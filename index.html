@@ -1,0 +1,1472 @@
+<!doctype html>
+<html lang="ja" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Board Game Library｜きょうは なにで あそぶ？</title>
+<meta name="description" content="にんずうと じかんと きぶんを えらぶだけ。30びょうで きょうの ボードゲームが きまる ずかん。">
+<meta name="theme-color" content="#141C3A">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="ボドゲずかん">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   Board Game Library — 8bit RPG theme
+   ========================================================= */
+:root{
+  /* よる（既定） */
+  --bg:#141C3A;
+  --bg-2:#1C2650;
+  --panel:#0A0E24;
+  --frame:#FFFFFF;
+  --text:#FFFFFF;
+  --muted:#9DB2DE;
+  --accent:#F8D030;   /* ゴールド */
+  --accent-2:#5CD6FF; /* みず */
+  --danger:#FF6B5E;
+  --shadow:4px 4px 0 rgba(0,0,0,.55);
+  --scrim:rgba(10,14,36,.76);
+  --px:16px;
+  --font:"DotGothic16","HiraMaruProN-W4","Hiragino Maru Gothic ProN","MS Gothic","Osaka-mono",monospace;
+}
+html[data-theme="day"]{
+  --bg:#E8E1CE;
+  --bg-2:#FFFFFF;
+  --panel:#FFFFFF;
+  --frame:#12141E;
+  --text:#12141E;
+  --muted:#3E4354;
+  --accent:#0F3FA8;
+  --accent-2:#8A2E12;
+  --danger:#B0271A;
+  --shadow:4px 4px 0 rgba(32,34,58,.30);
+  --scrim:rgba(250,246,236,.86);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{margin:0;padding:0;background-color:#141C3A;color-scheme:dark}
+html[data-theme="day"]{background-color:#DCD6C4;color-scheme:light}
+body{
+  margin:0;padding:0;
+  background-color:#141C3A;
+  background-color:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  font-size:16px;
+  line-height:1.85;
+  letter-spacing:.02em;
+  -webkit-text-size-adjust:100%;
+  -webkit-font-smoothing:none;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+  overflow-wrap:anywhere;
+}
+/* 走査線（よるのみ・ごく薄く） */
+body::after{
+  content:"";position:fixed;inset:0;z-index:99;pointer-events:none;
+  background:repeating-linear-gradient(rgba(0,0,0,.16) 0 1px, transparent 1px 3px);
+  opacity:.5;
+}
+html[data-theme="day"] body::after{display:none}
+/* ドット文字は細いので、あかるい画面では少し太らせて読みやすくする */
+html[data-theme="day"] body{text-shadow:0.5px 0 0 currentColor}
+html[data-theme="day"] .win,
+html[data-theme="day"] .section,
+html[data-theme="day"] .gcard,
+html[data-theme="day"] .roll-stage{border-width:3px}
+html[data-theme="day"] .tag{border-color:var(--muted);color:var(--muted)}
+
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+h1,h2,h3{font-weight:400;margin:0;letter-spacing:.04em}
+p{margin:0 0 .8em}
+img{image-rendering:auto}
+
+.wrap{max-width:600px;margin:0 auto;padding:0 14px}
+#app{min-height:calc(100vh - 150px)}
+#bg{
+  position:fixed;inset:0;z-index:-2;
+  background-color:#141C3A;
+  /* 酒場のドット絵（外部ファイル不要・ここに埋め込み） */
+  background-image:url("data:image/png;base64,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");
+  background-position:center 42%;
+  background-size:cover;
+  background-repeat:no-repeat;
+  image-rendering:-webkit-optimize-contrast;
+  image-rendering:crisp-edges;
+  image-rendering:-webkit-optimize-contrast; /* 古いiOS用 */
+  image-rendering:pixelated;
+}
+#bg::after{content:"";position:absolute;inset:0;background:var(--scrim)}
+
+/* ---------- ウィンドウ枠（ドラクエ風） ---------- */
+.win{
+  background:var(--panel);
+  border:3px solid var(--frame);
+  box-shadow:var(--shadow);
+  padding:14px 15px;
+  position:relative;
+}
+.win + .win{margin-top:12px}
+
+/* ---------- ヘッダー ---------- */
+.topbar{
+  position:sticky;top:0;z-index:30;
+  background:var(--panel);
+  border-bottom:3px solid var(--frame);
+  padding-top:env(safe-area-inset-top);
+}
+.topbar-in{display:flex;align-items:center;gap:10px;height:52px;max-width:600px;margin:0 auto;padding:0 14px}
+.brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:14px;letter-spacing:.1em;color:var(--accent)}
+.brand .ico{width:22px;height:22px;display:block;color:var(--accent)}
+.spacer{flex:1}
+.icon-btn{
+  border:2px solid var(--frame);background:var(--panel);color:var(--text);
+  padding:5px 10px;font-size:12px;cursor:pointer;letter-spacing:.08em;
+}
+.icon-btn:active{transform:translate(1px,1px)}
+
+/* ---------- タブ ---------- */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  background:var(--panel);border-top:3px solid var(--frame);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.tabbar-in{display:grid;grid-template-columns:repeat(4,1fr);max-width:600px;margin:0 auto}
+.tab{
+  border:0;background:none;padding:8px 0 10px;display:grid;gap:1px;justify-items:center;
+  color:var(--muted);font-size:11px;cursor:pointer;letter-spacing:.06em;
+}
+.tab .i{width:22px;height:22px;display:block}
+.tab[aria-current="true"]{color:var(--accent)}
+.tab[aria-current="true"] .i{filter:drop-shadow(0 0 3px currentColor)}
+
+/* ---------- 見出し・文字 ---------- */
+.page{padding:18px 0 30px}
+.lede{font-size:21px;line-height:1.5;color:var(--accent);margin:0 0 8px}
+.lede::before{content:"▶ ";font-size:16px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 18px;line-height:1.7}
+.count{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+
+.field{margin:0 0 18px}
+.field > h2{font-size:15px;margin:0 0 10px;color:var(--accent-2)}
+.field > h2 em{font-style:normal;font-size:11.5px;color:var(--muted);margin-left:8px}
+.catlabel{font-size:11.5px;color:var(--muted);margin:0 0 6px}
+
+/* ---------- コマンド（チップ） ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{
+  border:2px solid var(--frame);background:var(--panel);color:var(--text);
+  padding:7px 12px;font-size:14px;cursor:pointer;line-height:1.4;
+}
+.chip::before{content:"　";white-space:pre}
+.chip[aria-pressed="true"]{background:var(--text);color:var(--panel);border-color:var(--text);font-weight:400}
+.chip[aria-pressed="true"]::before{content:"▶"}
+.chip.sm{font-size:12.5px;padding:5px 9px}
+
+.tagline{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.tag{font-size:11px;padding:2px 7px;border:1px solid var(--muted);color:var(--muted)}
+.tag.hit{border-color:var(--accent);color:var(--accent)}
+
+/* ---------- ボタン ---------- */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:13px 16px;border:3px solid var(--frame);background:var(--panel);color:var(--text);
+  font-size:16px;letter-spacing:.06em;cursor:pointer;box-shadow:var(--shadow);
+}
+.btn:active{transform:translate(2px,2px);box-shadow:none}
+.btn.primary{color:var(--accent);border-color:var(--accent)}
+.btn.big{font-size:18px;padding:17px}
+.btn.danger{color:var(--danger);border-color:var(--danger);box-shadow:none}
+.btn.small{width:auto;padding:8px 12px;font-size:13px;box-shadow:none;border-width:2px}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{flex:1}
+.cursor::before{content:"▶";color:var(--accent);margin-right:6px}
+.blink{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
+/* ---------- ゲームカード ---------- */
+.card-list{display:grid;gap:12px}
+.gcard{
+  display:grid;grid-template-columns:88px 1fr;gap:12px;width:100%;text-align:left;
+  background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
+  padding:11px;cursor:pointer;color:var(--text);align-items:start;
+}
+.gcard:active{transform:translate(2px,2px);box-shadow:none}
+.thumb{
+  width:88px;height:88px;border:2px solid var(--frame);background:var(--bg-2);
+  display:grid;place-items:center;overflow:hidden;position:relative;
+}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .glyph{font-size:30px;color:var(--accent);line-height:1}
+.thumb.mini{width:38px;height:38px;flex:0 0 auto}
+.thumb.mini .glyph{font-size:15px}
+.gcard h3{font-size:16px;line-height:1.4;margin:0 0 4px}
+.gcard .summary{font-size:12.5px;color:var(--muted);margin:5px 0 6px;line-height:1.6}
+.meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12.5px;color:var(--muted)}
+.meta b{color:var(--text);font-weight:400}
+.stars{color:var(--accent);letter-spacing:1px;font-size:13px}
+.stars .off{opacity:.3}
+.badge{font-size:10.5px;padding:1px 6px;border:1px solid var(--accent);color:var(--accent);margin-left:6px;vertical-align:2px;white-space:nowrap}
+
+/* ---------- おまかせ ---------- */
+.roll-stage{
+  border:3px solid var(--frame);background:var(--panel);box-shadow:var(--shadow);
+  padding:34px 16px;display:grid;place-items:center;gap:16px;text-align:center;margin-bottom:14px;
+}
+.die{width:76px;height:76px;color:var(--accent)}
+.die.shaking{animation:shake .12s steps(2) infinite}
+@keyframes shake{0%{transform:translate(-3px,2px) rotate(-4deg)}100%{transform:translate(3px,-2px) rotate(4deg)}}
+.encounter{font-size:15px;color:var(--accent);margin:0}
+.result-title{font-size:20px;color:var(--accent);margin:0 0 4px}
+.hero-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;border:3px solid var(--frame)}
+.hero-fallback{
+  width:100%;aspect-ratio:4/3;border:3px solid var(--frame);background:var(--bg-2);
+  display:grid;place-items:center;gap:10px;
+}
+.hero-fallback .glyph{font-size:52px;color:var(--accent)}
+
+/* ---------- 詳細 ---------- */
+.detail-title{font-size:22px;line-height:1.45;margin:0 0 14px;color:var(--text)}
+.hero-strip{display:flex;gap:10px;overflow-x:auto;padding:0 0 10px;margin:0 0 14px}
+.hero-strip img{height:170px;border:3px solid var(--frame);object-fit:cover;flex:0 0 auto}
+.section{
+  background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
+  padding:14px 15px;margin:0 0 14px;
+}
+.section > h2{font-size:14px;color:var(--accent);margin:0 0 10px;padding-bottom:8px;border-bottom:2px solid var(--frame)}
+.section > h2::before{content:"▼ "}
+.section .body{white-space:pre-wrap;font-size:14.5px;line-height:1.9}
+.summary-lead{font-size:17px;line-height:1.8;margin:0}
+.kv{display:grid;grid-template-columns:7em 1fr;gap:5px 10px;font-size:14px;margin:0}
+.kv dt{color:var(--muted);font-size:13px}
+.kv dd{margin:0}
+
+/* ---------- フォーム ---------- */
+label.lbl{display:block;font-size:13px;margin:0 0 6px;color:var(--accent-2)}
+.hint{font-size:11.5px;color:var(--muted);margin-left:6px}
+input[type=text],input[type=number],input[type=search],textarea,select{
+  width:100%;padding:10px 11px;border:2px solid var(--frame);background:var(--bg-2);
+  color:var(--text);outline:none;border-radius:0;-webkit-appearance:none;appearance:none;
+}
+select{background-image:none}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.75}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{
+  outline:3px solid var(--accent);outline-offset:2px;
+}
+textarea{min-height:110px;resize:vertical;line-height:1.9}
+.row{display:flex;gap:9px;align-items:center}
+.row > *{flex:1}
+.form-group{margin:0 0 16px}
+.starpick{display:flex;gap:4px}
+.starpick button{border:0;background:none;font-size:24px;color:var(--accent);opacity:.28;cursor:pointer;padding:0 2px;line-height:1}
+.starpick button[aria-pressed="true"]{opacity:1}
+.imgs-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
+.imgs-preview figure{position:relative;margin:0}
+.imgs-preview img{width:72px;height:72px;object-fit:cover;border:2px solid var(--frame)}
+.imgs-preview .x{
+  position:absolute;top:-8px;right:-8px;width:22px;height:22px;
+  background:var(--danger);color:#fff;border:2px solid var(--frame);font-size:11px;cursor:pointer;line-height:1;padding:0;
+}
+.filebtn{display:inline-flex;align-items:center;gap:8px;border:2px dashed var(--muted);padding:10px 14px;cursor:pointer;font-size:13.5px}
+input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+details summary{font-size:13px;color:var(--muted);cursor:pointer}
+
+/* ---------- 管理 ---------- */
+.admin-row{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;
+  background:var(--panel);border:2px solid var(--frame);margin-bottom:8px;
+}
+.admin-row .t{flex:1;min-width:0}
+.admin-row .t b{display:block;font-size:14px;font-weight:400}
+.admin-row .t span{font-size:11px;color:var(--muted)}
+.mini{border:2px solid var(--frame);background:var(--panel);color:var(--text);padding:5px 9px;font-size:12px;cursor:pointer}
+.mini.warn{color:var(--danger);border-color:var(--danger)}
+.note{font-size:12.5px;color:var(--muted);border:2px dashed var(--muted);padding:11px 13px;line-height:1.7}
+.divider{height:3px;background:var(--frame);opacity:.35;margin:24px 0 18px}
+h2.sec{font-size:16px;margin:0 0 10px;color:var(--accent-2)}
+h2.sec::before{content:"■ ";font-size:12px}
+.tagchip{display:inline-flex;align-items:center;gap:6px;border:2px solid var(--frame);padding:4px 8px;font-size:12.5px}
+
+.empty{text-align:center;padding:34px 16px;color:var(--muted);border:3px dashed var(--muted)}
+.empty .mark{display:block;margin:0 auto 12px;width:40px;height:40px;color:var(--muted)}
+
+#toast{
+  position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--panel);color:var(--text);border:3px solid var(--frame);box-shadow:var(--shadow);
+  padding:10px 16px;font-size:13px;z-index:100;opacity:0;pointer-events:none;transition:opacity .15s;
+  max-width:88vw;text-align:center;
+}
+#toast.show{opacity:1}
+.searchbar{display:flex;gap:8px;margin:0 0 14px}
+.searchbar input{flex:2}
+.searchbar select{flex:1.2}
+</style>
+</head>
+<body>
+
+<div id="bg" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <a class="brand" href="#/"><span class="ico" data-icon="chest"></span>BOARD GAME LIBRARY</a>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="themeBtn">よる</button>
+  </div>
+</header>
+
+<main id="app" class="wrap"></main>
+
+<nav class="tabbar" aria-label="メニュー">
+  <div class="tabbar-in">
+    <button class="tab" data-go="#/"><span class="i" data-icon="search"></span>さがす</button>
+    <button class="tab" data-go="#/list"><span class="i" data-icon="book"></span>ずかん</button>
+    <button class="tab" data-go="#/random"><span class="i" data-icon="die"></span>おまかせ</button>
+    <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり</button>
+  </div>
+</nav>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   Board Game Library（ファミコンRPG風）
+   ビルド不要の単一ファイル。データはLocalStorage。
+   公開用の library.json があれば初期データとして読み込む。
+   ========================================================= */
+
+const KEY = {
+  games:'bgl.games.v1',
+  tags:'bgl.tags.v1',
+  theme:'bgl.theme2',
+  filters:'bgl.filters',
+  pubver:'bgl.publishedVersion',
+  localOnly:'bgl.localOnly',
+  gh:'bgl.siteConfig'
+};
+
+const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
+
+const DEFAULT_TAGS = [
+  {name:'初心者', category:'難易度'},
+  {name:'中級者', category:'難易度'},
+  {name:'重量級', category:'難易度'},
+  {name:'軽量級', category:'難易度'},
+  {name:'協力', category:'ジャンル'},
+  {name:'対戦', category:'ジャンル'},
+  {name:'正体隠匿', category:'ジャンル'},
+  {name:'ドラフト', category:'ジャンル'},
+  {name:'デッキ構築', category:'ジャンル'},
+  {name:'ワーカープレイスメント', category:'ジャンル'},
+  {name:'トリックテイキング', category:'ジャンル'},
+  {name:'パーティー', category:'ジャンル'},
+  {name:'盛り上がる', category:'雰囲気'},
+  {name:'静か', category:'雰囲気'},
+  {name:'頭脳戦', category:'雰囲気'},
+  {name:'運要素', category:'雰囲気'},
+  {name:'家族向け', category:'雰囲気'}
+];
+
+const SEED_GAMES = [
+  {
+    id:'seed-ito', title:'ito（イト）', images:[], playersMin:2, playersMax:10, playTime:30, age:8, difficulty:2,
+    tags:['初心者','協力','盛り上がる','家族向け'],
+    summary:'数字を言葉に置きかえて、みんなで小さい順に並べる協力ゲーム。',
+    quickRule:'1. 1〜100のカードを1枚ずつ配る（自分だけ見る）\n2. お題（例：好きな食べ物の人気度）に沿って、数字の大きさを言葉で表現する\n3. 話し合って小さい順に出す\n4. 最後まで順番を間違えなければ成功',
+    recommendation:'・初対面でも一気に距離が縮まる\n・4〜6人がちょうどいい\n・ルール説明は3分で終わる',
+    detailRule:'カードは全員に1枚ずつ配られ、自分の数字は絶対に他人へ伝えられません。お題に対して「その数字らしさ」だけを言葉で表現します。たとえば「1は最悪、100は最高」の基準でお題が「コンビニの好きなおにぎり」なら、53の人は「まあ普通においしい、たまに買う」といった表現になります。全員の表現を聞いたら、誰が小さいかを相談し、小さいと思う人からカードを場に出します。出したカードが昇順になっていれば継続、逆転していたら失敗としてライフが1つ減ります。ライフが残った状態で全員がカードを出し切ればクリアです。慣れてきたら1人2枚配って難易度を上げられます。'
+  },
+  {
+    id:'seed-nanjamonja', title:'ナンジャモンジャ', images:[], playersMin:2, playersMax:6, playTime:15, age:4, difficulty:1,
+    tags:['初心者','家族向け','盛り上がる','運要素','軽量級'],
+    summary:'謎の生き物に名前をつけて、出てきたら早く呼ぶだけの記憶ゲーム。',
+    quickRule:'1. カードを1枚めくる\n2. 初めて出た生き物なら好きな名前をつける\n3. 見たことのある生き物なら、その名前を早く叫ぶ\n4. 一番早く言えた人が場のカードをもらう',
+    recommendation:'・小さい子から大人まで一緒に遊べる\n・待ち時間ゼロ、1ゲーム10分\n・変な名前をつけるほど盛り上がる',
+    detailRule:'山札を裏向きに置き、手番の人が1枚ずつ表にして場に重ねます。まだ名前のついていないキャラクターなら、めくった人が自由に名前をつけます。すでに名前がついているキャラクターが出たら、全員でその名前を叫び、最も早かった人が場に重なっているカードをすべて獲得します。名前を間違えて言っても罰はありませんが、正しい名前を言った人が優先されます。山札がなくなった時点で、獲得枚数が最も多い人の勝ちです。'
+  },
+  {
+    id:'seed-codenames', title:'コードネーム', images:[], playersMin:4, playersMax:8, playTime:15, age:10, difficulty:2,
+    tags:['初心者','協力','対戦','頭脳戦'],
+    summary:'ひとことのヒントで、味方の単語カードだけを当ててもらうチーム戦。',
+    quickRule:'1. チームに分かれ、各チーム1人がヒントを出す役になる\n2. ヒント役は「単語＋数字」だけを言う\n3. 仲間は場の25枚から味方の単語を選ぶ\n4. 先に自分の色を全部当てたチームの勝ち',
+    recommendation:'・4人以上いるときの鉄板\n・話し合いが自然に生まれる\n・ヒント役をやると一気にハマる',
+    detailRule:'25枚の単語カードを5×5に並べ、各チームのヒント役だけが色の配置図を見ます。ヒントは必ず「1単語＋その単語に関係する枚数」の形で出し、それ以外の情報を伝えることはできません。仲間は関係すると思うカードに触れ、味方の色なら継続、相手の色や無関係な色なら手番終了です。暗殺者のカードに触れるとその時点で負けになります。先に自分の色をすべて当てたチームの勝利です。'
+  },
+  {
+    id:'seed-hannin', title:'犯人は踊る', images:[], playersMin:3, playersMax:8, playTime:15, age:8, difficulty:2,
+    tags:['初心者','正体隠匿','パーティー','盛り上がる','軽量級'],
+    summary:'手札を渡し合ううちに犯人が入れ替わる、追いかけっこの推理ゲーム。',
+    quickRule:'1. カードを配る。犯人カードを持つ人が犯人\n2. 手番でカードを1枚出して効果を使う\n3. 犯人カードは他人に渡ることがある\n4. 探偵カードで犯人を指名できれば市民の勝ち、犯人が最後まで逃げ切れば犯人の勝ち',
+    recommendation:'・カード1組で遊べて持ち運びが楽\n・脱落なしで最後まで全員参加\n・5〜6人が一番おもしろい',
+    detailRule:'各プレイヤーに手札が配られ、その中の1枚が犯人カードです。手番ではカードを1枚出して効果を解決します。「取り引き」は隣と手札を1枚交換し、「情報操作」は全員が手札を回すなど、カードによって犯人の居場所が動きます。「探偵」を出した人は犯人だと思う相手を指名し、当たれば市民側の勝ち、外れればゲームは続きます。犯人カードを持つ人が最後の1枚として犯人カードを出し切ると犯人の勝ちです。'
+  },
+  {
+    id:'seed-skull', title:'スカル', images:[], playersMin:3, playersMax:6, playTime:20, age:10, difficulty:2,
+    tags:['初心者','対戦','頭脳戦','静か'],
+    summary:'花を伏せるか、ドクロを混ぜるか。度胸で読み合うブラフゲーム。',
+    quickRule:'1. 手持ちのコースターを裏向きに置いていく\n2. 「何枚めくれるか」を宣言して競り合う\n3. 勝った人は宣言した枚数だけめくる\n4. 花だけをめくれれば成功。2回成功で勝ち',
+    recommendation:'・コンポーネントが渋くて雰囲気がいい\n・ルールは2分、駆け引きは無限\n・静かに熱くなりたい夜に',
+    detailRule:'各プレイヤーは花3枚とドクロ1枚を持ちます。全員が裏向きに1枚以上を積んだあと、誰かが「自分は◯枚めくれる」と宣言すると競りが始まり、より多い枚数を宣言するか降りるかを選びます。最も高い宣言をした人は、まず自分の山からめくり、その後は他人の山から好きにめくります。宣言枚数ぶんの花をめくれれば成功、ドクロが出たら失敗して手持ちを1枚失います。2回成功した人がその場の勝者です。'
+  },
+  {
+    id:'seed-splendor', title:'スプレンダー', images:[], playersMin:2, playersMax:4, playTime:30, age:10, difficulty:3,
+    tags:['中級者','対戦','頭脳戦','静か'],
+    summary:'宝石を集めてカードを買い、割引を増やしていく発展ゲーム。',
+    quickRule:'1. 宝石チップを取る\n2. カードを買う\n3. 買ったカードが次の割引になる\n4. 先に15点に到達した人の勝ち',
+    recommendation:'・「拡大再生産」の入門として最適\n・2人でも4人でも成立する\n・言葉が少なくても遊べる',
+    detailRule:'手番にできるのは3つのうち1つです。異なる色の宝石チップを3枚取る、同じ色を2枚取る、場のカードを買う（または確保する）。購入したカードには色ボーナスが描かれており、以後その色のチップの代わりとして永続的に使えます。高得点のカードほど必要な宝石が多く、序盤は安いカードで割引を積み上げるのが基本です。条件を満たすと貴族タイルが自動的に訪問し、追加の点が入ります。誰かが15点に達したら、その周を最後まで行い、最高得点の人が勝者です。'
+  },
+  {
+    id:'seed-dominion', title:'ドミニオン', images:[], playersMin:2, playersMax:4, playTime:30, age:13, difficulty:3,
+    tags:['中級者','デッキ構築','対戦','頭脳戦'],
+    summary:'カードを買って自分の山札を強くしていく、デッキ構築の元祖。',
+    quickRule:'1. 手札5枚でアクションを1回使う\n2. 財宝を出してカードを1枚買う\n3. 使ったカードは捨て札にして5枚引く\n4. 終了時に勝利点が最も多い人の勝ち',
+    recommendation:'・毎回使うカードが変わるので飽きない\n・慣れると1ゲーム25分\n・じっくり考えたい人向け',
+    detailRule:'全員が同じ初期デッキ（銅貨7枚と屋敷3枚）から始めます。手番は「アクション1回・購入1回」が基本で、アクションカードの効果によって追加のドローや購入が可能になります。買ったカードは捨て札に置かれ、山札が尽きたら捨て札を混ぜて新しい山札にするため、買ったカードは必ず手札に巡ってきます。勝利点カードはデッキの動きを鈍らせるため、いつ買うかの判断が勝負どころです。属州の山が尽きるか、いずれかの3つの山が尽きたらゲーム終了、勝利点の合計で勝敗を決めます。'
+  },
+  {
+    id:'seed-catan', title:'カタンの開拓者たち', images:[], playersMin:3, playersMax:4, playTime:75, age:10, difficulty:4,
+    tags:['中級者','重量級','対戦','頭脳戦','運要素'],
+    summary:'資源を集めて交渉し、島に開拓地を広げていく王道ゲーム。',
+    quickRule:'1. サイコロを振って資源をもらう\n2. 他のプレイヤーと交渉して交換する\n3. 道・開拓地・都市を建てる\n4. 先に10点に到達した人の勝ち',
+    recommendation:'・交渉が始まると一気に盛り上がる\n・時間があるときの本命\n・初回は説明15分＋プレイ60分を見込んで',
+    detailRule:'六角形のタイルで島を作り、各タイルに数字チップを置きます。手番の最初にサイコロを2個振り、出目と一致するタイルに接する開拓地の持ち主が資源を受け取ります。資源は他プレイヤーと自由に交渉して交換でき、ここでの立ち回りが勝敗を大きく左右します。道・開拓地・都市はそれぞれ決まった資源の組み合わせで建設し、開拓地1点、都市2点として計算します。最長交易路や最大騎士力のボーナスを含め、手番中に10点へ到達した人の勝ちです。7が出たときの盗賊の移動も重要な駆け引きになります。'
+  },
+  {
+    id:'seed-onenight', title:'ワンナイト人狼', images:[], playersMin:3, playersMax:7, playTime:10, age:8, difficulty:2,
+    tags:['初心者','正体隠匿','パーティー','盛り上がる','軽量級'],
+    summary:'夜は一度きり、朝の話し合いだけで人狼を追放する短時間人狼。',
+    quickRule:'1. 役職カードを配り、夜の行動を1回だけ行う\n2. 朝になったら3〜5分話し合う\n3. せーので指を差し、最多票の人を追放\n4. 人狼を追放できれば村人の勝ち',
+    recommendation:'・脱落者が出ないので気まずくならない\n・1回10分、何度も遊べる\n・人狼が苦手な人の入り口に',
+    detailRule:'人数より2枚多い役職カードを用意し、余った2枚は場に伏せます。夜フェーズでは人狼が仲間を確認し、占い師が誰かのカードを見るなど、役職ごとの行動を1度だけ行います。怪盗や吊り師など、カードが入れ替わる役職があるため、朝の時点で自分の役職が変わっている可能性があります。昼の話し合いで情報を出し合い、投票で最多票の人を追放します。追放された人が人狼なら村人陣営の勝ち、誰も人狼でなければ人狼陣営の勝ちです。'
+  },
+  {
+    id:'seed-gokiburi', title:'ごきぶりポーカー', images:[], playersMin:2, playersMax:6, playTime:20, age:8, difficulty:1,
+    tags:['初心者','対戦','運要素','盛り上がる','家族向け','軽量級'],
+    summary:'「これはカエルだよ」の一言を、信じるか疑うかだけのブラフ合戦。',
+    quickRule:'1. 手札から1枚を裏向きで誰かに渡し、生き物の名前を宣言する\n2. 渡された人は「当たり」か「はずれ」を答える\n3. 外した方がそのカードを引き取る\n4. 同じ生き物を4枚集めてしまった人の負け',
+    recommendation:'・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀',
+    detailRule:'8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。'
+  }
+];
+
+const TIME_OPTIONS = [
+  {id:'15', label:'15分以内'}, {id:'30', label:'30分'},
+  {id:'45', label:'45分'}, {id:'60', label:'60分以上'}
+];
+const PLAYER_OPTIONS = [
+  {id:'2', label:'2人'}, {id:'3', label:'3人'}, {id:'4', label:'4人'},
+  {id:'5', label:'5人'}, {id:'6', label:'6人以上'}
+];
+
+/* ---------------- ドット絵アイコン ---------------- */
+const ICONS = {
+  search:[
+    '..####..',
+    '.#....#.',
+    '#..###.#',
+    '#..#...#',
+    '#......#',
+    '.#....#.',
+    '..####..',
+    '.....###'
+  ],
+  book:[
+    '.######.',
+    '.#..#.#.',
+    '.#..#.#.',
+    '.#..#.#.',
+    '.#..#.#.',
+    '.#..#.#.',
+    '.######.',
+    '........'
+  ],
+  die:[
+    '.######.',
+    '.#....#.',
+    '.#.#..#.',
+    '.#....#.',
+    '.#..#.#.',
+    '.#....#.',
+    '.######.',
+    '........'
+  ],
+  gear:[
+    '..#..#..',
+    '.######.',
+    '.#....#.',
+    '##....##',
+    '##....##',
+    '.#....#.',
+    '.######.',
+    '..#..#..'
+  ],
+  chest:[
+    '..####..',
+    '.######.',
+    '.#.##.#.',
+    '########',
+    '#..##..#',
+    '#..##..#',
+    '########',
+    '........'
+  ],
+  sword:[
+    '......##',
+    '.....##.',
+    '....##..',
+    '.#.##...',
+    '..###...',
+    '.####...',
+    '##..#...',
+    '#.......'
+  ]
+};
+function pixSVG(name){
+  const map = ICONS[name];
+  if(!map) return '';
+  let rects = '';
+  map.forEach((row, y) => {
+    for(let x = 0; x < row.length; x++){
+      if(row[x] === '#') rects += '<rect x="'+x+'" y="'+y+'" width="1" height="1"/>';
+    }
+  });
+  return '<svg viewBox="0 0 8 8" width="100%" height="100%" fill="currentColor" ' +
+    'shape-rendering="crispEdges" aria-hidden="true">' + rects + '</svg>';
+}
+function paintIcons(root){
+  (root || document).querySelectorAll('[data-icon]').forEach(el => {
+    if(!el.dataset.painted){ el.innerHTML = pixSVG(el.dataset.icon); el.dataset.painted = '1'; }
+  });
+}
+
+/* ---------------- storage ---------------- */
+const store = {
+  read(k, fallback){
+    try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; }
+    catch(e){ return fallback; }
+  },
+  write(k, v){
+    try{ localStorage.setItem(k, JSON.stringify(v)); return true; }
+    catch(e){ toast('セーブできませんでした（画像が多すぎるかも）'); return false; }
+  }
+};
+
+const state = {
+  games: [], tags: [],
+  filters: { time:null, players:null, playersN:6, tags:[] },
+  listQuery:'', listSort:'title',
+  lastRandomId: null,
+  formImages: [], formTags: []
+};
+
+function loadAll(){
+  state.games = store.read(KEY.games, null) || SEED_GAMES.map(g=>({...g}));
+  state.tags  = store.read(KEY.tags, null)  || DEFAULT_TAGS.map(t=>({...t}));
+  const f = store.read(KEY.filters, null);
+  if(f && typeof f === 'object'){
+    state.filters = { time:f.time||null, players:f.players||null,
+      playersN: Math.min(30, Math.max(6, Number(f.playersN)||6)),
+      tags:Array.isArray(f.tags)?f.tags:[] };
+  }
+}
+function saveGames(){ store.write(KEY.games, state.games); }
+function saveTags(){ store.write(KEY.tags, state.tags); }
+function saveFilters(){ store.write(KEY.filters, state.filters); }
+
+async function syncPublished(){
+  if(location.protocol === 'file:') return;
+  if(store.read(KEY.localOnly, false)) return;
+  try{
+    const res = await fetch('library.json?t=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data || !Array.isArray(data.games)) return;
+    const ver = String(data.version || '');
+    if(ver && ver === store.read(KEY.pubver, '')) return;
+    state.games = data.games;
+    if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
+    saveGames(); saveTags();
+    store.write(KEY.pubver, ver);
+    render();
+  }catch(e){ /* library.json が無ければ何もしない */ }
+}
+
+/* ---------------- utils ---------------- */
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
+  {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]
+));
+const uid = () => 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+function stars(n, max){
+  max = max || 5;
+  n = Math.max(0, Math.min(max, Number(n)||0));
+  return '<span class="stars" aria-label="'+n+'/'+max+'">' + '★'.repeat(n) +
+    '<span class="off">'+'★'.repeat(max-n)+'</span></span>';
+}
+function playersText(g){
+  return g.playersMin === g.playersMax ? g.playersMin + '人' : g.playersMin + '〜' + g.playersMax + '人';
+}
+function thumbHTML(g, cls){
+  const c = 'thumb' + (cls ? ' ' + cls : '');
+  if(g.images && g.images[0]) return '<div class="'+c+'"><img src="'+esc(g.images[0])+'" alt=""></div>';
+  return '<div class="'+c+'"><span class="glyph">'+esc((g.title||'？').trim().charAt(0))+'</span></div>';
+}
+
+/* ---------------- 検索ロジック ---------------- */
+function timeScore(playTime, optId){
+  const t = Number(playTime)||0;
+  if(optId === '15') return t <= 15 ? 1 : (t <= 22 ? .6 : 0);
+  if(optId === '30') return (t >= 22 && t <= 38) ? 1 : ((t >= 15 && t <= 48) ? .6 : 0);
+  if(optId === '45') return (t >= 38 && t <= 52) ? 1 : ((t >= 30 && t <= 65) ? .6 : 0);
+  if(optId === '60') return t >= 60 ? 1 : (t >= 48 ? .6 : 0);
+  return 0;
+}
+function playersCount(f){
+  if(f.players === '6') return Math.min(30, Math.max(6, Number(f.playersN)||6));
+  return Number(f.players);
+}
+function playersOk(g, f){
+  const n = playersCount(f);
+  return g.playersMin <= n && n <= g.playersMax;
+}
+function scoreGame(g, f){
+  let got = 0, max = 0, hardOk = true;
+  if(f.players){ max += 1; if(playersOk(g, f)) got += 1; else hardOk = false; }
+  if(f.time){
+    max += 1;
+    const s = timeScore(g.playTime, f.time);
+    got += s;
+    if(s === 0) hardOk = false;
+  }
+  if(f.tags.length){
+    max += f.tags.length;
+    const hit = f.tags.filter(t => (g.tags||[]).includes(t)).length;
+    got += hit;
+    if(hit < f.tags.length) hardOk = false;
+  }
+  return { game:g, rate: max === 0 ? 1 : got/max, perfect:hardOk };
+}
+function search(f){
+  const scored = state.games.map(g => scoreGame(g, f));
+  const by = (a,b) => b.rate - a.rate || (a.game.difficulty||0) - (b.game.difficulty||0);
+  return {
+    perfect: scored.filter(s=>s.perfect).sort(by).map(s=>s.game),
+    near: scored.filter(s=>!s.perfect && s.rate >= 0.5).sort(by).map(s=>s.game)
+  };
+}
+function hasFilter(f){ return !!(f.time || f.players || f.tags.length); }
+function condText(f){
+  const c = [];
+  if(f.players){
+    c.push(f.players === '6' ? playersCount(f)+'人' : (PLAYER_OPTIONS.find(o=>o.id===f.players)||{}).label);
+  }
+  if(f.time) c.push((TIME_OPTIONS.find(o=>o.id===f.time)||{}).label);
+  c.push(...f.tags);
+  return c.join('・');
+}
+
+/* ---------------- 画像 ---------------- */
+function readImage(file, maxSize){
+  maxSize = maxSize || 900;
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(new Error('read'));
+    fr.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('decode'));
+      img.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+        const w = Math.round(img.width*scale), h = Math.round(img.height*scale);
+        const cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(cv.toDataURL('image/jpeg', 0.72));
+      };
+      img.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+
+/* ---------------- routing ---------------- */
+function go(hash){ location.hash = hash; }
+function currentRoute(){
+  const h = location.hash.replace(/^#/, '') || '/';
+  const p = h.split('/').filter(Boolean);
+  return { name: p[0] || 'home', param: p[1] ? decodeURIComponent(p[1]) : null };
+}
+const app = document.getElementById('app');
+
+function render(){
+  const r = currentRoute();
+  const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm, admin:viewAdmin, random:viewRandom };
+  app.innerHTML = (views[r.name] || viewHome)(r.param);
+  paintIcons(app);
+  bind(r);
+  const map = { home:'#/', list:'#/list', random:'#/random', admin:'#/admin' };
+  document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
+  window.scrollTo(0,0);
+}
+
+/* ---------------- views ---------------- */
+function chipGroup(name, options, selected, multi){
+  return '<div class="chips">' + options.map(o => {
+    const on = multi ? selected.includes(o.id) : selected === o.id;
+    return '<button class="chip" data-chip="'+name+'" data-val="'+esc(o.id)+'" aria-pressed="'+on+'">'+esc(o.label)+'</button>';
+  }).join('') + '</div>';
+}
+
+function viewHome(){
+  const f = state.filters;
+  const cats = TAG_CATEGORIES.map(cat => {
+    const list = state.tags.filter(t => t.category === cat);
+    if(!list.length) return '';
+    return '<div style="margin-bottom:11px"><div class="catlabel">'+esc(cat)+'</div>' +
+      chipGroup('tags', list.map(t=>({id:t.name,label:t.name})), f.tags, true) + '</div>';
+  }).join('');
+  const uncat = state.tags.filter(t => !TAG_CATEGORIES.includes(t.category));
+  const uncatHTML = uncat.length ? '<div><div class="catlabel">その他</div>' +
+    chipGroup('tags', uncat.map(t=>({id:t.name,label:t.name})), f.tags, true) + '</div>' : '';
+
+  const n = hasFilter(f) ? search(f).perfect.length : state.games.length;
+
+  return '<section class="page">' +
+    '<h1 class="lede">きょうは なにで あそぶ？</h1>' +
+    '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>ずかんには '+state.games.length+'さくひんが とうろく されている。</p>' +
+
+    '<div class="field"><h2>どのくらい あそべる？<em>ひとつ</em></h2>' + chipGroup('time', TIME_OPTIONS, f.time, false) + '</div>' +
+    '<div class="field"><h2>なんにんで あそぶ？<em>ひとつ</em></h2>' + chipGroup('players', PLAYER_OPTIONS, f.players, false) +
+      (f.players === '6' ?
+        '<div class="row" style="margin-top:10px;align-items:center">' +
+        '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">じっさいの にんずう</span>' +
+        '<input type="number" id="playersN" min="6" max="30" inputmode="numeric" value="'+playersCount(f)+'" style="flex:0 0 88px">' +
+        '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">人</span></div>' : '') +
+      '</div>' +
+    '<div class="field"><h2>どんな ゲームが いい？<em>いくつでも</em></h2>' + cats + uncatHTML + '</div>' +
+
+    (hasFilter(f) ? '<p class="count">えらんだ じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '') +
+
+    '<button class="btn primary" id="searchBtn" style="margin-bottom:11px">▶ おすすめを みる（'+n+'）</button>' +
+    '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
+    '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、それに あう ゲームだけから ひきます。</p>' +
+  '</section>';
+}
+
+function gameCard(g, hitTags){
+  const tags = (g.tags||[]).slice(0,4).map(t =>
+    '<span class="tag'+((hitTags||[]).includes(t)?' hit':'')+'">'+esc(t)+'</span>').join('');
+  const beginner = (g.tags||[]).includes('初心者') ? '<span class="badge">しょしんしゃ○</span>' : '';
+  return '<button class="gcard" data-open="'+esc(g.id)+'">' + thumbHTML(g) +
+    '<div><h3>'+esc(g.title)+beginner+'</h3>' +
+    '<div class="meta"><span><b>'+playersText(g)+'</b></span><span><b>'+(Number(g.playTime)||0)+'分</b></span>' +
+    '<span>むずかしさ '+stars(g.difficulty)+'</span></div>' +
+    '<p class="summary">'+esc(g.summary||'')+'</p>' +
+    '<div class="tagline">'+tags+'</div></div></button>';
+}
+
+function viewList(){
+  const f = state.filters;
+  const filtered = hasFilter(f);
+  const res = search(f);
+  let list = filtered ? res.perfect.slice() : state.games.slice();
+
+  const q = state.listQuery.trim().toLowerCase();
+  if(q) list = list.filter(g => (g.title+' '+(g.summary||'')+' '+(g.tags||[]).join(' ')).toLowerCase().includes(q));
+
+  if(!filtered || q){
+    const s = state.listSort;
+    list.sort((a,b) =>
+      s === 'time' ? (a.playTime-b.playTime) :
+      s === 'players' ? (a.playersMin-b.playersMin) :
+      s === 'difficulty' ? (a.difficulty-b.difficulty) :
+      a.title.localeCompare(b.title,'ja'));
+  }
+
+  let html = '<section class="page">' +
+    '<h1 class="lede">'+(filtered ? 'おすすめの ゲーム' : 'ボードゲーム ずかん')+'</h1>' +
+    '<p class="sub">'+(filtered ? esc(condText(f))+' の じょうけんで '+list.length+'さくひん'
+                                : 'ぜんぶで '+list.length+'さくひん。えらぶと あそびかたが よめる。')+'</p>' +
+
+    '<div class="searchbar">' +
+      '<input type="search" id="listQ" placeholder="なまえで さがす" value="'+esc(state.listQuery)+'">' +
+      '<select id="listSort">' +
+        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順'].map(o=>{
+          const [v,l]=o.split(':');
+          return '<option value="'+v+'"'+(state.listSort===v?' selected':'')+'>'+l+'</option>';
+        }).join('') +
+      '</select></div>' +
+
+    (filtered ? '<p class="count">じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '');
+
+  if(!list.length && !res.near.length){
+    html += '<div class="empty"><span class="mark" data-icon="search"></span>' +
+      'じょうけんに あう ゲームが みつからない！<br><span style="font-size:12px">じょうけんを ひとつ へらすと みつかりやすい。</span>' +
+      '<div style="margin-top:16px"><button class="btn small" data-go2="#/">じょうけんを えらびなおす</button></div></div>';
+  }else{
+    if(list.length) html += '<div class="card-list">'+list.map(g=>gameCard(g,f.tags)).join('')+'</div>';
+    else html += '<div class="note" style="margin-bottom:14px">ぴったりの ゲームは いなかった。ちかい ゲームを だします。</div>';
+    if(filtered && res.near.length && !q){
+      html += '<div class="divider"></div><h2 class="sec">じょうけんに ちかい ゲーム</h2>' +
+        '<p class="count">じょうけんを ひとつ はずすと こうほに なります。</p>' +
+        '<div class="card-list">'+res.near.slice(0,6).map(g=>gameCard(g,f.tags)).join('')+'</div>';
+    }
+  }
+  return html + '</section>';
+}
+
+function viewRandom(){
+  const f = state.filters;
+  return '<section class="page">' +
+    '<h1 class="lede">おまかせで きめる</h1>' +
+    '<p class="sub">'+(hasFilter(f) ? esc(condText(f))+' の なかから ひきます' : 'とうろく されている ぜんさくひんから ひきます')+'</p>' +
+    '<div id="randomSlot">' +
+      '<div class="roll-stage"><span class="die" data-icon="die"></span>' +
+      '<p class="encounter">▼ ボタンを おして ゲームを よびだそう</p></div>' +
+      '<button class="btn primary big" id="rollBtn">▶ ひく</button>' +
+    '</div></section>';
+}
+
+function randomResultHTML(g){
+  const img = (g.images && g.images[0])
+    ? '<img class="hero-img" src="'+esc(g.images[0])+'" alt="">'
+    : '<div class="hero-fallback"><span class="glyph">'+esc((g.title||'？').trim().charAt(0))+'</span></div>';
+  return '<div>' + img +
+    '<div class="win" style="margin-top:12px">' +
+      '<p class="encounter" style="margin:0 0 8px">'+esc(g.title)+' が あらわれた！</p>' +
+      '<p class="sub" style="margin:0 0 10px">'+esc(g.summary||'')+'</p>' +
+      '<div class="meta"><span><b>'+playersText(g)+'</b></span><span><b>'+(Number(g.playTime)||0)+'分</b></span>' +
+      '<span>むずかしさ '+stars(g.difficulty)+'</span></div>' +
+      '<div class="tagline">'+(g.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div>' +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:12px">' +
+      '<button class="btn" id="rollBtn">もう一度行う</button>' +
+      '<button class="btn primary" data-open="'+esc(g.id)+'">くわしく みる</button></div></div>';
+}
+
+function viewDetail(id){
+  const g = state.games.find(x => x.id === id);
+  if(!g) return '<section class="page"><div class="empty"><span class="mark" data-icon="search"></span>その ゲームは みつからなかった…' +
+    '<div style="margin-top:16px"><button class="btn small" data-go2="#/list">ずかんへ もどる</button></div></div></section>';
+
+  const gallery = (g.images||[]).length
+    ? '<div class="hero-strip">'+g.images.map(s=>'<img src="'+esc(s)+'" alt="">').join('')+'</div>' : '';
+  const optional = [];
+  if(g.strategy) optional.push('<dt>せんりゃく性</dt><dd>'+stars(g.strategy)+'</dd>');
+  if(g.excitement) optional.push('<dt>もりあがり</dt><dd>'+stars(g.excitement)+'</dd>');
+  if(g.luck) optional.push('<dt>うんの要素</dt><dd>'+stars(g.luck)+'</dd>');
+
+  return '<section class="page">' +
+    '<button class="mini" data-go2="#/list" style="margin-bottom:14px">◀ ずかんへ もどる</button>' +
+    '<h1 class="detail-title">'+esc(g.title)+'</h1>' + gallery +
+
+    '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+esc(g.summary||'（みきにゅう）')+'</p></div>' +
+    (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+esc(g.quickRule)+'</div></div>' : '') +
+    (g.recommendation ? '<div class="section"><h2>おすすめ ポイント</h2><div class="body">'+esc(g.recommendation)+'</div></div>' : '') +
+
+    '<div class="section"><h2>ステータス</h2><dl class="kv">' +
+      '<dt>にんずう</dt><dd>'+playersText(g)+'</dd>' +
+      '<dt>じかん</dt><dd>やく'+(Number(g.playTime)||0)+'分</dd>' +
+      '<dt>たいしょう年齢</dt><dd>'+(g.age ? esc(g.age)+'さい〜' : '—')+'</dd>' +
+      '<dt>むずかしさ</dt><dd>'+stars(g.difficulty)+'</dd>' + optional.join('') +
+      '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+((g.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')||'—')+'</div></dd>' +
+    '</dl></div>' +
+
+    (g.detailRule ? '<div class="section"><h2>くわしい ルール</h2><div class="body">'+esc(g.detailRule)+'</div></div>' : '') +
+
+    '<div class="btn-row" style="margin-top:18px">' +
+      '<button class="btn" data-go2="#/random">おまかせで ひく</button>' +
+      '<button class="btn" data-go2="#/edit/'+esc(g.id)+'">へんしゅう</button></div>' +
+  '</section>';
+}
+
+function viewForm(id){
+  const editing = !!id;
+  const g = editing ? state.games.find(x => x.id === id) : null;
+  if(editing && !g) return '<section class="page"><div class="empty">へんしゅうする ゲームが みつからなかった</div></section>';
+
+  state.formImages = g ? (g.images||[]).slice() : [];
+  state.formTags = g ? (g.tags||[]).slice() : [];
+  const v = (k,d) => g ? (g[k] != null ? g[k] : d) : d;
+
+  const tagChips = TAG_CATEGORIES.concat(['その他']).map(cat => {
+    const list = state.tags.filter(t => cat === 'その他' ? !TAG_CATEGORIES.includes(t.category) : t.category === cat);
+    if(!list.length) return '';
+    return '<div style="margin-bottom:9px"><div class="catlabel">'+esc(cat)+'</div><div class="chips">' +
+      list.map(t => '<button type="button" class="chip sm" data-formtag="'+esc(t.name)+'" aria-pressed="'+state.formTags.includes(t.name)+'">'+esc(t.name)+'</button>').join('') +
+      '</div></div>';
+  }).join('');
+
+  const starRow = (name,val) => '<div class="starpick" data-star="'+name+'">' +
+    [1,2,3,4,5].map(i=>'<button type="button" data-v="'+i+'" aria-pressed="'+(i<=val)+'" aria-label="'+i+'">★</button>').join('') +
+    '</div><input type="hidden" name="'+name+'" value="'+val+'">';
+
+  return '<section class="page">' +
+    '<h1 class="lede">'+(editing ? 'ゲームを へんしゅう' : 'ゲームを ついか')+'</h1>' +
+    '<p class="sub">なまえだけ いれれば セーブできます。あとから かきたせます。</p>' +
+
+    '<div class="form-group"><label class="lbl" for="f-title">タイトル</label>' +
+      '<input type="text" id="f-title" value="'+esc(v('title',''))+'" placeholder="れい：スプレンダー"></div>' +
+
+    '<div class="form-group"><label class="lbl">はこ画像・プレイ画像<span class="hint">1まいめが はこ画像</span></label>' +
+      '<label class="filebtn">＋ 画像を えらぶ<input type="file" id="f-images" accept="image/*" multiple></label>' +
+      '<div class="row" style="margin-top:9px">' +
+        '<input type="text" id="f-imgurl" placeholder="画像の URL を はりつけ" style="flex:2">' +
+        '<button type="button" class="mini" id="addUrlBtn" style="flex:0 0 auto">URLを ついか</button></div>' +
+      '<p class="count" style="margin:6px 0 0">URLで いれると 端末の ほぞん容量を つかいません。</p>' +
+      '<div class="imgs-preview" id="imgPreview"></div></div>' +
+
+    '<div class="form-group"><label class="lbl">プレイ にんずう</label><div class="row">' +
+      '<input type="number" id="f-pmin" min="1" max="30" value="'+esc(v('playersMin',2))+'" inputmode="numeric">' +
+      '<span style="flex:0 0 auto;color:var(--muted)">〜</span>' +
+      '<input type="number" id="f-pmax" min="1" max="30" value="'+esc(v('playersMax',4))+'" inputmode="numeric"></div></div>' +
+
+    '<div class="form-group"><div class="row">' +
+      '<div><label class="lbl" for="f-time">じかん（分）</label><input type="number" id="f-time" min="1" max="600" value="'+esc(v('playTime',30))+'" inputmode="numeric"></div>' +
+      '<div><label class="lbl" for="f-age">たいしょう年齢</label><input type="number" id="f-age" min="1" max="99" value="'+esc(v('age',8))+'" inputmode="numeric"></div>' +
+    '</div></div>' +
+
+    '<div class="form-group"><label class="lbl">むずかしさ</label>'+starRow('difficulty', Number(v('difficulty',2)))+'</div>' +
+
+    '<details style="margin:0 0 16px"><summary>その他の ひょうか（にんい）</summary>' +
+      '<div style="margin-top:12px"><label class="lbl">せんりゃく性</label>'+starRow('strategy', Number(v('strategy',0)))+'</div>' +
+      '<div style="margin-top:12px"><label class="lbl">もりあがり</label>'+starRow('excitement', Number(v('excitement',0)))+'</div>' +
+      '<div style="margin-top:12px"><label class="lbl">うんの要素</label>'+starRow('luck', Number(v('luck',0)))+'</div></details>' +
+
+    '<div class="form-group"><label class="lbl">タグ</label>'+tagChips+'</div>' +
+
+    '<div class="form-group"><label class="lbl" for="f-summary">ひとこと しょうかい</label>' +
+      '<input type="text" id="f-summary" value="'+esc(v('summary',''))+'" placeholder="れい：宝石を集めて発展する戦略ゲーム"></div>' +
+
+    '<div class="form-group"><label class="lbl" for="f-quick">30びょうルール<span class="hint">改行で箇条書き</span></label>' +
+      '<textarea id="f-quick" placeholder="1. 宝石を取る&#10;2. カードを買う&#10;3. 15点で勝利">'+esc(v('quickRule',''))+'</textarea></div>' +
+
+    '<div class="form-group"><label class="lbl" for="f-reco">おすすめ ポイント</label>' +
+      '<textarea id="f-reco" placeholder="・初心者におすすめ&#10;・4人が一番楽しい">'+esc(v('recommendation',''))+'</textarea></div>' +
+
+    '<div class="form-group"><label class="lbl" for="f-detail">くわしい ルール</label>' +
+      '<textarea id="f-detail" style="min-height:170px">'+esc(v('detailRule',''))+'</textarea></div>' +
+
+    '<div class="btn-row"><button class="btn" data-go2="'+(editing ? '#/game/'+esc(id) : '#/admin')+'">やめる</button>' +
+      '<button class="btn primary" id="saveBtn" data-id="'+esc(id||'')+'">セーブする</button></div>' +
+    (editing ? '<button class="btn danger" id="deleteBtn" data-id="'+esc(id)+'" style="margin-top:12px">この ゲームを けす</button>' : '') +
+  '</section>';
+}
+
+function viewAdmin(){
+  const localOnly = store.read(KEY.localOnly, false);
+  const cfg = getSiteConfig();
+  const rows = state.games.map(g =>
+    '<div class="admin-row">' + thumbHTML(g,'mini') +
+    '<div class="t"><b>'+esc(g.title)+'</b><span>'+playersText(g)+'・'+(Number(g.playTime)||0)+'分・むずかしさ'+(g.difficulty||0)+'</span></div>' +
+    '<button class="mini" data-go2="#/edit/'+esc(g.id)+'">へんしゅう</button>' +
+    '<button class="mini warn" data-del="'+esc(g.id)+'">けす</button></div>').join('');
+
+  const tagRows = TAG_CATEGORIES.concat(['その他']).map(cat => {
+    const list = state.tags.filter(t => cat === 'その他' ? !TAG_CATEGORIES.includes(t.category) : t.category === cat);
+    if(!list.length) return '';
+    return '<div style="margin-bottom:10px"><div class="catlabel">'+esc(cat)+'</div><div class="chips">' +
+      list.map(t => '<span class="tagchip">'+esc(t.name)+'<button class="mini warn" data-deltag="'+esc(t.name)+'" style="border:0;padding:0 3px">✕</button></span>').join('') +
+      '</div></div>';
+  }).join('');
+
+  return '<section class="page">' +
+    '<h1 class="lede">かんり</h1>' +
+    '<p class="sub">ゲームの ついか・へんしゅう・さくじょ と、ともだちに みせる ための じゅんびが できます。</p>' +
+    '<button class="btn primary" data-go2="#/add" style="margin-bottom:18px">＋ ゲームを ついかする</button>' +
+
+    '<h2 class="sec">とうろく ゲーム（'+state.games.length+'）</h2>' +
+    (rows || '<div class="note">まだ 1けんも とうろく されていません。</div>') +
+
+    '<div class="divider"></div><h2 class="sec">タグ</h2>' +
+    '<p class="count">タグは じゆうに ついか・さくじょ できます。けすと 各ゲームからも はずれます。</p>' + tagRows +
+    '<div class="row" style="margin-top:10px">' +
+      '<input type="text" id="newTag" placeholder="あたらしい タグ" style="flex:2">' +
+      '<select id="newTagCat" style="flex:1">'+TAG_CATEGORIES.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select>' +
+      '<button class="mini" id="addTagBtn" style="flex:0 0 auto">ついか</button></div>' +
+
+    '<div class="divider"></div><h2 class="sec">ともだちの がめんにも だす</h2>' +
+    '<p class="count">ついかした ゲームは、いまは この スマホ（パソコン）の なかだけに あります。<br>' +
+      'したの ボタンを おすと、こうかいしている サイトの ゲームが いれかわり、ともだちの がめんにも でます。</p>' +
+
+    '<button class="btn primary big" id="publishBtn" style="margin-bottom:6px">サイトを こうしんする</button>' +
+    '<div id="pubStatus"></div>' +
+
+    '<details style="margin:14px 0 16px"'+(cfg.token?'':' open')+'><summary>さいしょの せってい（1かいだけ）</summary>' +
+      '<p class="count" style="margin:10px 0">サイトを おいて いる ばしょ（GitHub）の なまえと、かきこみ用の あいことばを いれます。この スマホの なかにだけ ほぞんされ、ともだちには みえません。</p>' +
+      '<div class="form-group"><label class="lbl" for="ghOwner">ユーザーめい</label>' +
+        '<input type="text" id="ghOwner" value="'+esc(cfg.owner)+'" placeholder="れい：taro123" autocapitalize="off" autocorrect="off"></div>' +
+      '<div class="form-group"><label class="lbl" for="ghRepo">おきばの なまえ</label>' +
+        '<input type="text" id="ghRepo" value="'+esc(cfg.repo)+'" placeholder="れい：board-game-library" autocapitalize="off" autocorrect="off"></div>' +
+      '<div class="form-group"><label class="lbl" for="ghBranch">えだの なまえ<span class="hint">たいてい main</span></label>' +
+        '<input type="text" id="ghBranch" value="'+esc(cfg.branch)+'" placeholder="main" autocapitalize="off" autocorrect="off"></div>' +
+      '<div class="form-group"><label class="lbl" for="ghToken">かきこみ用の あいことば</label>' +
+        '<input type="password" id="ghToken" value="'+esc(cfg.token)+'" placeholder="ghp_… で はじまる もじれつ" autocapitalize="off" autocorrect="off"></div>' +
+      '<div class="note">あいことばは GitHubの Settings → Developer settings → Personal access tokens で つくれます。この おきばだけに、かきこみ（Contents: Read and write）を ゆるすと あんぜんです。</div>' +
+    '</details>' +
+
+    '<details style="margin:0 0 16px"><summary>じどうを つかわない ばあい（てさぎょう）</summary>' +
+      '<div class="win" style="margin-top:10px">' +
+        '<p style="margin:0 0 10px;font-size:14px"><span style="color:var(--accent)">1.</span> したの ボタンで データの ファイルを ほぞんする</p>' +
+        '<button class="btn small" id="exportBtn" style="width:100%;margin-bottom:14px">ともだちよう データを つくる</button>' +
+        '<p style="margin:0 0 6px;font-size:14px"><span style="color:var(--accent)">2.</span> ほぞんした ファイルを、この サイトを おいた ばしょへ そのまま アップロードする</p>' +
+        '<p class="count" style="margin:0">ファイルの なまえは かえないで ください。</p>' +
+      '</div></details>' +
+
+    '<p class="count" style="margin-bottom:6px">スマホを かえる ときや、まえの ないように もどす ときは こちら。</p>' +
+    '<label class="btn small" style="width:100%;cursor:pointer;margin-bottom:16px;display:flex">ほぞんした データを よみこむ' +
+      '<input type="file" id="importFile" accept="application/json,.json"></label>' +
+
+    '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:14px">' +
+      '<input type="checkbox" id="localOnly" '+(localOnly?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
+      '<span style="font-size:13px">この スマホの へんしゅうを ゆうせんする<br>' +
+      '<span style="color:var(--muted);font-size:11.5px">ゲームを ついか・へんしゅうする 人（かんりする 人）は ONに して ください。つくりかけの ないようが きえなく なります。</span></span></label>' +
+    '<div class="divider"></div><h2 class="sec">サイトの ばしょを おしえる</h2>' +
+    '<p class="count">この サイトの アドレスと QRコードを だせます。その場で ともだちの スマホで よみとって もらえます。</p>' +
+    '<div class="row" style="margin-bottom:10px">' +
+      '<input type="text" id="shareUrl" value="'+esc(publicUrl())+'" placeholder="https://…" style="flex:2">' +
+      '<button class="mini" id="qrBtn" style="flex:0 0 auto">QRを だす</button></div>' +
+    '<div class="btn-row" style="margin-bottom:10px">' +
+      '<button class="btn small" id="copyUrlBtn" style="flex:1">URLを コピー</button>' +
+      '<button class="btn small" id="shareBtn" style="flex:1">きょうゆう</button></div>' +
+    '<div id="qrBox"></div>' +
+
+    '<div class="divider"></div><h2 class="sec">そのた</h2>' +
+    '<button class="mini warn" id="resetBtn">さいしょの サンプルに もどす</button>' +
+  '</section>';
+}
+
+/* ---------------- サイトの じどう こうしん ----------------
+   GitHub の API を つかって、こうかい中の library.json を
+   ボタン ひとつで おきかえる。トークンは この端末にだけ ほぞんされる。 */
+function getSiteConfig(){
+  const c = store.read(KEY.gh, {}) || {};
+  return { owner:c.owner||'', repo:c.repo||'', branch:c.branch||'main', token:c.token||'' };
+}
+function saveSiteConfig(c){ store.write(KEY.gh, c); }
+
+function toBase64Utf8(str){
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  const CH = 0x8000;
+  for(let i = 0; i < bytes.length; i += CH){
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+  }
+  return btoa(bin);
+}
+function pubStatus(msg, kind){
+  const el = document.getElementById('pubStatus');
+  if(!el) return;
+  const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
+  el.innerHTML = '<p class="count" style="color:'+color+';margin:10px 0 0">'+esc(msg)+'</p>';
+}
+async function publishToSite(){
+  const cfg = {
+    owner: (document.getElementById('ghOwner')||{value:''}).value.trim(),
+    repo:  (document.getElementById('ghRepo')||{value:''}).value.trim(),
+    branch:((document.getElementById('ghBranch')||{value:''}).value.trim() || 'main'),
+    token: (document.getElementById('ghToken')||{value:''}).value.trim()
+  };
+  if(!cfg.owner || !cfg.repo || !cfg.token){
+    pubStatus('さいしょの せっていを ぜんぶ いれて ください。', 'ng');
+    return;
+  }
+  saveSiteConfig(cfg);
+
+  const btn = document.getElementById('publishBtn');
+  if(btn) btn.disabled = true;
+  pubStatus('サイトに つないで います…');
+
+  const api = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' +
+              encodeURIComponent(cfg.repo) + '/contents/library.json';
+  const headers = { 'Authorization':'Bearer ' + cfg.token, 'Accept':'application/vnd.github+json' };
+
+  try{
+    let sha = null;
+    const cur = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), {headers});
+    if(cur.status === 200){ sha = (await cur.json()).sha; }
+    else if(cur.status === 401){ throw new Error('あいことば（トークン）が ちがうか、きげんが きれています。'); }
+    else if(cur.status === 403){ throw new Error('この あいことばには かきこむ けんげんが ありません。'); }
+    else if(cur.status !== 404){ throw new Error('サイトが みつかりません。ユーザーめいと おきばの なまえを たしかめて ください。'); }
+
+    const ver = new Date().toISOString();
+    const payload = {
+      message: 'ボードゲームを こうしん',
+      content: toBase64Utf8(JSON.stringify({version:ver, tags:state.tags, games:state.games}, null, 2)),
+      branch: cfg.branch
+    };
+    if(sha) payload.sha = sha;
+
+    const put = await fetch(api, {
+      method:'PUT',
+      headers: Object.assign({'Content-Type':'application/json'}, headers),
+      body: JSON.stringify(payload)
+    });
+    if(!put.ok){
+      if(put.status === 404) throw new Error('おきばが みつかりません。ユーザーめい・おきばの なまえ・ブランチを たしかめて ください。');
+      if(put.status === 409) throw new Error('ブランチの なまえが ちがうかも しれません（main か master）。');
+      throw new Error('こうしん できませんでした（' + put.status + '）。');
+    }
+    store.write(KEY.pubver, ver);
+    pubStatus('こうしん しました！ 1〜2ふん あとに ともだちの がめんにも でます。', 'ok');
+    toast('サイトを こうしん しました');
+  }catch(err){
+    pubStatus((err && err.message) ? err.message : 'つうしんに しっぱい しました。でんぱを たしかめて ください。', 'ng');
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+}
+
+/* ---------------- 共有・QR ---------------- */
+function publicUrl(){
+  if(location.protocol === 'file:') return '';
+  return location.origin + location.pathname;
+}
+function showQR(url){
+  const box = document.getElementById('qrBox');
+  if(!box) return;
+  if(!/^https?:\/\//.test(url)){
+    box.innerHTML = '<div class="note">インターネットに こうかいした あとの アドレス（https:// から はじまる もの）を いれて ください。<br>' +
+      'じぶんの スマホや パソコンの なかで ひらいて いる あいだは、QRコードを つくれません。</div>';
+    return;
+  }
+  const src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=' + encodeURIComponent(url);
+  box.innerHTML =
+    '<div class="win" style="text-align:center">' +
+      '<div style="background:#fff;padding:10px;display:inline-block;border:3px solid var(--frame)">' +
+        '<img id="qrImg" src="'+esc(src)+'" alt="QRコード" width="220" height="220" style="display:block;image-rendering:pixelated">' +
+      '</div>' +
+      '<p class="count" style="margin:10px 0 0;word-break:break-all">'+esc(url)+'</p>' +
+    '</div>';
+  const img = document.getElementById('qrImg');
+  if(img) img.onerror = () => {
+    box.innerHTML = '<div class="note">QR画像を よみこめませんでした（つうしんが ないか、ブロックされています）。<br>URLを コピーして おくってください。</div>';
+  };
+}
+function copyText(text){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(()=>toast('コピーしました'), ()=>toast('コピーできませんでした'));
+    return;
+  }
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); toast('コピーしました'); }
+  catch(e){ toast('コピーできませんでした'); }
+  ta.remove();
+}
+
+/* ---------------- 画像プレビュー ---------------- */
+function paintImgPreview(){
+  const box = document.getElementById('imgPreview');
+  if(!box) return;
+  box.innerHTML = state.formImages.map((src,i) =>
+    '<figure><img src="'+esc(src)+'" alt=""><button class="x" data-rmimg="'+i+'" aria-label="けす">✕</button></figure>').join('');
+}
+
+/* ---------------- events ---------------- */
+function bind(r){
+  app.querySelectorAll('[data-go2]').forEach(b => b.onclick = () => go(b.dataset.go2));
+  app.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('#/game/'+b.dataset.open));
+
+  app.querySelectorAll('[data-chip]').forEach(b => {
+    b.onclick = () => {
+      const kind = b.dataset.chip, val = b.dataset.val;
+      if(kind === 'tags'){
+        const i = state.filters.tags.indexOf(val);
+        if(i >= 0) state.filters.tags.splice(i,1); else state.filters.tags.push(val);
+      }else{
+        state.filters[kind] = state.filters[kind] === val ? null : val;
+      }
+      saveFilters(); render();
+    };
+  });
+  const playersN = document.getElementById('playersN');
+  if(playersN) playersN.onchange = e => {
+    state.filters.playersN = Math.min(30, Math.max(6, Number(e.target.value)||6));
+    saveFilters(); render();
+  };
+  const clearBtn = document.getElementById('clearFilter');
+  if(clearBtn) clearBtn.onclick = () => { state.filters = {time:null,players:null,playersN:6,tags:[]}; saveFilters(); render(); };
+  const searchBtn = document.getElementById('searchBtn');
+  if(searchBtn) searchBtn.onclick = () => go('#/list');
+  const randomBtn = document.getElementById('randomBtn');
+  if(randomBtn) randomBtn.onclick = () => { go('#/random'); setTimeout(roll, 60); };
+
+  const listQ = document.getElementById('listQ');
+  if(listQ){
+    listQ.oninput = e => {
+      state.listQuery = e.target.value;
+      clearTimeout(bind._q);
+      bind._q = setTimeout(() => {
+        const pos = e.target.selectionStart;
+        render();
+        const el = document.getElementById('listQ');
+        if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} }
+      }, 260);
+    };
+  }
+  const listSort = document.getElementById('listSort');
+  if(listSort) listSort.onchange = e => { state.listSort = e.target.value; render(); };
+
+  const rollBtn = document.getElementById('rollBtn');
+  if(rollBtn) rollBtn.onclick = roll;
+
+  const fileInput = document.getElementById('f-images');
+  if(fileInput){
+    paintImgPreview();
+    fileInput.onchange = async e => {
+      for(const f of Array.from(e.target.files||[])){
+        try{ state.formImages.push(await readImage(f)); }
+        catch(err){ toast('よみこめない 画像が ありました'); }
+      }
+      e.target.value = '';
+      paintImgPreview();
+    };
+    document.getElementById('imgPreview').onclick = e => {
+      const btn = e.target.closest('[data-rmimg]');
+      if(!btn) return;
+      state.formImages.splice(Number(btn.dataset.rmimg),1);
+      paintImgPreview();
+    };
+  }
+  const addUrlBtn = document.getElementById('addUrlBtn');
+  if(addUrlBtn) addUrlBtn.onclick = () => {
+    const input = document.getElementById('f-imgurl');
+    const url = input.value.trim();
+    if(!url) return toast('画像の URLを いれてください');
+    if(!/^(https?:\/\/|data:image\/)/.test(url)) return toast('https:// から はじまる URLを いれてください');
+    state.formImages.push(url);
+    input.value = '';
+    paintImgPreview();
+    toast('画像を ついかしました');
+  };
+  app.querySelectorAll('[data-formtag]').forEach(b => {
+    b.onclick = () => {
+      const t = b.dataset.formtag;
+      const i = state.formTags.indexOf(t);
+      if(i >= 0) state.formTags.splice(i,1); else state.formTags.push(t);
+      b.setAttribute('aria-pressed', String(i < 0));
+    };
+  });
+  app.querySelectorAll('[data-star]').forEach(group => {
+    group.onclick = e => {
+      const b = e.target.closest('button[data-v]');
+      if(!b) return;
+      const v = Number(b.dataset.v);
+      const cur = Number(group.nextElementSibling.value);
+      const next = (cur === v) ? 0 : v;
+      group.nextElementSibling.value = next;
+      group.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(Number(x.dataset.v) <= next)));
+    };
+  });
+  const saveBtn = document.getElementById('saveBtn');
+  if(saveBtn) saveBtn.onclick = () => saveForm(saveBtn.dataset.id || null);
+  const deleteBtn = document.getElementById('deleteBtn');
+  if(deleteBtn) deleteBtn.onclick = () => removeGame(deleteBtn.dataset.id);
+
+  app.querySelectorAll('[data-del]').forEach(b => b.onclick = () => removeGame(b.dataset.del));
+  app.querySelectorAll('[data-deltag]').forEach(b => b.onclick = () => {
+    const name = b.dataset.deltag;
+    if(!confirm('タグ「'+name+'」を けします。各ゲームからも はずれます。')) return;
+    state.tags = state.tags.filter(t => t.name !== name);
+    state.games.forEach(g => g.tags = (g.tags||[]).filter(t => t !== name));
+    state.filters.tags = state.filters.tags.filter(t => t !== name);
+    saveTags(); saveGames(); saveFilters(); render(); toast('タグを けしました');
+  });
+  const addTagBtn = document.getElementById('addTagBtn');
+  if(addTagBtn) addTagBtn.onclick = () => {
+    const name = document.getElementById('newTag').value.trim();
+    if(!name) return toast('タグの なまえを いれてください');
+    if(state.tags.some(t => t.name === name)) return toast('おなじ なまえの タグが あります');
+    state.tags.push({name, category: document.getElementById('newTagCat').value});
+    saveTags(); render(); toast('タグを ついかしました');
+  };
+  const exportBtn = document.getElementById('exportBtn');
+  if(exportBtn) exportBtn.onclick = exportLibrary;
+  const importFile = document.getElementById('importFile');
+  if(importFile) importFile.onchange = importLibrary;
+  const localOnly = document.getElementById('localOnly');
+  if(localOnly) localOnly.onchange = e => {
+    store.write(KEY.localOnly, e.target.checked);
+    toast(e.target.checked ? 'この スマホの へんしゅうを ゆうせんします' : 'サイトの データを はんえいします');
+  };
+  const publishBtn = document.getElementById('publishBtn');
+  if(publishBtn) publishBtn.onclick = publishToSite;
+  const qrBtn = document.getElementById('qrBtn');
+  if(qrBtn) qrBtn.onclick = () => showQR(document.getElementById('shareUrl').value.trim());
+  const copyUrlBtn = document.getElementById('copyUrlBtn');
+  if(copyUrlBtn) copyUrlBtn.onclick = () => {
+    const url = document.getElementById('shareUrl').value.trim();
+    if(!url) return toast('URLが ありません');
+    copyText(url);
+  };
+  const shareBtn = document.getElementById('shareBtn');
+  if(shareBtn) shareBtn.onclick = () => {
+    const url = document.getElementById('shareUrl').value.trim();
+    if(!url) return toast('URLが ありません');
+    if(navigator.share) navigator.share({title:'Board Game Library', url}).catch(()=>{});
+    else copyText(url);
+  };
+  const resetBtn = document.getElementById('resetBtn');
+  if(resetBtn) resetBtn.onclick = () => {
+    if(!confirm('とうろくした 内容を すべて けして、サンプルに もどします。よろしいですか？')) return;
+    state.games = SEED_GAMES.map(g=>({...g}));
+    state.tags = DEFAULT_TAGS.map(t=>({...t}));
+    saveGames(); saveTags(); render(); toast('サンプルに もどしました');
+  };
+}
+
+/* ---------------- actions ---------------- */
+function roll(){
+  const f = state.filters;
+  const res = search(f);
+  let pool = hasFilter(f) ? res.perfect : state.games;
+  let fallback = false;
+  if(!pool.length && res.near.length){ pool = res.near; fallback = true; }
+
+  const slot = document.getElementById('randomSlot');
+  if(!slot) return;
+
+  if(!pool.length){
+    slot.innerHTML = '<div class="empty"><span class="mark" data-icon="search"></span>じょうけんに あう ゲームが みつからない！' +
+      '<div style="margin-top:16px"><button class="btn small" data-go2="#/">じょうけんを えらびなおす</button></div></div>';
+    paintIcons(slot); bind(currentRoute()); return;
+  }
+
+  let pick = pool[Math.floor(Math.random()*pool.length)];
+  if(pool.length > 1 && pick.id === state.lastRandomId) pick = pool[(pool.indexOf(pick)+1) % pool.length];
+  state.lastRandomId = pick.id;
+
+  slot.innerHTML = '<div class="roll-stage"><span class="die shaking" data-icon="die"></span>' +
+    '<p class="encounter blink">＊ シャッフル ちゅう…</p></div>';
+  paintIcons(slot);
+
+  setTimeout(() => {
+    slot.innerHTML = (fallback ? '<div class="note" style="margin-bottom:12px">ぴったりの 1本が いなかったので、ちかい ゲームから えらびました。</div>' : '')
+      + randomResultHTML(pick);
+    paintIcons(slot); bind(currentRoute());
+  }, 700);
+}
+
+function saveForm(id){
+  const val = s => (document.getElementById(s)||{value:''}).value;
+  const num = s => Number(val(s))||0;
+  const hidden = n => Number((document.querySelector('input[name="'+n+'"]')||{value:0}).value)||0;
+
+  const title = val('f-title').trim();
+  if(!title) return toast('タイトルを いれてください');
+
+  let pmin = Math.max(1,num('f-pmin')), pmax = Math.max(1,num('f-pmax'));
+  if(pmin > pmax){ const t = pmin; pmin = pmax; pmax = t; }
+
+  const data = {
+    id: id || uid(), title,
+    images: state.formImages.slice(),
+    playersMin: pmin, playersMax: pmax,
+    playTime: Math.max(1,num('f-time')), age: num('f-age'),
+    difficulty: hidden('difficulty'), strategy: hidden('strategy'),
+    excitement: hidden('excitement'), luck: hidden('luck'),
+    tags: state.formTags.slice(),
+    summary: val('f-summary').trim(),
+    quickRule: val('f-quick'), detailRule: val('f-detail'), recommendation: val('f-reco')
+  };
+
+  if(id){
+    const i = state.games.findIndex(g => g.id === id);
+    if(i >= 0) state.games[i] = data;
+  }else{
+    state.games.unshift(data);
+  }
+  saveGames();
+  toast(id ? 'セーブしました' : title + ' を なかまに した！');
+  go('#/game/' + data.id);
+}
+
+function removeGame(id){
+  const g = state.games.find(x => x.id === id);
+  if(!g) return;
+  if(!confirm('「'+g.title+'」を けします。よろしいですか？')) return;
+  state.games = state.games.filter(x => x.id !== id);
+  saveGames(); toast('けしました'); go('#/admin'); render();
+}
+
+function exportLibrary(){
+  const payload = { version:new Date().toISOString(), tags:state.tags, games:state.games };
+  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'library.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  store.write(KEY.pubver, payload.version);
+  toast('データの ファイルを ほぞんしました');
+}
+
+function importLibrary(e){
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    try{
+      const data = JSON.parse(fr.result);
+      if(!data || !Array.isArray(data.games)) throw new Error('format');
+      state.games = data.games;
+      if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
+      saveGames(); saveTags();
+      if(data.version) store.write(KEY.pubver, String(data.version));
+      render(); toast('よみこみました（'+data.games.length+'さくひん）');
+    }catch(err){ toast('よみこめませんでした。ほぞんした データの ファイルを えらんで ください'); }
+  };
+  fr.readAsText(file);
+  e.target.value = '';
+}
+
+/* ---------------- theme ---------------- */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('themeBtn').textContent = t === 'day' ? 'ひる' : 'よる';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', t === 'day' ? '#DCD6C4' : '#141C3A');
+}
+function initTheme(){
+  applyTheme(store.read(KEY.theme, null) || 'night');
+  document.getElementById('themeBtn').onclick = () => {
+    const next = document.documentElement.getAttribute('data-theme') === 'day' ? 'night' : 'day';
+    applyTheme(next); store.write(KEY.theme, next);
+  };
+}
+
+/* ---------------- boot ---------------- */
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => {
+    if(t.dataset.go === '#/random'){ go('#/random'); setTimeout(roll, 60); return; }
+    go(t.dataset.go);
+  };
+});
+window.addEventListener('hashchange', render);
+
+paintIcons(document);
+initTheme();
+loadAll();
+render();
+syncPublished();
+
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
+</script>
+</body>
+</html>
