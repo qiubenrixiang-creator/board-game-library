@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-05T04:04:37.001Z",
+  "version": "2026-09-05T13:45:38.127Z",
   "tags": [
     {
       "name": "初心者",
@@ -50,6 +50,30 @@
       "category": "ジャンル"
     },
     {
+      "name": "ブラフ",
+      "category": "ジャンル"
+    },
+    {
+      "name": "ワードゲーム",
+      "category": "ジャンル"
+    },
+    {
+      "name": "アクション",
+      "category": "ジャンル"
+    },
+    {
+      "name": "ダイス",
+      "category": "ジャンル"
+    },
+    {
+      "name": "記憶",
+      "category": "ジャンル"
+    },
+    {
+      "name": "リアルタイム",
+      "category": "ジャンル"
+    },
+    {
       "name": "盛り上がる",
       "category": "雰囲気"
     },
@@ -68,12 +92,55 @@
     {
       "name": "家族向け",
       "category": "雰囲気"
+    },
+    {
+      "name": "データみきにゅう",
+      "category": "そのた"
     }
   ],
   "games": [
     {
-      "id": "seed-ito",
-      "title": "ito（イト）",
+      "id": "g001",
+      "title": "3秒トライ！",
+      "images": [],
+      "summary": "お題に3秒で答えるスピードパーティーゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 8,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "パーティー",
+        "盛り上がる",
+        "ワードゲーム"
+      ]
+    },
+    {
+      "id": "g002",
+      "title": "5本のキュウリ",
+      "images": [],
+      "summary": "最後の1トリックで大きい数字を出さないよう立ち回るカードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g003",
+      "title": "ito クラシック",
       "images": [],
       "playersMin": 2,
       "playersMax": 10,
@@ -92,8 +159,1756 @@
       "detailRule": "カードは全員に1枚ずつ配られ、自分の数字は絶対に他人へ伝えられません。お題に対して「その数字らしさ」だけを言葉で表現します。たとえば「1は最悪、100は最高」の基準でお題が「コンビニの好きなおにぎり」なら、53の人は「まあ普通においしい、たまに買う」といった表現になります。全員の表現を聞いたら、誰が小さいかを相談し、小さいと思う人からカードを場に出します。出したカードが昇順になっていれば継続、逆転していたら失敗としてライフが1つ減ります。ライフが残った状態で全員がカードを出し切ればクリアです。慣れてきたら1人2枚配って難易度を上げられます。"
     },
     {
-      "id": "seed-nanjamonja",
-      "title": "ナンジャモンジャ",
+      "id": "g004",
+      "title": "KLASK(クラスク)",
+      "images": [],
+      "summary": "磁石のコマを操って相手のゴールを狙う2人用アクションゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 2,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "アクション",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g005",
+      "title": "lineup(ラインナップ)",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g006",
+      "title": "Poi(ポイ)",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g007",
+      "title": "UNO FLIP!",
+      "images": [],
+      "summary": "裏返るとルールが変わるUNO。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 10,
+      "playTime": 30,
+      "age": 7,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "運要素"
+      ]
+    },
+    {
+      "id": "g008",
+      "title": "あいうえバトル",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g009",
+      "title": "アイランド(サバイブ！)",
+      "images": [],
+      "summary": "沈んでいく島から探検家を助け出すサバイバルゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 45,
+      "age": 8,
+      "difficulty": 3,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g010",
+      "title": "あおもりレシピ",
+      "images": [],
+      "summary": "カードを集めて料理を完成させるレシピシリーズのご当地版。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g011",
+      "title": "赤ずきんは眠らない",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g012",
+      "title": "アズール",
+      "images": [],
+      "summary": "美しいタイルを取り、壁を彩っていくタイル配置ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 40,
+      "age": 8,
+      "difficulty": 3,
+      "tags": [
+        "中級者",
+        "対戦",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g013",
+      "title": "アルゴ",
+      "images": [],
+      "summary": "相手の数字カードを推理して当てる数当てゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 20,
+      "age": 7,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g014",
+      "title": "アンコンシャス・マインド",
+      "images": [],
+      "summary": "心理学の黎明期を舞台にした重量級ワーカープレイスメント。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 1,
+      "playersMax": 4,
+      "playTime": 120,
+      "age": 14,
+      "difficulty": 5,
+      "tags": [
+        "重量級",
+        "ワーカープレイスメント",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g015",
+      "title": "いかだの5人",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g016",
+      "title": "いぬポーカー",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g017",
+      "title": "インカの黄金",
+      "images": [],
+      "summary": "遺跡を進むか引き返すか。撤退の見極めが全てのチキンレース。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 8,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "盛り上がる",
+        "運要素",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g018",
+      "title": "インサイダーゲーム",
+      "images": [],
+      "summary": "質問で答えを当てつつ、誘導していた裏切り者を探す。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 4,
+      "playersMax": 8,
+      "playTime": 15,
+      "age": 9,
+      "difficulty": 2,
+      "tags": [
+        "正体隠匿",
+        "パーティー",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g019",
+      "title": "インパクト",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g020",
+      "title": "ウィングスパン",
+      "images": [],
+      "summary": "鳥を呼び寄せて生態系を育てるエンジンビルドゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 1,
+      "playersMax": 5,
+      "playTime": 70,
+      "age": 10,
+      "difficulty": 4,
+      "tags": [
+        "中級者",
+        "重量級",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g021",
+      "title": "ウナギかヘビか",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g022",
+      "title": "ウボンゴ",
+      "images": [],
+      "summary": "図形ピースを枠にぴったり収める早解きパズル。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 1,
+      "playersMax": 4,
+      "playTime": 25,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g023",
+      "title": "エバーデール",
+      "images": [],
+      "summary": "森の動物たちの町を作るワーカープレイスメント。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 1,
+      "playersMax": 4,
+      "playTime": 80,
+      "age": 13,
+      "difficulty": 4,
+      "tags": [
+        "重量級",
+        "ワーカープレイスメント",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g024",
+      "title": "エルフェンランド",
+      "images": [],
+      "summary": "乗り物カードを使って妖精の国を旅する。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 60,
+      "age": 10,
+      "difficulty": 3,
+      "tags": [
+        "中級者",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g025",
+      "title": "お邪魔者",
+      "images": [],
+      "summary": "金を掘りたい鉱夫と、邪魔をするお邪魔者の隠れた戦い。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 10,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "正体隠匿",
+        "対戦",
+        "盛り上がる",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g026",
+      "title": "おばけキャッチ",
+      "images": [],
+      "summary": "条件に合う駒を誰よりも早くつかむ反射神経ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 8,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "盛り上がる",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g027",
+      "title": "音速飯店",
+      "images": [],
+      "summary": "手番なしで叫びながら中華料理を完成させるスピードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "盛り上がる",
+        "リアルタイム"
+      ]
+    },
+    {
+      "id": "g028",
+      "title": "ガイスター",
+      "images": [],
+      "summary": "良いオバケと悪いオバケを隠して戦う2人用の心理戦。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 2,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g029",
+      "title": "海底探険",
+      "images": [],
+      "summary": "酸素を分け合いながら深海のお宝を持ち帰るチキンレース。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "運要素",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g030",
+      "title": "海底探検 深版",
+      "images": [],
+      "summary": "海底探険のリメイク版。より深く、より危険に。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "運要素",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g031",
+      "title": "カイト",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g032",
+      "title": "カタン",
+      "images": [],
+      "playersMin": 3,
+      "playersMax": 4,
+      "playTime": 75,
+      "age": 10,
+      "difficulty": 4,
+      "tags": [
+        "中級者",
+        "重量級",
+        "対戦",
+        "頭脳戦",
+        "運要素"
+      ],
+      "summary": "資源を集めて交渉し、島に開拓地を広げていく王道ゲーム。",
+      "quickRule": "1. サイコロを振って資源をもらう\n2. 他のプレイヤーと交渉して交換する\n3. 道・開拓地・都市を建てる\n4. 先に10点に到達した人の勝ち",
+      "recommendation": "・交渉が始まると一気に盛り上がる\n・時間があるときの本命\n・初回は説明15分＋プレイ60分を見込んで",
+      "detailRule": "六角形のタイルで島を作り、各タイルに数字チップを置きます。手番の最初にサイコロを2個振り、出目と一致するタイルに接する開拓地の持ち主が資源を受け取ります。資源は他プレイヤーと自由に交渉して交換でき、ここでの立ち回りが勝敗を大きく左右します。道・開拓地・都市はそれぞれ決まった資源の組み合わせで建設し、開拓地1点、都市2点として計算します。最長交易路や最大騎士力のボーナスを含め、手番中に10点へ到達した人の勝ちです。7が出たときの盗賊の移動も重要な駆け引きになります。"
+    },
+    {
+      "id": "g033",
+      "title": "我流功夫極めロード",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g034",
+      "title": "カルカソンヌ",
+      "images": [],
+      "summary": "タイルをつなげて街道や都市を広げる陣取りゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 45,
+      "age": 8,
+      "difficulty": 3,
+      "tags": [
+        "中級者",
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g035",
+      "title": "がんめんマン",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g036",
+      "title": "キャット＆チョコレート 日常編",
+      "images": [],
+      "summary": "手札のアイテムでピンチをどう切り抜けるか説明する大喜利ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "パーティー",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g037",
+      "title": "キャプテン・リノ",
+      "images": [],
+      "summary": "カードでビルを積み上げ、崩さないようにするバランスゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 5,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g038",
+      "title": "キャプテン・リノ スーパーバトル",
+      "images": [],
+      "summary": "キャプテン・リノの大型版。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 20,
+      "age": 5,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g039",
+      "title": "キューバーズ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g040",
+      "title": "キュリオス",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g041",
+      "title": "キングオブトウキョー",
+      "images": [],
+      "summary": "怪獣になってダイスを振り、東京の王を目指す。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "盛り上がる",
+        "ダイス",
+        "運要素",
+        "対戦"
+      ]
+    },
+    {
+      "id": "g042",
+      "title": "クアルト・ミニ",
+      "images": [],
+      "summary": "相手に駒を選ばせて4つ並びを狙う2人用アブストラクト。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 2,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 3,
+      "tags": [
+        "対戦",
+        "頭脳戦",
+        "静か"
+      ]
+    },
+    {
+      "id": "g043",
+      "title": "クイズいいセン行きまSHOW!",
+      "images": [],
+      "summary": "答えの「真ん中」を狙う、みんなのズレを楽しむクイズ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 10,
+      "playTime": 30,
+      "age": 10,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる",
+        "初心者"
+      ]
+    },
+    {
+      "id": "g044",
+      "title": "九九ジャン",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g045",
+      "title": "クジラオルカ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g046",
+      "title": "クラスター",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g047",
+      "title": "月面探険",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g048",
+      "title": "声をひそめて",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g049",
+      "title": "コードネームデュエット",
+      "images": [],
+      "summary": "2人で協力して単語を当てるコードネーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 2,
+      "playTime": 15,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "協力",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g050",
+      "title": "ごきぶりポーカー",
+      "images": [],
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "対戦",
+        "運要素",
+        "盛り上がる",
+        "家族向け",
+        "軽量級"
+      ],
+      "summary": "「これはカエルだよ」の一言を、信じるか疑うかだけのブラフ合戦。",
+      "quickRule": "1. 手札から1枚を裏向きで誰かに渡し、生き物の名前を宣言する\n2. 渡された人は「当たり」か「はずれ」を答える\n3. 外した方がそのカードを引き取る\n4. 同じ生き物を4枚集めてしまった人の負け",
+      "recommendation": "・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀",
+      "detailRule": "8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。"
+    },
+    {
+      "id": "g051",
+      "title": "国旗王",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g052",
+      "title": "小早川 新版",
+      "images": [],
+      "summary": "たった1枚のカードで勝負する超短時間の心理戦。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "対戦",
+        "運要素",
+        "頭脳戦",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g053",
+      "title": "ゴブレット・ゴブラーズ",
+      "images": [],
+      "summary": "大きい駒でかぶせられる三目並べ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 2,
+      "playTime": 10,
+      "age": 5,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g054",
+      "title": "コヨーテ",
+      "images": [],
+      "summary": "自分だけ見えない数字を推理する、はったりの心理戦。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 10,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "運要素",
+        "パーティー",
+        "ブラフ"
+      ]
+    },
+    {
+      "id": "g055",
+      "title": "これは俺の魚だ！",
+      "images": [],
+      "summary": "ペンギンで魚を集めながら相手の道をふさぐ陣取り。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g056",
+      "title": "ザ・マインド エクストリーム",
+      "images": [],
+      "summary": "言葉を使わず、数字の順番を合わせる協力ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "協力",
+        "静か"
+      ]
+    },
+    {
+      "id": "g057",
+      "title": "サイトシーイング",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g058",
+      "title": "さかなかるた",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g059",
+      "title": "ザックンパック",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g060",
+      "title": "侍石～JISHAKU～",
+      "images": [],
+      "summary": "磁石の石を落とし、くっつけないように置く緊張のゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g061",
+      "title": "シャドウズ・イン・ザ・フォレスト",
+      "images": [],
+      "summary": "部屋を暗くして遊ぶ、影に隠れる妖精たちのゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "家族向け",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g062",
+      "title": "人狼ドッチ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g063",
+      "title": "スイーツレシピ",
+      "images": [],
+      "summary": "カードを集めてスイーツを完成させるレシピシリーズ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g064",
+      "title": "スカウト",
+      "images": [],
+      "summary": "手札の並び替えができないのが悩ましいカードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 20,
+      "age": 9,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g065",
+      "title": "スカル",
+      "images": [],
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "初心者",
+        "対戦",
+        "頭脳戦",
+        "静か"
+      ],
+      "summary": "花を伏せるか、ドクロを混ぜるか。度胸で読み合うブラフゲーム。",
+      "quickRule": "1. 手持ちのコースターを裏向きに置いていく\n2. 「何枚めくれるか」を宣言して競り合う\n3. 勝った人は宣言した枚数だけめくる\n4. 花だけをめくれれば成功。2回成功で勝ち",
+      "recommendation": "・コンポーネントが渋くて雰囲気がいい\n・ルールは2分、駆け引きは無限\n・静かに熱くなりたい夜に",
+      "detailRule": "各プレイヤーは花3枚とドクロ1枚を持ちます。全員が裏向きに1枚以上を積んだあと、誰かが「自分は◯枚めくれる」と宣言すると競りが始まり、より多い枚数を宣言するか降りるかを選びます。最も高い宣言をした人は、まず自分の山からめくり、その後は他人の山から好きにめくります。宣言枚数ぶんの花をめくれれば成功、ドクロが出たら失敗して手持ちを1枚失います。2回成功した人がその場の勝者です。"
+    },
+    {
+      "id": "g066",
+      "title": "すずめ雀",
+      "images": [],
+      "summary": "牌を減らして遊びやすくした入門用の麻雀。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "運要素",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g067",
+      "title": "スティッキー",
+      "images": [],
+      "summary": "束から棒を1本ずつ抜き取るバランスゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "初心者",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g068",
+      "title": "スティックスタック",
+      "images": [],
+      "summary": "カラフルな棒を積み上げるバランスゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 8,
+      "playTime": 20,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "アクション",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g069",
+      "title": "ストーリーキューブ",
+      "images": [],
+      "summary": "サイコロの絵をつないで物語を作る。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 1,
+      "playersMax": 8,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "ワードゲーム"
+      ]
+    },
+    {
+      "id": "g070",
+      "title": "ストライク",
+      "images": [],
+      "summary": "ダイスを闘技場に投げ込み、同じ目を狙う。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "運要素",
+        "ダイス"
+      ]
+    },
+    {
+      "id": "g071",
+      "title": "スピードカップス",
+      "images": [],
+      "summary": "お題どおりにカップを並べる早さ勝負。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "アクション",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g072",
+      "title": "スポッツ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g073",
+      "title": "ソクラテスラ",
+      "images": [],
+      "summary": "偉人を合体させて戦わせるカードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "盛り上がる",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g074",
+      "title": "ソクラテスラ拡張版～神々の宴～",
+      "images": [],
+      "summary": "ソクラテスラの拡張セット。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "盛り上がる",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g075",
+      "title": "ソクラテスラ拡張版～死のプレゼンテーション～",
+      "images": [],
+      "summary": "ソクラテスラの拡張セット。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "盛り上がる",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g076",
+      "title": "そっとおやすみ",
+      "images": [],
+      "summary": "そろえた人からそっと寝る、静かな早抜けゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 7,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "パーティー",
+        "家族向け"
+      ]
+    },
+    {
+      "id": "g077",
+      "title": "ダイイングメッセージ",
+      "images": [],
+      "summary": "被害者が残した記号から犯人を伝える推理ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "協力",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g078",
+      "title": "タイガー＆ドラゴン",
+      "images": [],
+      "summary": "手札を出し切ることを狙う、和風の心理戦。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 30,
+      "age": 9,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g079",
+      "title": "ダイスフォージ",
+      "images": [],
+      "summary": "ダイスの面を自分で強化していく神話のゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 60,
+      "age": 10,
+      "difficulty": 3,
+      "tags": [
+        "中級者",
+        "ダイス",
+        "運要素"
+      ]
+    },
+    {
+      "id": "g080",
+      "title": "ダイビィ！",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g081",
+      "title": "たった今考えたプロポーズの言葉を君に捧ぐよ。",
+      "images": [],
+      "summary": "即興のプロポーズで相手の心を射止める大喜利ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 7,
+      "playTime": 30,
+      "age": 10,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる",
+        "ワードゲーム"
+      ]
+    },
+    {
+      "id": "g082",
+      "title": "ダブルナイン",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g083",
+      "title": "たべたのだぁれ？",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g084",
+      "title": "タンブリンダイス",
+      "images": [],
+      "summary": "ダイスを弾いて得点エリアを狙うおはじきゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "アクション",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g085",
+      "title": "チーズは誰が食べた？",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g086",
+      "title": "チャオチャオ",
+      "images": [],
+      "summary": "嘘をついて橋を渡る、シンプルなブラフゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "ブラフ",
+        "運要素"
+      ]
+    },
+    {
+      "id": "g087",
+      "title": "テストプレイなんてしてないよ",
+      "images": [],
+      "summary": "無茶な勝利条件を先に達成した人の勝ち。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 7,
+      "playTime": 10,
+      "age": 10,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g088",
+      "title": "テストプレイなんてしてないよ アニマル",
+      "images": [],
+      "summary": "「テストプレイなんてしてないよ」のシリーズ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 7,
+      "playTime": 10,
+      "age": 10,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g089",
+      "title": "テストプレイなんてしてないよ 黒",
+      "images": [],
+      "summary": "「テストプレイなんてしてないよ」のシリーズ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 7,
+      "playTime": 10,
+      "age": 10,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g090",
+      "title": "テレストレーション",
+      "images": [],
+      "summary": "描いて当てて、また描く。ズレていく伝言ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 4,
+      "playersMax": 8,
+      "playTime": 30,
+      "age": 12,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g091",
+      "title": "ドデリド エクストリーム",
+      "images": [],
+      "summary": "条件に合わせて言葉を叫ぶ反射神経ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "アクション",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g092",
+      "title": "トマトマト",
+      "images": [],
+      "summary": "言い間違えたら負けの早口カードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "盛り上がる",
+        "ワードゲーム",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g093",
+      "title": "ドミニオン",
+      "images": [],
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 13,
+      "difficulty": 3,
+      "tags": [
+        "中級者",
+        "デッキ構築",
+        "対戦",
+        "頭脳戦"
+      ],
+      "summary": "カードを買って自分の山札を強くしていく、デッキ構築の元祖。",
+      "quickRule": "1. 手札5枚でアクションを1回使う\n2. 財宝を出してカードを1枚買う\n3. 使ったカードは捨て札にして5枚引く\n4. 終了時に勝利点が最も多い人の勝ち",
+      "recommendation": "・毎回使うカードが変わるので飽きない\n・慣れると1ゲーム25分\n・じっくり考えたい人向け",
+      "detailRule": "全員が同じ初期デッキ（銅貨7枚と屋敷3枚）から始めます。手番は「アクション1回・購入1回」が基本で、アクションカードの効果によって追加のドローや購入が可能になります。買ったカードは捨て札に置かれ、山札が尽きたら捨て札を混ぜて新しい山札にするため、買ったカードは必ず手札に巡ってきます。勝利点カードはデッキの動きを鈍らせるため、いつ買うかの判断が勝負どころです。属州の山が尽きるか、いずれかの3つの山が尽きたらゲーム終了、勝利点の合計で勝敗を決めます。"
+    },
+    {
+      "id": "g094",
+      "title": "ドミニオン：海辺",
+      "images": [],
+      "summary": "ドミニオンの拡張セット。海がテーマ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 13,
+      "difficulty": 3,
+      "tags": [
+        "中級者",
+        "デッキ構築",
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g095",
+      "title": "ドラスレ",
+      "images": [],
+      "summary": "村人となってドラゴン退治に挑む協力型RPGボードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 1,
+      "playersMax": 4,
+      "playTime": 60,
+      "age": 10,
+      "difficulty": 3,
+      "tags": [
+        "協力",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g096",
+      "title": "トロイカ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g097",
+      "title": "ナインタイル",
+      "images": [],
+      "summary": "9枚のタイルを裏返しながらお題の並びを作る早解き。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g098",
+      "title": "ナナトリドリ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g099",
+      "title": "ナンジャモンジャ・シロ",
       "images": [],
       "playersMin": 2,
       "playersMax": 6,
@@ -113,27 +1928,299 @@
       "detailRule": "山札を裏向きに置き、手番の人が1枚ずつ表にして場に重ねます。まだ名前のついていないキャラクターなら、めくった人が自由に名前をつけます。すでに名前がついているキャラクターが出たら、全員でその名前を叫び、最も早かった人が場に重なっているカードをすべて獲得します。名前を間違えて言っても罰はありませんが、正しい名前を言った人が優先されます。山札がなくなった時点で、獲得枚数が最も多い人の勝ちです。"
     },
     {
-      "id": "seed-codenames",
-      "title": "コードネーム",
+      "id": "g100",
+      "title": "ナンジャモンジャ・ミドリ",
       "images": [],
-      "playersMin": 4,
-      "playersMax": 8,
+      "playersMin": 2,
+      "playersMax": 6,
       "playTime": 15,
+      "age": 4,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "盛り上がる",
+        "運要素",
+        "軽量級"
+      ],
+      "summary": "謎の生き物に名前をつけて、出てきたら早く呼ぶだけの記憶ゲーム。",
+      "quickRule": "1. カードを1枚めくる\n2. 初めて出た生き物なら好きな名前をつける\n3. 見たことのある生き物なら、その名前を早く叫ぶ\n4. 一番早く言えた人が場のカードをもらう",
+      "recommendation": "・小さい子から大人まで一緒に遊べる\n・待ち時間ゼロ、1ゲーム10分\n・変な名前をつけるほど盛り上がる",
+      "detailRule": "山札を裏向きに置き、手番の人が1枚ずつ表にして場に重ねます。まだ名前のついていないキャラクターなら、めくった人が自由に名前をつけます。すでに名前がついているキャラクターが出たら、全員でその名前を叫び、最も早かった人が場に重なっているカードをすべて獲得します。名前を間違えて言っても罰はありませんが、正しい名前を言った人が優先されます。山札がなくなった時点で、獲得枚数が最も多い人の勝ちです。"
+    },
+    {
+      "id": "g101",
+      "title": "にじいろのヘビ",
+      "images": [],
+      "summary": "ヘビのカードをつないで完成させる、小さな子から遊べるゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 10,
+      "age": 4,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "初心者",
+        "運要素"
+      ]
+    },
+    {
+      "id": "g102",
+      "title": "ニムト",
+      "images": [],
+      "summary": "牛のマークを引き取らないように数字を出す。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 10,
+      "playTime": 45,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "運要素",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g103",
+      "title": "ニャーニャーゲーム",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g104",
+      "title": "ニューズの時間ですS",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g105",
+      "title": "ねこポーカー",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g106",
+      "title": "のびのびTRPGザ・ホラー",
+      "images": [],
+      "summary": "サイコロと即興で物語を作る短時間TRPG。ホラー編。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 60,
       "age": 10,
       "difficulty": 2,
       "tags": [
-        "初心者",
         "協力",
-        "対戦",
-        "頭脳戦"
-      ],
-      "summary": "ひとことのヒントで、味方の単語カードだけを当ててもらうチーム戦。",
-      "quickRule": "1. チームに分かれ、各チーム1人がヒントを出す役になる\n2. ヒント役は「単語＋数字」だけを言う\n3. 仲間は場の25枚から味方の単語を選ぶ\n4. 先に自分の色を全部当てたチームの勝ち",
-      "recommendation": "・4人以上いるときの鉄板\n・話し合いが自然に生まれる\n・ヒント役をやると一気にハマる",
-      "detailRule": "25枚の単語カードを5×5に並べ、各チームのヒント役だけが色の配置図を見ます。ヒントは必ず「1単語＋その単語に関係する枚数」の形で出し、それ以外の情報を伝えることはできません。仲間は関係すると思うカードに触れ、味方の色なら継続、相手の色や無関係な色なら手番終了です。暗殺者のカードに触れるとその時点で負けになります。先に自分の色をすべて当てたチームの勝利です。"
+        "パーティー"
+      ]
     },
     {
-      "id": "seed-hannin",
+      "id": "g107",
+      "title": "のびのびTRPGソード",
+      "images": [],
+      "summary": "サイコロと即興で物語を作る短時間TRPG。剣と魔法編。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 60,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "協力",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g108",
+      "title": "のびのびTRPGマジック",
+      "images": [],
+      "summary": "サイコロと即興で物語を作る短時間TRPG。魔法編。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 60,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "協力",
+        "パーティー"
+      ]
+    },
+    {
+      "id": "g109",
+      "title": "はぁっていうゲーム",
+      "images": [],
+      "summary": "声と表情だけでお題を伝える演技ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 8,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "パーティー",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g110",
+      "title": "バーテンダウト",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g111",
+      "title": "ハードメンタリティ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g112",
+      "title": "バウンズオフ",
+      "images": [],
+      "summary": "ボールを弾ませてお題の形を作る。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 7,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "アクション",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g113",
+      "title": "ハゲタカのえじき",
+      "images": [],
+      "summary": "同時に出した数字の勝負でカードを取り合う心理戦。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "対戦",
+        "頭脳戦",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g114",
+      "title": "ハッピーパンレシピ",
+      "images": [],
+      "summary": "レシピシリーズのパン版。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g115",
+      "title": "バトルライン",
+      "images": [],
+      "summary": "カードで陣地を競う2人用の名作。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 2,
+      "playTime": 30,
+      "age": 10,
+      "difficulty": 3,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g116",
       "title": "犯人は踊る",
       "images": [],
       "playersMin": 3,
@@ -154,28 +2241,198 @@
       "detailRule": "各プレイヤーに手札が配られ、その中の1枚が犯人カードです。手番ではカードを1枚出して効果を解決します。「取り引き」は隣と手札を1枚交換し、「情報操作」は全員が手札を回すなど、カードによって犯人の居場所が動きます。「探偵」を出した人は犯人だと思う相手を指名し、当たれば市民側の勝ち、外れればゲームは続きます。犯人カードを持つ人が最後の1枚として犯人カードを出し切ると犯人の勝ちです。"
     },
     {
-      "id": "seed-skull",
-      "title": "スカル",
+      "id": "g117",
+      "title": "ピキット",
       "images": [],
-      "playersMin": 3,
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
       "playersMax": 6,
-      "playTime": 20,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g118",
+      "title": "ビス20",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g119",
+      "title": "ヒット＆アウト",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g120",
+      "title": "ヒュードロドロップ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g121",
+      "title": "ひらがじゃん牌バージョン",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g122",
+      "title": "ファウナ",
+      "images": [],
+      "summary": "動物の生息地や大きさを予想して当てるクイズゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 45,
       "age": 10,
       "difficulty": 2,
       "tags": [
-        "初心者",
-        "対戦",
-        "頭脳戦",
-        "静か"
-      ],
-      "summary": "花を伏せるか、ドクロを混ぜるか。度胸で読み合うブラフゲーム。",
-      "quickRule": "1. 手持ちのコースターを裏向きに置いていく\n2. 「何枚めくれるか」を宣言して競り合う\n3. 勝った人は宣言した枚数だけめくる\n4. 花だけをめくれれば成功。2回成功で勝ち",
-      "recommendation": "・コンポーネントが渋くて雰囲気がいい\n・ルールは2分、駆け引きは無限\n・静かに熱くなりたい夜に",
-      "detailRule": "各プレイヤーは花3枚とドクロ1枚を持ちます。全員が裏向きに1枚以上を積んだあと、誰かが「自分は◯枚めくれる」と宣言すると競りが始まり、より多い枚数を宣言するか降りるかを選びます。最も高い宣言をした人は、まず自分の山からめくり、その後は他人の山から好きにめくります。宣言枚数ぶんの花をめくれれば成功、ドクロが出たら失敗して手持ちを1枚失います。2回成功した人がその場の勝者です。"
+        "家族向け",
+        "頭脳戦"
+      ]
     },
     {
-      "id": "seed-splendor",
-      "title": "スプレンダー",
+      "id": "g123",
+      "title": "フェッチクエスト",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g124",
+      "title": "ブロックス",
+      "images": [],
+      "summary": "角をつなげて自分のピースを置いていく陣取り。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 20,
+      "age": 7,
+      "difficulty": 2,
+      "tags": [
+        "家族向け",
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g125",
+      "title": "ペチケ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g126",
+      "title": "ベネチアのおみやげ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g127",
+      "title": "ヘルパゴス",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g128",
+      "title": "宝石の煌めき",
       "images": [],
       "playersMin": 2,
       "playersMax": 4,
@@ -194,88 +2451,575 @@
       "detailRule": "手番にできるのは3つのうち1つです。異なる色の宝石チップを3枚取る、同じ色を2枚取る、場のカードを買う（または確保する）。購入したカードには色ボーナスが描かれており、以後その色のチップの代わりとして永続的に使えます。高得点のカードほど必要な宝石が多く、序盤は安いカードで割引を積み上げるのが基本です。条件を満たすと貴族タイルが自動的に訪問し、追加の点が入ります。誰かが15点に達したら、その周を最後まで行い、最高得点の人が勝者です。"
     },
     {
-      "id": "seed-dominion",
-      "title": "ドミニオン",
+      "id": "g129",
+      "title": "ほっかいどうレシピ",
       "images": [],
+      "summary": "レシピシリーズのご当地版。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g130",
+      "title": "街コロ",
+      "images": [],
+      "summary": "サイコロを振って街の施設を増やしていく。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
       "playersMin": 2,
       "playersMax": 4,
       "playTime": 30,
-      "age": 13,
-      "difficulty": 3,
-      "tags": [
-        "中級者",
-        "デッキ構築",
-        "対戦",
-        "頭脳戦"
-      ],
-      "summary": "カードを買って自分の山札を強くしていく、デッキ構築の元祖。",
-      "quickRule": "1. 手札5枚でアクションを1回使う\n2. 財宝を出してカードを1枚買う\n3. 使ったカードは捨て札にして5枚引く\n4. 終了時に勝利点が最も多い人の勝ち",
-      "recommendation": "・毎回使うカードが変わるので飽きない\n・慣れると1ゲーム25分\n・じっくり考えたい人向け",
-      "detailRule": "全員が同じ初期デッキ（銅貨7枚と屋敷3枚）から始めます。手番は「アクション1回・購入1回」が基本で、アクションカードの効果によって追加のドローや購入が可能になります。買ったカードは捨て札に置かれ、山札が尽きたら捨て札を混ぜて新しい山札にするため、買ったカードは必ず手札に巡ってきます。勝利点カードはデッキの動きを鈍らせるため、いつ買うかの判断が勝負どころです。属州の山が尽きるか、いずれかの3つの山が尽きたらゲーム終了、勝利点の合計で勝敗を決めます。"
-    },
-    {
-      "id": "seed-catan",
-      "title": "カタンの開拓者たち",
-      "images": [],
-      "playersMin": 3,
-      "playersMax": 4,
-      "playTime": 75,
-      "age": 10,
-      "difficulty": 4,
-      "tags": [
-        "中級者",
-        "重量級",
-        "対戦",
-        "頭脳戦",
-        "運要素"
-      ],
-      "summary": "資源を集めて交渉し、島に開拓地を広げていく王道ゲーム。",
-      "quickRule": "1. サイコロを振って資源をもらう\n2. 他のプレイヤーと交渉して交換する\n3. 道・開拓地・都市を建てる\n4. 先に10点に到達した人の勝ち",
-      "recommendation": "・交渉が始まると一気に盛り上がる\n・時間があるときの本命\n・初回は説明15分＋プレイ60分を見込んで",
-      "detailRule": "六角形のタイルで島を作り、各タイルに数字チップを置きます。手番の最初にサイコロを2個振り、出目と一致するタイルに接する開拓地の持ち主が資源を受け取ります。資源は他プレイヤーと自由に交渉して交換でき、ここでの立ち回りが勝敗を大きく左右します。道・開拓地・都市はそれぞれ決まった資源の組み合わせで建設し、開拓地1点、都市2点として計算します。最長交易路や最大騎士力のボーナスを含め、手番中に10点へ到達した人の勝ちです。7が出たときの盗賊の移動も重要な駆け引きになります。"
-    },
-    {
-      "id": "seed-onenight",
-      "title": "ワンナイト人狼",
-      "images": [],
-      "playersMin": 3,
-      "playersMax": 7,
-      "playTime": 10,
-      "age": 8,
+      "age": 7,
       "difficulty": 2,
       "tags": [
         "初心者",
-        "正体隠匿",
-        "パーティー",
-        "盛り上がる",
-        "軽量級"
-      ],
-      "summary": "夜は一度きり、朝の話し合いだけで人狼を追放する短時間人狼。",
-      "quickRule": "1. 役職カードを配り、夜の行動を1回だけ行う\n2. 朝になったら3〜5分話し合う\n3. せーので指を差し、最多票の人を追放\n4. 人狼を追放できれば村人の勝ち",
-      "recommendation": "・脱落者が出ないので気まずくならない\n・1回10分、何度も遊べる\n・人狼が苦手な人の入り口に",
-      "detailRule": "人数より2枚多い役職カードを用意し、余った2枚は場に伏せます。夜フェーズでは人狼が仲間を確認し、占い師が誰かのカードを見るなど、役職ごとの行動を1度だけ行います。怪盗や吊り師など、カードが入れ替わる役職があるため、朝の時点で自分の役職が変わっている可能性があります。昼の話し合いで情報を出し合い、投票で最多票の人を追放します。追放された人が人狼なら村人陣営の勝ち、誰も人狼でなければ人狼陣営の勝ちです。"
+        "ダイス",
+        "運要素",
+        "対戦"
+      ]
     },
     {
-      "id": "seed-gokiburi",
-      "title": "ごきぶりポーカー",
+      "id": "g131",
+      "title": "マッチ売りの大富豪",
       "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
       "playersMin": 2,
       "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g132",
+      "title": "魔法のラビリンス",
+      "images": [],
+      "summary": "見えない壁を覚えながら迷路を進む。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 6,
+      "difficulty": 2,
+      "tags": [
+        "家族向け",
+        "記憶"
+      ]
+    },
+    {
+      "id": "g133",
+      "title": "マラケシュ",
+      "images": [],
+      "summary": "絨毯を敷き広げて商人を歩かせる。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "家族向け",
+        "対戦",
+        "運要素"
+      ]
+    },
+    {
+      "id": "g134",
+      "title": "ミッドナイトカクテル",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g135",
+      "title": "ミリメモリー",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g136",
+      "title": "みんなのレシピ",
+      "images": [],
+      "summary": "レシピシリーズ。材料を集めて料理を完成させる。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
+        "家族向け",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g137",
+      "title": "メイメイ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g138",
+      "title": "目撃者たちの夜",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g139",
+      "title": "もっとホイップを！",
+      "images": [],
+      "summary": "ケーキを崩さないように積んでいくバランスゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 5,
       "playTime": 20,
       "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "アクション"
+      ]
+    },
+    {
+      "id": "g140",
+      "title": "モンスターメーカー",
+      "images": [],
+      "summary": "迷宮を進み宝を持ち帰る、日本の名作カードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 5,
+      "playTime": 45,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "運要素"
+      ]
+    },
+    {
+      "id": "g141",
+      "title": "藪の中 新版",
+      "images": [],
+      "summary": "食い違う証言から真実を導く推理ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
+    },
+    {
+      "id": "g142",
+      "title": "ゆくカバくるカバ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g143",
+      "title": "ラブレター",
+      "images": [],
+      "summary": "たった16枚のカードで姫に手紙を届ける推理ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 20,
+      "age": 10,
       "difficulty": 1,
       "tags": [
         "初心者",
         "対戦",
         "運要素",
-        "盛り上がる",
+        "軽量級"
+      ]
+    },
+    {
+      "id": "g144",
+      "title": "リカーマイスター",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g145",
+      "title": "六華",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g146",
+      "title": "レシピ",
+      "images": [],
+      "summary": "材料カードを集めて料理を完成させる定番シリーズ。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "tags": [
+        "初心者",
         "家族向け",
         "軽量級"
-      ],
-      "summary": "「これはカエルだよ」の一言を、信じるか疑うかだけのブラフ合戦。",
-      "quickRule": "1. 手札から1枚を裏向きで誰かに渡し、生き物の名前を宣言する\n2. 渡された人は「当たり」か「はずれ」を答える\n3. 外した方がそのカードを引き取る\n4. 同じ生き物を4枚集めてしまった人の負け",
-      "recommendation": "・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀",
-      "detailRule": "8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。"
+      ]
+    },
+    {
+      "id": "g147",
+      "title": "レンソービンゴ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g148",
+      "title": "ワードスナイパー",
+      "images": [],
+      "summary": "お題と頭文字から言葉をひらめく早答えゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "ワードゲーム",
+        "盛り上がる",
+        "初心者"
+      ]
+    },
+    {
+      "id": "g149",
+      "title": "ワードバスケット",
+      "images": [],
+      "summary": "文字カードでしりとりをつなぐ早出しゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 8,
+      "playTime": 10,
+      "age": 8,
+      "difficulty": 1,
+      "tags": [
+        "ワードゲーム",
+        "盛り上がる",
+        "初心者"
+      ]
+    },
+    {
+      "id": "g150",
+      "title": "ワニに乗る",
+      "images": [],
+      "summary": "ワニの背中に動物を積み上げるバランスゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 4,
+      "difficulty": 1,
+      "tags": [
+        "家族向け",
+        "アクション",
+        "初心者"
+      ]
+    },
+    {
+      "id": "g151",
+      "title": "ワン・パーセント",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g152",
+      "title": "ワンニャービスケッツ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g153",
+      "title": "ファフニル",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g154",
+      "title": "すりかえダイヤ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g155",
+      "title": "インサイダーブラック",
+      "images": [],
+      "summary": "インサイダーゲームのブラック版。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 4,
+      "playersMax": 8,
+      "playTime": 15,
+      "age": 9,
+      "difficulty": 2,
+      "tags": [
+        "正体隠匿",
+        "パーティー",
+        "盛り上がる"
+      ]
+    },
+    {
+      "id": "g156",
+      "title": "ふくろと金貨",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g157",
+      "title": "アテッコ",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g158",
+      "title": "ノッケテック",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g159",
+      "title": "亜熱帯日本",
+      "images": [],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 8,
+      "difficulty": 2,
+      "tags": [
+        "データみきにゅう"
+      ]
+    },
+    {
+      "id": "g160",
+      "title": "スタータップス",
+      "images": [],
+      "summary": "投資と市場の占有を競うカードゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "playersMin": 3,
+      "playersMax": 7,
+      "playTime": 20,
+      "age": 10,
+      "difficulty": 2,
+      "tags": [
+        "対戦",
+        "頭脳戦"
+      ]
     }
   ]
 }
