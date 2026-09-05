@@ -280,7 +280,9 @@ textarea{min-height:110px;resize:vertical;line-height:1.9}
 }
 .filebtn{display:inline-flex;align-items:center;gap:8px;border:2px dashed var(--muted);padding:10px 14px;cursor:pointer;font-size:13.5px}
 input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
-details summary{font-size:13px;color:var(--muted);cursor:pointer}
+details summary{font-size:13px;color:var(--muted);cursor:pointer;padding:6px 0}
+details summary::marker{color:var(--accent)}
+details[open] summary{margin-bottom:4px}
 
 /* ---------- 管理 ---------- */
 .admin-row{
@@ -357,7 +359,8 @@ const KEY = {
   localOnly:'bgl.localOnly',
   gh:'bgl.siteConfig',
   bgm:'bgl.bgmEnabled',
-  se:'bgl.seEnabled'
+  se:'bgl.seEnabled',
+  dirty:'bgl.localEdited'   /* この端末で ついか・へんしゅう したか */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -666,9 +669,28 @@ function loadAll(){
       tags:Array.isArray(f.tags)?f.tags:[] };
   }
 }
-function saveGames(){ store.write(KEY.games, state.games); }
-function saveTags(){ store.write(KEY.tags, state.tags); }
+/* この端末で へんしゅう した しるし。
+   これが ついて いる あいだは、サイト側の データで かってに 上書き しない。 */
+function markDirty(){ store.write(KEY.dirty, true); }
+function clearDirty(){ store.write(KEY.dirty, false); }
+function isDirty(){ return store.read(KEY.dirty, false); }
+
+function saveGames(){ store.write(KEY.games, state.games); markDirty(); }
+function saveTags(){ store.write(KEY.tags, state.tags); markDirty(); }
 function saveFilters(){ store.write(KEY.filters, state.filters); }
+
+let pendingSiteData = null;   /* サイト側に あるが、まだ とりこんで いない データ */
+
+function adoptSiteData(data){
+  state.games = data.games;
+  if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
+  store.write(KEY.games, state.games);
+  store.write(KEY.tags, state.tags);
+  store.write(KEY.pubver, String(data.version || ''));
+  clearDirty();                 /* サイトと おなじ ないよう なので しるしを けす */
+  pendingSiteData = null;
+  render();
+}
 
 async function syncPublished(){
   if(location.protocol === 'file:') return;
@@ -680,12 +702,17 @@ async function syncPublished(){
     if(!data || !Array.isArray(data.games)) return;
     const ver = String(data.version || '');
     if(ver && ver === store.read(KEY.pubver, '')) return;
-    state.games = data.games;
-    if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
-    saveGames(); saveTags();
-    store.write(KEY.pubver, ver);
-    render();
-  }catch(e){ /* library.json が無ければ何もしない */ }
+
+    /* この端末で ついか・へんしゅう して いる ばあいは、ぜったいに 上書き しない。
+       かんり画面から 手動で とりこめる ように しておく だけ。 */
+    if(isDirty()){
+      pendingSiteData = data;
+      const r = currentRoute();
+      if(r.name === 'admin') render();
+      return;
+    }
+    adoptSiteData(data);
+  }catch(e){ /* library.json が無ければ 何も しない */ }
 }
 
 /* ---------------- utils ---------------- */
@@ -714,6 +741,25 @@ function thumbHTML(g, cls){
   const c = 'thumb' + (cls ? ' ' + cls : '');
   if(g.images && g.images[0]) return '<div class="'+c+'"><img src="'+esc(g.images[0])+'" alt=""></div>';
   return '<div class="'+c+'"><span class="glyph">'+esc((g.title||'？').trim().charAt(0))+'</span></div>';
+}
+
+/* ---------------- けんさく用の 文字ならし ----------------
+   ひらがな・カタカナ・全角/半角・大文字小文字の ちがいを むしして
+   おなじ ものとして あつかう。漢字は「よみがな」欄で ひろう。 */
+function normalizeText(str){
+  let t = String(str == null ? '' : str);
+  if(t.normalize) t = t.normalize('NFKC');          /* 全角英数→半角、半角カナ→全角 */
+  t = t.toLowerCase();
+  /* カタカナ → ひらがな */
+  t = t.replace(/[\u30A1-\u30F6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  /* 長音・記号・空白は むし */
+  t = t.replace(/[ー・\s\u3000！!？?、。，．,\.:：;；~〜\-—–_（）\(\)「」『』【】\[\]"'＆&]/g, '');
+  return t;
+}
+function searchIndex(g){
+  return normalizeText([
+    g.title, g.reading || '', g.summary || '', (g.tags||[]).join(' ')
+  ].join(' '));
 }
 
 /* ---------------- 検索ロジック ---------------- */
@@ -803,6 +849,12 @@ const app = document.getElementById('app');
 
 function render(){
   const r = currentRoute();
+  const routeKey = r.name + '/' + (r.param || '');
+  /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
+     いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
+  const sameScreen = (render._routeKey === routeKey);
+  const keepY = window.scrollY || window.pageYOffset || 0;
+
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm, admin:viewAdmin, random:viewRandom };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
@@ -811,7 +863,13 @@ function render(){
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   syncBgm();
   paintSoundBtns();
-  window.scrollTo(0,0);
+
+  render._routeKey = routeKey;
+  if(sameScreen){
+    window.scrollTo(0, keepY);
+  }else{
+    window.scrollTo(0, 0);
+  }
 }
 
 /* ---------------- views ---------------- */
@@ -876,8 +934,8 @@ function viewList(){
   const res = search(f);
   let list = filtered ? res.perfect.slice() : state.games.slice();
 
-  const q = state.listQuery.trim().toLowerCase();
-  if(q) list = list.filter(g => (g.title+' '+(g.summary||'')+' '+(g.tags||[]).join(' ')).toLowerCase().includes(q));
+  const q = normalizeText(state.listQuery);
+  if(q) list = list.filter(g => searchIndex(g).includes(q));
 
   if(!filtered || q){
     const s = state.listSort;
@@ -894,7 +952,7 @@ function viewList(){
                                 : 'ぜんぶで '+list.length+'さくひん。えらぶと あそびかたが よめる。')+'</p>' +
 
     '<div class="searchbar">' +
-      '<input type="search" id="listQ" placeholder="なまえで さがす" value="'+esc(state.listQuery)+'">' +
+      '<input type="search" id="listQ" placeholder="なまえで さがす（かな・漢字 どちらでも）" value="'+esc(state.listQuery)+'">' +
       '<select id="listSort">' +
         ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順'].map(o=>{
           const [v,l]=o.split(':');
@@ -1013,6 +1071,10 @@ function viewForm(id){
     '<div class="form-group"><label class="lbl" for="f-title">タイトル</label>' +
       '<input type="text" id="f-title" value="'+esc(v('title',''))+'" placeholder="れい：スプレンダー"></div>' +
 
+    '<div class="form-group"><label class="lbl" for="f-reading">よみがな<span class="hint">けんさく用・にんい</span></label>' +
+      '<input type="text" id="f-reading" value="'+esc(v('reading',''))+'" placeholder="れい：ほうせきのきらめき すぷれんだー">' +
+      '<p class="count" style="margin:6px 0 0">漢字の タイトルは、ここに ひらがなを いれると ひらがなでも さがせます。べつの よびかたも スペースで くぎって いれられます。</p></div>' +
+
     '<div class="form-group"><label class="lbl">はこ画像・プレイ画像<span class="hint">1まいめが はこ画像</span></label>' +
       '<label class="filebtn">＋ 画像を えらぶ<input type="file" id="f-images" accept="image/*" multiple></label>' +
       '<div class="row" style="margin-top:9px">' +
@@ -1080,8 +1142,10 @@ function viewAdmin(){
     '<p class="sub">ゲームの ついか・へんしゅう・さくじょ と、ともだちに みせる ための じゅんびが できます。</p>' +
     '<button class="btn primary" data-go2="#/add" style="margin-bottom:18px">＋ ゲームを ついかする</button>' +
 
-    '<h2 class="sec">とうろく ゲーム（'+state.games.length+'）</h2>' +
-    (rows || '<div class="note">まだ 1けんも とうろく されていません。</div>') +
+    '<details style="margin:0 0 6px"><summary style="font-size:16px;color:var(--accent-2)">■ とうろく ゲーム（'+state.games.length+'）<span class="hint">タップで ひらく</span></summary>' +
+      '<div style="margin-top:12px">' +
+      (rows || '<div class="note">まだ 1けんも とうろく されていません。</div>') +
+      '</div></details>' +
 
     '<div class="divider"></div><h2 class="sec">タグ</h2>' +
     '<p class="count">タグは じゆうに ついか・さくじょ できます。けすと 各ゲームからも はずれます。</p>' + tagRows +
@@ -1089,6 +1153,13 @@ function viewAdmin(){
       '<input type="text" id="newTag" placeholder="あたらしい タグ" style="flex:2">' +
       '<select id="newTagCat" style="flex:1">'+TAG_CATEGORIES.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select>' +
       '<button class="mini" id="addTagBtn" style="flex:0 0 auto">ついか</button></div>' +
+
+    (pendingSiteData ?
+      '<div class="note" style="margin-bottom:14px;border-color:var(--accent);color:var(--text)">' +
+      'サイトには べつの ないよう（'+pendingSiteData.games.length+'さくひん）が あります。<br>' +
+      'この スマホの ないよう（'+state.games.length+'さくひん）は そのまま のこして あります。<br>' +
+      '<button class="mini" id="pullSiteBtn" style="margin-top:8px">サイトの ないように いれかえる</button>' +
+      '</div>' : '') +
 
     '<div class="divider"></div><h2 class="sec">ともだちの がめんにも だす</h2>' +
     '<p class="count">ついかした ゲームは、いまは この スマホ（パソコン）の なかだけに あります。<br>' +
@@ -1135,6 +1206,12 @@ function viewAdmin(){
       '<button class="btn small" id="copyUrlBtn" style="flex:1">URLを コピー</button>' +
       '<button class="btn small" id="shareBtn" style="flex:1">きょうゆう</button></div>' +
     '<div id="qrBox"></div>' +
+
+    '<div class="divider"></div><h2 class="sec">じぶんだけの ずかんに する</h2>' +
+    '<p class="count">この サイトを おしえて もらった 人が、じぶんの もっている ボードゲームだけの ずかんを つくれます。<br>' +
+      'したの ボタンを おすと ぜんぶ けして からっぽに し、この スマホの へんしゅうを ゆうせんする せっていが ONに なります。<br>' +
+      'ここで つくった ないようは あなたの スマホの 中だけに のこり、ほかの 人の 画面は かわりません。</p>' +
+    '<button class="btn danger" id="makeMineBtn" style="margin-bottom:16px">からっぽに して じぶんの ずかんを つくる</button>' +
 
     '<div class="divider"></div><h2 class="sec">おとの せってい</h2>' +
     '<p class="count">がめん右上の ♪ と SE でも きりかえ られます。せっていは この スマホに ほぞん されます。</p>' +
@@ -1224,6 +1301,7 @@ async function publishToSite(){
       throw new Error('こうしん できませんでした（' + put.status + '）。');
     }
     store.write(KEY.pubver, ver);
+    clearDirty();
     pubStatus('こうしん しました！ 1〜2ふん あとに ともだちの がめんにも でます。', 'ok');
     toast('サイトを こうしん しました');
   }catch(err){
@@ -1428,6 +1506,24 @@ function bind(r){
     if(navigator.share) navigator.share({title:'Board Game Library', url}).catch(()=>{});
     else copyText(url);
   };
+  const pullSiteBtn = document.getElementById('pullSiteBtn');
+  if(pullSiteBtn) pullSiteBtn.onclick = () => {
+    if(!pendingSiteData) return;
+    if(!confirm('この スマホの ないようを けして、サイトの ないように いれかえます。よろしいですか？')) return;
+    adoptSiteData(pendingSiteData);
+    toast('サイトの ないように いれかえました');
+  };
+  const makeMineBtn = document.getElementById('makeMineBtn');
+  if(makeMineBtn) makeMineBtn.onclick = () => {
+    if(!confirm('いま とうろく されている ゲームを ぜんぶ けして、からっぽの ずかんに します。\n（けされるのは この スマホの 中だけです）\nよろしいですか？')) return;
+    state.games = [];
+    state.tags = DEFAULT_TAGS.map(t=>({...t}));
+    state.filters = {time:null, players:null, playersN:6, tags:[]};
+    store.write(KEY.localOnly, true);
+    saveGames(); saveTags(); saveFilters(); markDirty();
+    render();
+    toast('からっぽに しました。ゲームを ついか して いきましょう');
+  };
   const resetBtn = document.getElementById('resetBtn');
   if(resetBtn) resetBtn.onclick = () => {
     if(!confirm('とうろくした 内容を すべて けして、サンプルに もどします。よろしいですか？')) return;
@@ -1483,6 +1579,7 @@ function saveForm(id){
 
   const data = {
     id: id || uid(), title,
+    reading: val('f-reading').trim(),
     images: state.formImages.slice(),
     playersMin: pmin, playersMax: pmax,
     playTime: Math.max(1,num('f-time')), age: num('f-age'),
@@ -1534,7 +1631,9 @@ function importLibrary(e){
       if(!data || !Array.isArray(data.games)) throw new Error('format');
       state.games = data.games;
       if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
-      saveGames(); saveTags();
+      store.write(KEY.games, state.games);
+      store.write(KEY.tags, state.tags);
+      markDirty();                                  /* この端末の ないようを まもる */
       if(data.version) store.write(KEY.pubver, String(data.version));
       render(); toast('よみこみました（'+data.games.length+'さくひん）');
     }catch(err){ toast('よみこめませんでした。ほぞんした データの ファイルを えらんで ください'); }
