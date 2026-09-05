@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-05T15:32:20.782Z",
+  "version": "2026-09-05T16:23:19.002Z",
   "tags": [
     {
       "name": "初心者",
@@ -102,84 +102,110 @@
     {
       "id": "g001",
       "title": "3秒トライ！",
-      "images": [],
-      "summary": "お題に3秒で答えるスピードパーティーゲーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "さんびょうとらい",
+      "images": [
+        "https://www.itten-games.com/wp/wp-content/uploads/2021/11/FB-3_3S.jpg"
+      ],
       "playersMin": 3,
-      "playersMax": 8,
-      "playTime": 15,
+      "playersMax": 7,
+      "playTime": 10,
       "age": 6,
-      "difficulty": 1,
+      "difficulty": 2,
+      "strategy": 3,
+      "excitement": 5,
+      "luck": 4,
       "tags": [
         "初心者",
         "パーティー",
         "盛り上がる",
-        "ワードゲーム"
+        "アクション",
+        "記憶",
+        "対戦"
       ],
-      "reading": "さんびょうとらい"
+      "summary": "数秒間のドタバタかけ引き!? 秒速チャレンジアクションゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "･初心者におすすめ\n･3秒でできるギリギリを知ることができる\n･大人数でやると盛り上がる"
     },
     {
       "id": "g002",
       "title": "5本のキュウリ",
-      "images": [],
-      "summary": "最後の1トリックで大きい数字を出さないよう立ち回るカードゲーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "ごほんのきゅうり",
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2015/04/bfec4cf0aa3925ea49faed0f919ea1e8-575x575.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 6,
       "playTime": 30,
       "age": 8,
       "difficulty": 2,
+      "strategy": 4,
+      "excitement": 4,
+      "luck": 0,
       "tags": [
         "対戦",
         "頭脳戦",
-        "静か"
+        "静か",
+        "初心者"
       ],
-      "reading": "ごほんのきゅうり"
+      "summary": "７枚目に出すカードが重要！きゅうりを６本取ったら負けとなるトリックテイキングゲーム！！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g003",
       "title": "ito クラシック",
-      "images": [],
+      "reading": "いと くらしっく",
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2024/02/ito-classic_box_L_square-575x575.jpg",
+        "https://arclightgames.jp/wp-content/uploads/2024/02/ito_compo3-575x575.jpg",
+        "https://arclightgames.jp/wp-content/uploads/2024/03/aeb995d4896726d46df4d085b88c7618-scaled.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 10,
-      "playTime": 30,
+      "playTime": 10,
       "age": 8,
       "difficulty": 2,
+      "strategy": 3,
+      "excitement": 4,
+      "luck": 4,
       "tags": [
         "初心者",
         "協力",
         "盛り上がる",
         "家族向け"
       ],
-      "summary": "数字を言葉に置きかえて、みんなで小さい順に並べる協力ゲーム。",
+      "summary": "価値観のズレに大笑い！？　会話が楽しい協力パーティゲーム",
       "quickRule": "1. 1〜100のカードを1枚ずつ配る（自分だけ見る）\n2. お題（例：好きな食べ物の人気度）に沿って、数字の大きさを言葉で表現する\n3. 話し合って小さい順に出す\n4. 最後まで順番を間違えなければ成功",
-      "recommendation": "・初対面でも一気に距離が縮まる\n・4〜6人がちょうどいい\n・ルール説明は3分で終わる",
       "detailRule": "カードは全員に1枚ずつ配られ、自分の数字は絶対に他人へ伝えられません。お題に対して「その数字らしさ」だけを言葉で表現します。たとえば「1は最悪、100は最高」の基準でお題が「コンビニの好きなおにぎり」なら、53の人は「まあ普通においしい、たまに買う」といった表現になります。全員の表現を聞いたら、誰が小さいかを相談し、小さいと思う人からカードを場に出します。出したカードが昇順になっていれば継続、逆転していたら失敗としてライフが1つ減ります。ライフが残った状態で全員がカードを出し切ればクリアです。慣れてきたら1人2枚配って難易度を上げられます。",
-      "reading": "いと くらしっく"
+      "recommendation": "・初対面でも一気に距離が縮まる\n・4〜6人がちょうどいい\n・ルール説明は3分で終わる"
     },
     {
       "id": "g004",
       "title": "KLASK(クラスク)",
-      "images": [],
-      "summary": "磁石のコマを操って相手のゴールを狙う2人用アクションゲーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "くらすく",
+      "images": [
+        "https://sugorokuya.jp/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6MjM1MDYsInB1ciI6ImJsb2JfaWQifX0=--d97e110da0c0e01bc1891d51fb61f68a0fb242b2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJ3ZWJwIiwicmVzaXplX3RvX2xpbWl0IjpbNTAwLDUwMF0sInNhdmVyIjp7InF1YWxpdHkiOjUwLCJzaGFycF95dXYiOnRydWV9fSwicHVyIjoidmFyaWF0aW9uIn19--1128949799fb2fe65fff5727923fbbb93eb8d883/220227.webp",
+        "https://baseec-img-mng.akamaized.net/images/item/origin/74354af0461da0cf315416de9670fd89.jpg?imformat=generic"
+      ],
       "playersMin": 2,
       "playersMax": 2,
       "playTime": 15,
       "age": 8,
       "difficulty": 2,
+      "strategy": 4,
+      "excitement": 5,
+      "luck": 2,
       "tags": [
         "対戦",
         "アクション",
         "盛り上がる"
       ],
-      "reading": "くらすく"
+      "summary": "世界で人気なお手軽テーブルホッケー！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "･やればやるほどのめり込んでしまう\n･ルールがとても簡単！"
     },
     {
       "id": "g005",
