@@ -928,7 +928,11 @@ function gameCard(g, hitTags){
     '<div class="tagline">'+tags+'</div></div></button>';
 }
 
-function viewList(){
+/* 一覧は「けんさく欄」と「けっか」を わけて 持つ。
+   文字を うっている あいだ 画面ぜんたいを 作りなおすと、
+   iPhone の 予測変換（IME）が とちゅうで きえて しまうため、
+   けっかの ぶぶんだけを 入れかえる。 */
+function listComputed(){
   const f = state.filters;
   const filtered = hasFilter(f);
   const res = search(f);
@@ -938,44 +942,76 @@ function viewList(){
   if(q) list = list.filter(g => searchIndex(g).includes(q));
 
   if(!filtered || q){
-    const s = state.listSort;
+    const sk = state.listSort;
     list.sort((a,b) =>
-      s === 'time' ? (a.playTime-b.playTime) :
-      s === 'players' ? (a.playersMin-b.playersMin) :
-      s === 'difficulty' ? (a.difficulty-b.difficulty) :
+      sk === 'time' ? (a.playTime-b.playTime) :
+      sk === 'players' ? (a.playersMin-b.playersMin) :
+      sk === 'difficulty' ? (a.difficulty-b.difficulty) :
       a.title.localeCompare(b.title,'ja'));
   }
+  return {f, filtered, res, list, q};
+}
 
-  let html = '<section class="page">' +
-    '<h1 class="lede">'+(filtered ? 'おすすめの ゲーム' : 'ボードゲーム ずかん')+'</h1>' +
-    '<p class="sub">'+(filtered ? esc(condText(f))+' の じょうけんで '+list.length+'さくひん'
-                                : 'ぜんぶで '+list.length+'さくひん。えらぶと あそびかたが よめる。')+'</p>' +
+function listResultsHTML(){
+  const c = listComputed();
+  const f = c.f, list = c.list, res = c.res;
 
-    '<div class="searchbar">' +
-      '<input type="search" id="listQ" placeholder="なまえで さがす（かな・漢字 どちらでも）" value="'+esc(state.listQuery)+'">' +
-      '<select id="listSort">' +
-        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順'].map(o=>{
-          const [v,l]=o.split(':');
-          return '<option value="'+v+'"'+(state.listSort===v?' selected':'')+'>'+l+'</option>';
-        }).join('') +
-      '</select></div>' +
-
-    (filtered ? '<p class="count">じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '');
+  let html = '<p class="count">' +
+    (c.filtered ? esc(condText(f)) + ' の じょうけんで ' + list.length + 'さくひん'
+                : 'ぜんぶで ' + list.length + 'さくひん') +
+    (c.q ? '（「' + esc(state.listQuery) + '」で けんさく中）' : '') +
+    (c.filtered ? ' <button class="mini" id="clearFilter" style="margin-left:6px">じょうけんを けす</button>' : '') +
+    '</p>';
 
   if(!list.length && !res.near.length){
     html += '<div class="empty"><span class="mark" data-icon="search"></span>' +
-      'じょうけんに あう ゲームが みつからない！<br><span style="font-size:12px">じょうけんを ひとつ へらすと みつかりやすい。</span>' +
+      (c.q ? 'その なまえの ゲームは みつからない！<br><span style="font-size:12px">べつの よみかたや、みじかい ことばで ためして みてください。</span>'
+           : 'じょうけんに あう ゲームが みつからない！<br><span style="font-size:12px">じょうけんを ひとつ へらすと みつかりやすい。</span>') +
       '<div style="margin-top:16px"><button class="btn small" data-go2="#/">じょうけんを えらびなおす</button></div></div>';
-  }else{
-    if(list.length) html += '<div class="card-list">'+list.map(g=>gameCard(g,f.tags)).join('')+'</div>';
-    else html += '<div class="note" style="margin-bottom:14px">ぴったりの ゲームは いなかった。ちかい ゲームを だします。</div>';
-    if(filtered && res.near.length && !q){
-      html += '<div class="divider"></div><h2 class="sec">じょうけんに ちかい ゲーム</h2>' +
-        '<p class="count">じょうけんを ひとつ はずすと こうほに なります。</p>' +
-        '<div class="card-list">'+res.near.slice(0,6).map(g=>gameCard(g,f.tags)).join('')+'</div>';
-    }
+    return html;
   }
-  return html + '</section>';
+
+  if(list.length) html += '<div class="card-list">' + list.map(g => gameCard(g, f.tags)).join('') + '</div>';
+  else html += '<div class="note" style="margin-bottom:14px">ぴったりの ゲームは いなかった。ちかい ゲームを だします。</div>';
+
+  if(c.filtered && res.near.length && !c.q){
+    html += '<div class="divider"></div><h2 class="sec">じょうけんに ちかい ゲーム</h2>' +
+      '<p class="count">じょうけんを ひとつ はずすと こうほに なります。</p>' +
+      '<div class="card-list">' + res.near.slice(0,6).map(g => gameCard(g, f.tags)).join('') + '</div>';
+  }
+  return html;
+}
+
+function viewList(){
+  const filtered = hasFilter(state.filters);
+  return '<section class="page">' +
+    '<h1 class="lede">' + (filtered ? 'おすすめの ゲーム' : 'ボードゲーム ずかん') + '</h1>' +
+    '<p class="sub">えらぶと あそびかたが よめる。</p>' +
+
+    '<div class="searchbar">' +
+      '<input type="search" id="listQ" placeholder="なまえで さがす（かな・漢字 どちらでも）" ' +
+        'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">' +
+      '<select id="listSort">' +
+        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順'].map(o => {
+          const parts = o.split(':');
+          return '<option value="' + parts[0] + '"' + (state.listSort === parts[0] ? ' selected' : '') + '>' + parts[1] + '</option>';
+        }).join('') +
+      '</select></div>' +
+
+    '<div id="listResults">' + listResultsHTML() + '</div>' +
+  '</section>';
+}
+
+/* けっかの ぶぶんだけを 入れかえる（けんさく欄には ふれない） */
+function updateListResults(){
+  const box = document.getElementById('listResults');
+  if(!box) return;
+  box.innerHTML = listResultsHTML();
+  paintIcons(box);
+  box.querySelectorAll('[data-go2]').forEach(b => b.onclick = () => go(b.dataset.go2));
+  box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('#/game/' + b.dataset.open));
+  const c = box.querySelector('#clearFilter');
+  if(c) c.onclick = () => { state.filters = {time:null, players:null, playersN:6, tags:[]}; saveFilters(); render(); };
 }
 
 function viewRandom(){
@@ -1389,19 +1425,28 @@ function bind(r){
 
   const listQ = document.getElementById('listQ');
   if(listQ){
-    listQ.oninput = e => {
-      state.listQuery = e.target.value;
+    let composing = false;                 /* かな漢字へんかんの とちゅうか */
+    const later = () => {
       clearTimeout(bind._q);
-      bind._q = setTimeout(() => {
-        const pos = e.target.selectionStart;
-        render();
-        const el = document.getElementById('listQ');
-        if(el){ el.focus(); try{ el.setSelectionRange(pos,pos); }catch(err){} }
-      }, 260);
+      bind._q = setTimeout(updateListResults, 180);
     };
+    /* へんかん中は なにも しない。けんさく欄を さわらないので
+       予測変換の こうほが きえなくなる。 */
+    listQ.addEventListener('compositionstart', () => { composing = true; });
+    listQ.addEventListener('compositionend', () => {
+      composing = false;
+      state.listQuery = listQ.value;
+      later();
+    });
+    listQ.addEventListener('input', () => {
+      if(composing) return;                /* へんかん確定まで まつ */
+      state.listQuery = listQ.value;
+      later();
+    });
+    listQ.addEventListener('search', () => { state.listQuery = listQ.value; updateListResults(); });
   }
   const listSort = document.getElementById('listSort');
-  if(listSort) listSort.onchange = e => { state.listSort = e.target.value; render(); };
+  if(listSort) listSort.onchange = e => { state.listSort = e.target.value; updateListResults(); };
 
   const rollBtn = document.getElementById('rollBtn');
   if(rollBtn) rollBtn.onclick = roll;
