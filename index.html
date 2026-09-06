@@ -159,6 +159,11 @@ img{image-rendering:auto}
 .tab .i{width:22px;height:22px;display:block}
 .tab[aria-current="true"]{color:var(--accent)}
 .tab[aria-current="true"] .i{filter:drop-shadow(0 0 3px currentColor)}
+.tab{position:relative}
+.tab .dot{
+  position:absolute;top:4px;right:calc(50% - 22px);
+  width:9px;height:9px;background:var(--accent);border:2px solid var(--panel);
+}
 
 /* ---------- 見出し・文字 ---------- */
 .page{padding:18px 0 30px}
@@ -248,6 +253,14 @@ img{image-rendering:auto}
 
 /* ---------- 詳細 ---------- */
 .detail-title{font-size:22px;line-height:1.45;margin:0 0 14px;color:var(--text)}
+.video-box{position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--frame);overflow:hidden}
+.video-box img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
+.video-box iframe{width:100%;height:100%;border:0;display:block}
+.video-play{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  width:64px;height:48px;border:3px solid #fff;background:rgba(0,0,0,.6);
+  color:#fff;font-size:20px;cursor:pointer;line-height:1;
+}
 .hero-strip{display:flex;gap:10px;overflow-x:auto;padding:0 0 10px;margin:0 0 14px}
 .hero-strip img{height:170px;border:3px solid var(--frame);object-fit:cover;flex:0 0 auto}
 .section{
@@ -313,6 +326,22 @@ h2.sec::before{content:"■ ";font-size:12px}
 .empty{text-align:center;padding:34px 16px;color:var(--muted);border:3px dashed var(--muted)}
 .empty .mark{display:block;margin:0 auto 12px;width:40px;height:40px;color:var(--muted)}
 
+/* いんさつ用：がめんの かざりを 消して 紙に おさめる */
+@media print{
+  .topbar, .tabbar, #bg, #toast, .no-print{display:none !important}
+  html, body{background:#fff !important;color:#000 !important;padding:0 !important}
+  body{text-shadow:none !important;font-size:10.5pt;line-height:1.45}
+  body::after{display:none !important}
+  #app{background:#fff !important;max-width:none;padding:0}
+  .print-table{width:100%;border-collapse:collapse}
+  .print-table th, .print-table td{border:1px solid #999;padding:3px 5px;font-size:9.5pt}
+  .print-table th{background:#eee}
+  .print-title{font-size:15pt;margin:0 0 6pt}
+}
+.print-table{width:100%;border-collapse:collapse;margin-top:10px}
+.print-table th, .print-table td{border:1px solid var(--line, #999);padding:5px 6px;font-size:12px;text-align:left}
+.print-table th{color:var(--accent)}
+
 #toast{
   position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:var(--panel);color:var(--text);border:3px solid var(--frame);box-shadow:var(--shadow);
@@ -346,7 +375,7 @@ h2.sec::before{content:"■ ";font-size:12px}
     <button class="tab" data-go="#/"><span class="i" data-icon="search"></span>さがす</button>
     <button class="tab" data-go="#/list"><span class="i" data-icon="book"></span>ずかん</button>
     <button class="tab" data-go="#/random"><span class="i" data-icon="die"></span>おまかせ</button>
-    <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり</button>
+    <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり<span class="dot" id="dirtyDot" hidden></span></button>
   </div>
 </nav>
 
@@ -728,6 +757,14 @@ function playFanfare(){
   n.volume = sound.fanfare.volume;
   n.play().catch(()=>{});
 }
+function paintDirtyDot(){
+  const d = document.getElementById('dirtyDot');
+  if(!d) return;
+  /* サイトに つないで いない 人（こうかい設定 なし）には 出さない */
+  const cfg = getSiteConfig();
+  const show = isDirty() && !!(cfg.owner && cfg.repo && cfg.token);
+  d.hidden = !show;
+}
 function paintSoundBtns(){
   const b = document.getElementById('bgmBtn');
   if(b){
@@ -781,6 +818,8 @@ const state = {
   listQuery:'', listSort:'title', listMode:'own',   /* own / wish / lent */
   today: null,                                      /* きょうの にんずう */
   bulkIndex: 0,                                     /* まとめて入力の いちばんめ */
+  logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
+  lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
   lastRandomId: null,
   formImages: [], formTags: []
 };
@@ -1026,7 +1065,8 @@ function render(){
   const keepY = window.scrollY || window.pageYOffset || 0;
 
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
-                  admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk };
+                  admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
+                  print:viewPrint, playlog:viewPlayLog, lend:viewLend };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
@@ -1034,6 +1074,7 @@ function render(){
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   syncBgm();
   paintSoundBtns();
+  paintDirtyDot();
 
   render._routeKey = routeKey;
   if(sameScreen){
@@ -1086,6 +1127,40 @@ function resetTimer(minutes){
   timerDone = false;
   timerLeft = Math.round(Number(minutes||30) * 60);
   paintTimer();
+}
+
+/* ---------------- YouTube の どうが ----------------
+   いろいろな かたちの URL から、どうがの ID だけを とりだす。
+   さいしょは 画像だけ おいて、タップした ときに はじめて
+   どうがを よみこむ（つうしん量の せつやくと 表示の はやさのため）。 */
+function youtubeId(url){
+  const u = String(url || '').trim();
+  if(!u) return '';
+  const patterns = [
+    /(?:youtube\.com\/watch\?(?:.*&)?v=)([A-Za-z0-9_-]{11})/,
+    /(?:youtu\.be\/)([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/shorts\/)([A-Za-z0-9_-]{11})/,
+    /(?:youtube\.com\/live\/)([A-Za-z0-9_-]{11})/
+  ];
+  for(const re of patterns){
+    const m = u.match(re);
+    if(m) return m[1];
+  }
+  if(/^[A-Za-z0-9_-]{11}$/.test(u)) return u;   /* IDだけ はりつけた ばあい */
+  return '';
+}
+function videoHTML(g){
+  const id = youtubeId(g.video);
+  if(!id) return '';
+  return '<div class="section"><h2>どうがで みる</h2>' +
+    '<div class="video-box" id="videoBox" data-vid="'+esc(id)+'">' +
+      '<img src="https://i.ytimg.com/vi/'+esc(id)+'/hqdefault.jpg" alt="" loading="lazy">' +
+      '<button class="video-play" id="videoPlay" aria-label="どうがを さいせい">▶</button>' +
+    '</div>' +
+    '<p class="count" style="margin:8px 0 0">タップで さいせい します。' +
+    '<a href="https://www.youtube.com/watch?v='+esc(id)+'" target="_blank" rel="noopener">YouTubeで ひらく</a></p>' +
+  '</div>';
 }
 
 /* ---------------- にた ゲーム ---------------- */
@@ -1165,6 +1240,7 @@ function gameCard(g, hitTags){
   const marks =
     (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
     (isLent(g) ? '<span class="badge">かしだし中</span>' : '') +
+    (youtubeId(g.video) ? '<span class="badge" style="border-color:var(--accent-2);color:var(--accent-2)">どうが</span>' : '') +
     (playCount(g) ? '<span class="badge">'+playCount(g)+'かい</span>' : '');
   return '<button class="gcard" data-open="'+esc(g.id)+'">' + thumbHTML(g) +
     '<div><h3>'+esc(g.title)+beginner+marks+'</h3>' +
@@ -1339,6 +1415,8 @@ function viewDetail(id){
 
     (g.detailRule ? '<div class="section"><h2>くわしい ルール</h2><div class="body">'+esc(g.detailRule)+'</div></div>' : '') +
 
+    videoHTML(g) +
+
     /* --- タイマー --- */
     '<div class="section"><h2>タイマー</h2>' +
       '<div id="timerBox" style="text-align:center">' +
@@ -1383,14 +1461,12 @@ function viewDetail(id){
         '</div>' : '') +
     '</div>' +
 
-    /* --- かしだし --- */
-    '<div class="section"><h2>かしだし</h2>' +
-      (isLent(g)
-        ? '<p style="margin:0 0 10px">'+esc(g.lentTo)+' さんに かしています'+(g.lentDate?'（'+esc(dateLabel(g.lentDate))+'から）':'')+'</p>' +
-          '<button class="btn small" id="returnBtn" style="width:100%">かえって きた</button>'
-        : '<div class="row"><input type="text" id="lentTo" placeholder="かした人の なまえ" style="flex:2">' +
-          '<button class="mini" id="lendBtn" style="flex:0 0 auto">かしだし</button></div>') +
-    '</div>' +
+    /* --- かしだし（じょうきょうだけ。とうろくは かんり画面から） --- */
+    (isLent(g) ?
+      '<div class="section"><h2>かしだし</h2>' +
+        '<p style="margin:0 0 10px">'+esc(g.lentTo)+' さんに かしています'+(g.lentDate?'（'+esc(dateLabel(g.lentDate))+'から）':'')+'</p>' +
+        '<button class="btn small" id="returnBtn" style="width:100%">かえって きた</button>' +
+      '</div>' : '') +
 
     /* --- にた ゲーム --- */
     (function(){
@@ -1469,6 +1545,10 @@ function viewForm(id){
       '<input type="checkbox" id="f-wish" '+(v('wish',false)?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
       '<span style="font-size:13px">まだ もって いない（ほしいリストに いれる）<br>' +
       '<span style="color:var(--muted);font-size:11.5px">ほしいリストの ゲームは、さがす・おまかせには でて きません。</span></span></label>' +
+
+    '<div class="form-group"><label class="lbl" for="f-video">しょうかい どうがの URL<span class="hint">YouTube・にんい</span></label>' +
+      '<input type="text" id="f-video" value="'+esc(v('video',''))+'" placeholder="https://www.youtube.com/watch?v=..." autocapitalize="off">' +
+      '<p class="count" style="margin:6px 0 0">ルール説明や プレイ動画を いれると、文章より わかりやすく なります。</p></div>' +
 
     '<div class="form-group"><label class="lbl" for="f-summary">ひとこと しょうかい</label>' +
       '<input type="text" id="f-summary" value="'+esc(v('summary',''))+'" placeholder="れい：宝石を集めて発展する戦略ゲーム"></div>' +
@@ -1620,6 +1700,9 @@ function viewBulk(){
       '<label class="lbl" for="bReading">よみがな<span class="hint">にんい</span></label>' +
       '<input type="text" id="bReading" value="'+esc(g.reading||'')+'" placeholder="ひらがなで" style="margin-bottom:12px">' +
 
+      '<label class="lbl" for="bVideo">しょうかい どうがの URL<span class="hint">YouTube・にんい</span></label>' +
+      '<input type="text" id="bVideo" value="'+esc(g.video||'')+'" placeholder="https://youtu.be/..." autocapitalize="off" style="margin-bottom:12px">' +
+
       '<label class="lbl">はこ画像・プレイ画像<span class="hint">1まいめが はこ画像</span></label>' +
       '<label class="filebtn">＋ 画像を えらぶ<input type="file" id="f-images" accept="image/*" multiple></label>' +
       '<div class="row" style="margin-top:9px">' +
@@ -1667,6 +1750,103 @@ function viewBulk(){
   '</section>';
 }
 
+function viewPrint(){
+  const list = ownedGames().slice().sort((a,b) => a.title.localeCompare(b.title,'ja'));
+  const rows = list.map(g =>
+    '<tr><td>'+esc(g.title)+'</td><td>'+playersText(g)+'</td><td>'+(Number(g.playTime)||0)+'分</td>' +
+    '<td>'+'★'.repeat(Math.max(0,Math.min(5,Number(g.difficulty)||0)))+'</td>' +
+    '<td>'+esc((g.tags||[]).filter(t => t !== 'データみきにゅう').slice(0,3).join('・'))+'</td></tr>').join('');
+
+  return '<section class="page">' +
+    '<div class="no-print">' +
+      '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
+      '<h1 class="lede">いんさつ用の 一覧</h1>' +
+      '<p class="sub">'+list.length+'さくひん。たなの よこに はったり、あつまりの ときに くばれます。</p>' +
+      '<button class="btn primary" id="printBtn" style="margin-bottom:16px">いんさつ・PDFに する</button>' +
+    '</div>' +
+    '<h2 class="print-title">ボードゲーム 一覧（'+list.length+'さくひん）</h2>' +
+    '<table class="print-table"><thead><tr>' +
+      '<th>タイトル</th><th>にんずう</th><th>じかん</th><th>むずかしさ</th><th>タグ</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table>' +
+  '</section>';
+}
+
+/* ================= E. まとめて きろく ================= */
+function viewPlayLog(){
+  const q = normalizeText(state.logQuery || '');
+  let list = ownedGames();
+  if(q) list = list.filter(g => searchIndex(g).includes(q));
+  list = list.slice().sort((a,b) => (lastPlayed(b)||'').localeCompare(lastPlayed(a)||'') || a.title.localeCompare(b.title,'ja'));
+
+  const picked = state.logPicked || [];
+  return '<section class="page">' +
+    '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
+    '<h1 class="lede">きょう あそんだ ゲーム</h1>' +
+    '<p class="sub">あそんだ ゲームを えらんで、まとめて きろく できます。</p>' +
+
+    '<div class="win" style="margin-bottom:14px">' +
+      '<div class="row" style="margin-bottom:8px">' +
+        '<input type="date" id="logDate" value="'+todayStr()+'" style="flex:1.4">' +
+        '<input type="number" id="logN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+(state.today||'')+'" style="flex:1"></div>' +
+      '<input type="text" id="logWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
+      '<textarea id="logMemo" placeholder="かんそう（えらんだ ぜんぶに つきます・にんい）" style="min-height:66px"></textarea>' +
+    '</div>' +
+
+    '<input type="search" id="logQ" placeholder="なまえで しぼる" value="'+esc(state.logQuery||'')+'" style="margin-bottom:10px">' +
+    '<p class="count">えらんで いる ゲーム：'+picked.length+'</p>' +
+    '<div class="chips" style="margin-bottom:14px">' +
+      list.slice(0,60).map(g =>
+        '<button class="chip sm" data-logpick="'+esc(g.id)+'" aria-pressed="'+(picked.indexOf(g.id)>=0)+'">'+esc(g.title)+'</button>').join('') +
+    '</div>' +
+
+    '<button class="btn primary" id="logSaveBtn">えらんだ '+picked.length+'ほんを きろくする</button>' +
+  '</section>';
+}
+
+function viewLend(){
+  const lent = state.games.filter(isLent).sort((a,b) => (a.lentDate||'').localeCompare(b.lentDate||''));
+  const q = normalizeText(state.lendQuery || '');
+  let list = ownedGames().filter(g => !isLent(g));
+  if(q) list = list.filter(g => searchIndex(g).includes(q));
+  list = list.slice().sort((a,b) => a.title.localeCompare(b.title,'ja'));
+
+  const pickedId = state.lendPick || '';
+  const picked = state.games.find(g => g.id === pickedId);
+
+  return '<section class="page">' +
+    '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
+    '<h1 class="lede">かしだし</h1>' +
+    '<p class="sub">だれに どの ゲームを かしたかを きろく できます。<br>この きろくは サイトには でません。</p>' +
+
+    '<h2 class="sec">いま かしている もの（'+lent.length+'）</h2>' +
+    (lent.length ?
+      lent.map(g =>
+        '<div class="admin-row">' + thumbHTML(g,'mini') +
+        '<div class="t"><b>'+esc(g.title)+'</b><span>'+esc(g.lentTo)+' さん'+(g.lentDate?'／'+esc(dateLabel(g.lentDate))+'から':'')+'</span></div>' +
+        '<button class="mini" data-return="'+esc(g.id)+'">かえって きた</button></div>').join('')
+      : '<div class="note" style="margin-bottom:16px">いま かしている ゲームは ありません。</div>') +
+
+    '<div class="divider"></div>' +
+    '<h2 class="sec">あたらしく かしだす</h2>' +
+
+    '<div class="win" style="margin-bottom:14px">' +
+      '<label class="lbl">1. ゲームを えらぶ</label>' +
+      '<input type="search" id="lendQ" placeholder="なまえで さがす" value="'+esc(state.lendQuery||'')+'" style="margin-bottom:8px">' +
+      (picked ? '<p class="count" style="margin:0 0 8px">えらんだ ゲーム：<span style="color:var(--accent)">'+esc(picked.title)+'</span></p>' : '') +
+      '<div class="chips" style="margin-bottom:14px;max-height:190px;overflow:auto">' +
+        list.slice(0,60).map(g =>
+          '<button class="chip sm" data-lendpick="'+esc(g.id)+'" aria-pressed="'+(g.id===pickedId)+'">'+esc(g.title)+'</button>').join('') +
+      '</div>' +
+
+      '<label class="lbl" for="lendName">2. かした人の なまえ</label>' +
+      '<div class="row"><input type="text" id="lendName" placeholder="れい：たろう" style="flex:2">' +
+        '<input type="date" id="lendDate" value="'+todayStr()+'" style="flex:1.4"></div>' +
+    '</div>' +
+
+    '<button class="btn primary" id="lendSaveBtn">かしだしを きろくする</button>' +
+  '</section>';
+}
+
 function viewAdmin(){
   const localOnly = store.read(KEY.localOnly, false);
   const cfg = getSiteConfig();
@@ -1688,10 +1868,15 @@ function viewAdmin(){
     '<h1 class="lede">かんり</h1>' +
     '<p class="sub">ゲームの ついか・へんしゅう・さくじょ と、ともだちに みせる ための じゅんびが できます。</p>' +
     '<button class="btn primary" data-go2="#/add" style="margin-bottom:10px">＋ ゲームを ついかする</button>' +
-    '<div class="btn-row" style="margin-bottom:18px">' +
+    '<div class="btn-row" style="margin-bottom:10px">' +
       '<button class="btn small" style="flex:1" data-go2="#/stats">とうけいを みる</button>' +
+      '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button></div>' +
+    '<div class="btn-row" style="margin-bottom:18px">' +
       '<button class="btn small" style="flex:1" data-go2="#/bulk">まとめて にゅうりょく' +
-        (ownedGames().filter(needsData).length ? '（'+ownedGames().filter(needsData).length+'）' : '') + '</button></div>' +
+        (ownedGames().filter(needsData).length ? '（'+ownedGames().filter(needsData).length+'）' : '') + '</button>' +
+      '<button class="btn small" style="flex:1" data-go2="#/print">いんさつ用 一覧</button></div>' +
+    '<button class="btn small" style="width:100%;margin-bottom:18px" data-go2="#/lend">かしだし' +
+      (state.games.filter(isLent).length ? '（'+state.games.filter(isLent).length+'）' : '') + '</button>' +
 
     '<details style="margin:0 0 6px"><summary style="font-size:16px;color:var(--accent-2)">■ とうろく ゲーム（'+state.games.length+'）<span class="hint">タップで ひらく</span></summary>' +
       '<div style="margin-top:12px">' +
@@ -1719,6 +1904,11 @@ function viewAdmin(){
     '<div class="divider"></div><h2 class="sec">ともだちの がめんにも だす</h2>' +
     '<p class="count">ついかした ゲームは、いまは この スマホ（パソコン）の なかだけに あります。<br>' +
       'したの ボタンを おすと、こうかいしている サイトの ゲームが いれかわり、ともだちの がめんにも でます。</p>' +
+
+    ((isDirty() && cfg.owner && cfg.repo && cfg.token) ?
+      '<div class="note" style="margin-bottom:12px;border-style:solid;border-color:var(--accent);color:var(--text)">' +
+      '▶ この スマホで へんしゅう した ぶんは、まだ サイトに はんえい されて いません。<br>' +
+      'したの ボタンを おすと ともだちの がめんにも でます。</div>' : '') +
 
     '<button class="btn primary big" id="publishBtn" style="margin-bottom:6px">サイトを こうしんする</button>' +
     '<div id="pubStatus"></div>' +
@@ -2111,17 +2301,48 @@ function bind(r){
     if(i >= 0){ g.plays.splice(i,1); saveGames(); render(); toast('けしました'); }
   });
 
-  /* かしだし */
-  const lendBtn = document.getElementById('lendBtn');
-  if(lendBtn) lendBtn.onclick = () => {
-    const gid = currentRoute().param;
-    const g = state.games.find(x => x.id === gid);
-    const who = (document.getElementById('lentTo')||{value:''}).value.trim();
-    if(!g) return;
-    if(!who) return toast('なまえを いれて ください');
-    g.lentTo = who; g.lentDate = todayStr();
-    saveGames(); render(); toast(who + ' さんに かしだし中');
+  const videoPlay = document.getElementById('videoPlay');
+  if(videoPlay) videoPlay.onclick = () => {
+    const box = document.getElementById('videoBox');
+    if(!box) return;
+    const vid = box.dataset.vid;
+    /* youtube-nocookie を つかうと 見た人の じょうほうが のこりにくい */
+    box.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(vid)+'?autoplay=1&playsinline=1" ' +
+      'title="どうが" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" ' +
+      'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
   };
+
+  /* かしだし */
+  const lendQ = document.getElementById('lendQ');
+  if(lendQ){
+    let composing = false;
+    const later = () => { clearTimeout(bind._dq); bind._dq = setTimeout(() => { state.lendQuery = lendQ.value; render(); }, 250); };
+    lendQ.addEventListener('compositionstart', () => { composing = true; });
+    lendQ.addEventListener('compositionend', () => { composing = false; later(); });
+    lendQ.addEventListener('input', () => { if(!composing) later(); });
+  }
+  app.querySelectorAll('[data-lendpick]').forEach(b => b.onclick = () => {
+    state.lendPick = (state.lendPick === b.dataset.lendpick) ? '' : b.dataset.lendpick;
+    render();
+  });
+  const lendSaveBtn = document.getElementById('lendSaveBtn');
+  if(lendSaveBtn) lendSaveBtn.onclick = () => {
+    const g = state.games.find(x => x.id === state.lendPick);
+    if(!g) return toast('ゲームを えらんで ください');
+    const who = (document.getElementById('lendName')||{value:''}).value.trim();
+    if(!who) return toast('かした人の なまえを いれて ください');
+    g.lentTo = who;
+    g.lentDate = (document.getElementById('lendDate')||{value:''}).value || todayStr();
+    state.lendPick = ''; state.lendQuery = '';
+    saveGames(); render();
+    toast(g.title + ' を ' + who + ' さんに かしました');
+  };
+  app.querySelectorAll('[data-return]').forEach(b => b.onclick = () => {
+    const g = state.games.find(x => x.id === b.dataset.return);
+    if(!g) return;
+    g.lentTo = ''; g.lentDate = '';
+    saveGames(); render(); toast(g.title + ' が かえって きました');
+  });
   const returnBtn = document.getElementById('returnBtn');
   if(returnBtn) returnBtn.onclick = () => {
     const gid = currentRoute().param;
@@ -2157,6 +2378,7 @@ function bind(r){
     g.difficulty = Math.min(5, Math.max(1, num('bDiff')));
     g.summary = (document.getElementById('bSummary')||{value:''}).value.trim();
     g.reading = (document.getElementById('bReading')||{value:''}).value.trim();
+    g.video = (document.getElementById('bVideo')||{value:''}).value.trim();
     g.age = num('bAge') || g.age || 8;
     g.images = state.formImages.slice();
     g.wish = !!(document.getElementById('bWish')||{}).checked;
@@ -2264,6 +2486,44 @@ function bind(r){
     store.write(KEY.sharePriv, e.target.checked);
     toast(e.target.checked ? 'こうかいする せってい に しました' : 'こうかい しない せってい に しました');
   };
+  const printBtn = document.getElementById('printBtn');
+  if(printBtn) printBtn.onclick = () => window.print();
+
+  const logQ = document.getElementById('logQ');
+  if(logQ){
+    let composing = false;
+    const later = () => { clearTimeout(bind._lq); bind._lq = setTimeout(() => { state.logQuery = logQ.value; render(); }, 250); };
+    logQ.addEventListener('compositionstart', () => { composing = true; });
+    logQ.addEventListener('compositionend', () => { composing = false; later(); });
+    logQ.addEventListener('input', () => { if(!composing) later(); });
+  }
+  app.querySelectorAll('[data-logpick]').forEach(b => b.onclick = () => {
+    const id = b.dataset.logpick;
+    const i = state.logPicked.indexOf(id);
+    if(i >= 0) state.logPicked.splice(i,1); else state.logPicked.push(id);
+    b.setAttribute('aria-pressed', String(i < 0));
+    const btn = document.getElementById('logSaveBtn');
+    if(btn) btn.textContent = 'えらんだ ' + state.logPicked.length + 'ほんを きろくする';
+  });
+  const logSaveBtn = document.getElementById('logSaveBtn');
+  if(logSaveBtn) logSaveBtn.onclick = () => {
+    if(!state.logPicked.length) return toast('ゲームを えらんで ください');
+    const d = (document.getElementById('logDate')||{value:''}).value || todayStr();
+    const n = Number((document.getElementById('logN')||{value:''}).value) || 0;
+    const w = (document.getElementById('logWin')||{value:''}).value.trim();
+    const m = (document.getElementById('logMemo')||{value:''}).value.trim();
+    let count = 0;
+    state.logPicked.forEach(id => {
+      const g = state.games.find(x => x.id === id);
+      if(!g) return;
+      g.plays = playsOf(g).concat([{d, n: n || undefined, w: w || undefined, m: m || undefined}]);
+      count++;
+    });
+    state.logPicked = [];
+    saveGames(); render();
+    toast(count + 'ほんを きろく しました');
+  };
+
   const backupBtn = document.getElementById('backupBtn');
   if(backupBtn) backupBtn.onclick = backupLibrary;
   const exportBtn = document.getElementById('exportBtn');
@@ -2369,6 +2629,11 @@ function saveForm(id){
   const title = val('f-title').trim();
   if(!title) return toast('タイトルを いれてください');
 
+  /* おなじ（または よく にた）なまえが すでに ないか しらべる */
+  const nq = normalizeText(title);
+  const same = state.games.filter(x => x.id !== id && normalizeText(x.title) === nq);
+  if(same.length && !confirm('「'+same[0].title+'」が すでに とうろく されて います。\nそれでも あたらしく ついか しますか？')) return;
+
   let pmin = Math.max(1,num('f-pmin')), pmax = Math.max(1,num('f-pmax'));
   if(pmin > pmax){ const t = pmin; pmin = pmax; pmax = t; }
 
@@ -2376,6 +2641,7 @@ function saveForm(id){
   const data = {
     id: id || uid(), title,
     reading: val('f-reading').trim(),
+    video: val('f-video').trim(),
     wish: !!(document.getElementById('f-wish') || {}).checked,
     plays: before ? playsOf(before) : [],
     lentTo: before ? (before.lentTo || '') : '',
