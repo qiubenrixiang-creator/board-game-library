@@ -372,6 +372,7 @@ const KEY = {
   se:'bgl.seEnabled',
   dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
+  sharePriv:'bgl.sharePrivate',  /* かんそう・かしだしも こうかいするか */
   today:'bgl.todayPlayers'  /* きょうの メンバーの にんずう */
 };
 
@@ -808,7 +809,7 @@ function saveFilters(){ store.write(KEY.filters, state.filters); }
 let pendingSiteData = null;   /* サイト側に あるが、まだ とりこんで いない データ */
 
 function adoptSiteData(data){
-  state.games = data.games;
+  state.games = mergePrivate(data.games);
   if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
   store.write(KEY.games, state.games);
   store.write(KEY.tags, state.tags);
@@ -1722,6 +1723,16 @@ function viewAdmin(){
     '<button class="btn primary big" id="publishBtn" style="margin-bottom:6px">サイトを こうしんする</button>' +
     '<div id="pubStatus"></div>' +
 
+    '<div class="note" style="margin:12px 0;border-color:var(--accent)">' +
+      '<b>こうかい されない もの</b><br>' +
+      'あそんだ きろく（かんそう）と、かしだし先の なまえは サイトに あげません。<br>' +
+      'これらは この スマホの 中だけに のこります。</div>' +
+
+    '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:16px">' +
+      '<input type="checkbox" id="sharePriv" '+(sharePrivateOn()?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
+      '<span style="font-size:13px">かんそうや かしだし先も こうかいする<br>' +
+      '<span style="color:var(--muted);font-size:11.5px">ONに すると だれでも 見られる ばしょに のります。ふつうは OFFの ままで だいじょうぶです。</span></span></label>' +
+
     '<details style="margin:14px 0 16px"'+(cfg.token?'':' open')+'><summary>さいしょの せってい（1かいだけ）</summary>' +
       '<p class="count" style="margin:10px 0">サイトを おいて いる ばしょ（GitHub）の なまえと、かきこみ用の あいことばを いれます。この スマホの なかにだけ ほぞんされ、ともだちには みえません。</p>' +
       '<div class="form-group"><label class="lbl" for="ghOwner">ユーザーめい</label>' +
@@ -1744,8 +1755,12 @@ function viewAdmin(){
       '</div></details>' +
 
     '<p class="count" style="margin-bottom:6px">スマホを かえる ときや、まえの ないように もどす ときは こちら。</p>' +
-    '<label class="btn small" style="width:100%;cursor:pointer;margin-bottom:16px;display:flex">ほぞんした データを よみこむ' +
-      '<input type="file" id="importFile" accept="application/json,.json"></label>' +
+    '<div class="btn-row" style="margin-bottom:8px">' +
+      '<button class="btn small" id="backupBtn" style="flex:1">じぶん用の ひかえを つくる</button>' +
+      '<label class="btn small" style="flex:1;cursor:pointer;display:flex">ほぞんした データを よみこむ' +
+        '<input type="file" id="importFile" accept="application/json,.json"></label>' +
+    '</div>' +
+    '<p class="count" style="margin:0 0 16px">「じぶん用の ひかえ」には かんそうや かしだし先も 入ります。この ファイルは サイトに あげないで ください。</p>' +
 
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:14px">' +
       '<input type="checkbox" id="localOnly" '+(localOnly?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
@@ -1789,6 +1804,35 @@ function viewAdmin(){
     '<div class="divider"></div><h2 class="sec">そのた</h2>' +
     '<button class="mini warn" id="resetBtn">さいしょの サンプルに もどす</button>' +
   '</section>';
+}
+
+/* ---------------- こうかい するとき に かくす もの ----------------
+   あそんだ きろく（かんそう ふくむ）と かしだし先の なまえは、
+   じぶんと なかまうちの メモ。GitHub は だれでも 見られるので、
+   こうかい用の データからは とりのぞく。 */
+const PRIVATE_FIELDS = ['plays', 'lentTo', 'lentDate'];
+
+function sharePrivateOn(){ return store.read(KEY.sharePriv, false); }
+
+function gamesForPublish(){
+  if(sharePrivateOn()) return state.games;
+  return state.games.map(g => {
+    const copy = Object.assign({}, g);
+    PRIVATE_FIELDS.forEach(f => { delete copy[f]; });
+    return copy;
+  });
+}
+/* とりこむ とき、この端末に ある きろくは のこす */
+function mergePrivate(incoming){
+  const mine = {};
+  state.games.forEach(g => { mine[g.id] = g; });
+  return incoming.map(g => {
+    const old = mine[g.id];
+    if(!old) return g;
+    if((!Array.isArray(g.plays) || !g.plays.length) && Array.isArray(old.plays) && old.plays.length) g.plays = old.plays;
+    if(!g.lentTo && old.lentTo){ g.lentTo = old.lentTo; g.lentDate = old.lentDate; }
+    return g;
+  });
 }
 
 /* ---------------- サイトの じどう こうしん ----------------
@@ -1847,7 +1891,7 @@ async function publishToSite(){
     const ver = new Date().toISOString();
     const payload = {
       message: 'ボードゲームを こうしん',
-      content: toBase64Utf8(JSON.stringify({version:ver, tags:state.tags, games:state.games}, null, 2)),
+      content: toBase64Utf8(JSON.stringify({version:ver, tags:state.tags, games:gamesForPublish()}, null, 2)),
       branch: cfg.branch
     };
     if(sha) payload.sha = sha;
@@ -2212,6 +2256,16 @@ function bind(r){
     saveTags(); render();
     toast(FAV_TAG + ' を つくりました');
   };
+  const sharePriv = document.getElementById('sharePriv');
+  if(sharePriv) sharePriv.onchange = e => {
+    if(e.target.checked && !confirm('かんそうや かしだし先の なまえが、だれでも 見られる ばしょに のります。よろしいですか？')){
+      e.target.checked = false; return;
+    }
+    store.write(KEY.sharePriv, e.target.checked);
+    toast(e.target.checked ? 'こうかいする せってい に しました' : 'こうかい しない せってい に しました');
+  };
+  const backupBtn = document.getElementById('backupBtn');
+  if(backupBtn) backupBtn.onclick = backupLibrary;
   const exportBtn = document.getElementById('exportBtn');
   if(exportBtn) exportBtn.onclick = exportLibrary;
   const importFile = document.getElementById('importFile');
@@ -2355,16 +2409,27 @@ function removeGame(id){
   saveGames(); toast('けしました'); go('#/admin'); render();
 }
 
-function exportLibrary(){
-  const payload = { version:new Date().toISOString(), tags:state.tags, games:state.games };
-  const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'library.json';
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 1000);
+}
+/* ともだちに みせる ための ファイル（かんそう・かしだし先は 入らない） */
+function exportLibrary(){
+  const payload = { version:new Date().toISOString(), tags:state.tags, games:gamesForPublish() };
+  downloadJSON(payload, 'library.json');
   store.write(KEY.pubver, payload.version);
-  toast('データの ファイルを ほぞんしました');
+  toast(sharePrivateOn() ? 'データの ファイルを ほぞんしました'
+                         : 'ほぞんしました（かんそう・かしだし先は 入れて いません）');
+}
+/* じぶん用の ひかえ（ぜんぶ 入る。サイトには あげない） */
+function backupLibrary(){
+  const payload = { version:new Date().toISOString(), backup:true, tags:state.tags, games:state.games };
+  downloadJSON(payload, 'bgl-backup-' + todayStr() + '.json');
+  toast('じぶん用の ひかえを ほぞんしました');
 }
 
 function importLibrary(e){
