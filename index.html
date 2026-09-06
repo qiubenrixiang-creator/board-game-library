@@ -1772,12 +1772,25 @@ function viewPrint(){
 }
 
 /* ================= E. まとめて きろく ================= */
-function viewPlayLog(){
+/* まとめて きろく：文字を うって いる あいだ 画面ぜんたいを 作りなおすと
+   iPhone の 予測変換が きえて しまうので、ゲームの 一覧だけを 入れかえる。 */
+function logListHTML(){
   const q = normalizeText(state.logQuery || '');
   let list = ownedGames();
   if(q) list = list.filter(g => searchIndex(g).includes(q));
   list = list.slice().sort((a,b) => (lastPlayed(b)||'').localeCompare(lastPlayed(a)||'') || a.title.localeCompare(b.title,'ja'));
 
+  const picked = state.logPicked || [];
+  return '<p class="count">えらんで いる ゲーム：'+picked.length+
+      (q ? '／「'+esc(state.logQuery)+'」で しぼりこみ中（'+list.length+'）' : '') + '</p>' +
+    '<div class="chips" style="margin-bottom:14px">' +
+      (list.length ? list.slice(0,60).map(g =>
+        '<button class="chip sm" data-logpick="'+esc(g.id)+'" aria-pressed="'+(picked.indexOf(g.id)>=0)+'">'+esc(g.title)+'</button>').join('')
+      : '<span class="count">みつかりません でした。</span>') +
+    '</div>';
+}
+
+function viewPlayLog(){
   const picked = state.logPicked || [];
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
@@ -1792,26 +1805,50 @@ function viewPlayLog(){
       '<textarea id="logMemo" placeholder="かんそう（えらんだ ぜんぶに つきます・にんい）" style="min-height:66px"></textarea>' +
     '</div>' +
 
-    '<input type="search" id="logQ" placeholder="なまえで しぼる" value="'+esc(state.logQuery||'')+'" style="margin-bottom:10px">' +
-    '<p class="count">えらんで いる ゲーム：'+picked.length+'</p>' +
-    '<div class="chips" style="margin-bottom:14px">' +
-      list.slice(0,60).map(g =>
-        '<button class="chip sm" data-logpick="'+esc(g.id)+'" aria-pressed="'+(picked.indexOf(g.id)>=0)+'">'+esc(g.title)+'</button>').join('') +
-    '</div>' +
+    '<input type="search" id="logQ" placeholder="なまえで しぼる" value="'+esc(state.logQuery||'')+'" ' +
+      'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:10px">' +
+    '<div id="logResults">' + logListHTML() + '</div>' +
 
     '<button class="btn primary" id="logSaveBtn">えらんだ '+picked.length+'ほんを きろくする</button>' +
   '</section>';
 }
+function updateLogList(){
+  const box = document.getElementById('logResults');
+  if(!box) return;
+  box.innerHTML = logListHTML();
+  bindLogPicks(box);
+}
+function bindLogPicks(box){
+  box.querySelectorAll('[data-logpick]').forEach(b => b.onclick = () => {
+    const id = b.dataset.logpick;
+    const i = state.logPicked.indexOf(id);
+    if(i >= 0) state.logPicked.splice(i,1); else state.logPicked.push(id);
+    b.setAttribute('aria-pressed', String(i < 0));
+    const cnt = box.querySelector('.count');
+    if(cnt) cnt.textContent = cnt.textContent.replace(/：\d+/, '：' + state.logPicked.length);
+    const btn = document.getElementById('logSaveBtn');
+    if(btn) btn.textContent = 'えらんだ ' + state.logPicked.length + 'ほんを きろくする';
+  });
+}
 
-function viewLend(){
-  const lent = state.games.filter(isLent).sort((a,b) => (a.lentDate||'').localeCompare(b.lentDate||''));
+/* かしだし：ここも 文字を うって いる あいだは 一覧だけを 入れかえる */
+function lendListHTML(){
   const q = normalizeText(state.lendQuery || '');
   let list = ownedGames().filter(g => !isLent(g));
   if(q) list = list.filter(g => searchIndex(g).includes(q));
   list = list.slice().sort((a,b) => a.title.localeCompare(b.title,'ja'));
 
-  const pickedId = state.lendPick || '';
-  const picked = state.games.find(g => g.id === pickedId);
+  const picked = state.games.find(g => g.id === state.lendPick);
+  return (picked ? '<p class="count" style="margin:0 0 8px">えらんだ ゲーム：<span style="color:var(--accent)">'+esc(picked.title)+'</span></p>' : '') +
+    '<div class="chips" style="margin-bottom:14px;max-height:190px;overflow:auto">' +
+      (list.length ? list.slice(0,60).map(g =>
+        '<button class="chip sm" data-lendpick="'+esc(g.id)+'" aria-pressed="'+(g.id===state.lendPick)+'">'+esc(g.title)+'</button>').join('')
+      : '<span class="count">みつかりません でした。</span>') +
+    '</div>';
+}
+
+function viewLend(){
+  const lent = state.games.filter(isLent).sort((a,b) => (a.lentDate||'').localeCompare(b.lentDate||''));
 
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
@@ -1831,12 +1868,9 @@ function viewLend(){
 
     '<div class="win" style="margin-bottom:14px">' +
       '<label class="lbl">1. ゲームを えらぶ</label>' +
-      '<input type="search" id="lendQ" placeholder="なまえで さがす" value="'+esc(state.lendQuery||'')+'" style="margin-bottom:8px">' +
-      (picked ? '<p class="count" style="margin:0 0 8px">えらんだ ゲーム：<span style="color:var(--accent)">'+esc(picked.title)+'</span></p>' : '') +
-      '<div class="chips" style="margin-bottom:14px;max-height:190px;overflow:auto">' +
-        list.slice(0,60).map(g =>
-          '<button class="chip sm" data-lendpick="'+esc(g.id)+'" aria-pressed="'+(g.id===pickedId)+'">'+esc(g.title)+'</button>').join('') +
-      '</div>' +
+      '<input type="search" id="lendQ" placeholder="なまえで さがす" value="'+esc(state.lendQuery||'')+'" ' +
+        'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:8px">' +
+      '<div id="lendResults">' + lendListHTML() + '</div>' +
 
       '<label class="lbl" for="lendName">2. かした人の なまえ</label>' +
       '<div class="row"><input type="text" id="lendName" placeholder="れい：たろう" style="flex:2">' +
@@ -1845,6 +1879,19 @@ function viewLend(){
 
     '<button class="btn primary" id="lendSaveBtn">かしだしを きろくする</button>' +
   '</section>';
+}
+function updateLendList(){
+  const box = document.getElementById('lendResults');
+  if(!box) return;
+  box.innerHTML = lendListHTML();
+  bindLendPicks(box);
+}
+function bindLendPicks(box){
+  box.querySelectorAll('[data-lendpick]').forEach(b => b.onclick = () => {
+    /* 画面ぜんたいを 作りなおすと 入力中の なまえが きえるので、ここだけ 更新する */
+    state.lendPick = (state.lendPick === b.dataset.lendpick) ? '' : b.dataset.lendpick;
+    updateLendList();
+  });
 }
 
 function viewAdmin(){
@@ -2315,16 +2362,18 @@ function bind(r){
   /* かしだし */
   const lendQ = document.getElementById('lendQ');
   if(lendQ){
-    let composing = false;
-    const later = () => { clearTimeout(bind._dq); bind._dq = setTimeout(() => { state.lendQuery = lendQ.value; render(); }, 250); };
+    let composing = false;   /* かな漢字へんかんの とちゅうか */
+    const later = () => {
+      clearTimeout(bind._dq);
+      bind._dq = setTimeout(() => { state.lendQuery = lendQ.value; updateLendList(); }, 200);
+    };
     lendQ.addEventListener('compositionstart', () => { composing = true; });
     lendQ.addEventListener('compositionend', () => { composing = false; later(); });
     lendQ.addEventListener('input', () => { if(!composing) later(); });
+    lendQ.addEventListener('search', () => { state.lendQuery = lendQ.value; updateLendList(); });
   }
-  app.querySelectorAll('[data-lendpick]').forEach(b => b.onclick = () => {
-    state.lendPick = (state.lendPick === b.dataset.lendpick) ? '' : b.dataset.lendpick;
-    render();
-  });
+  const lendBox = document.getElementById('lendResults');
+  if(lendBox) bindLendPicks(lendBox);
   const lendSaveBtn = document.getElementById('lendSaveBtn');
   if(lendSaveBtn) lendSaveBtn.onclick = () => {
     const g = state.games.find(x => x.id === state.lendPick);
@@ -2491,20 +2540,18 @@ function bind(r){
 
   const logQ = document.getElementById('logQ');
   if(logQ){
-    let composing = false;
-    const later = () => { clearTimeout(bind._lq); bind._lq = setTimeout(() => { state.logQuery = logQ.value; render(); }, 250); };
+    let composing = false;   /* かな漢字へんかんの とちゅうか */
+    const later = () => {
+      clearTimeout(bind._lq);
+      bind._lq = setTimeout(() => { state.logQuery = logQ.value; updateLogList(); }, 200);
+    };
     logQ.addEventListener('compositionstart', () => { composing = true; });
     logQ.addEventListener('compositionend', () => { composing = false; later(); });
     logQ.addEventListener('input', () => { if(!composing) later(); });
+    logQ.addEventListener('search', () => { state.logQuery = logQ.value; updateLogList(); });
   }
-  app.querySelectorAll('[data-logpick]').forEach(b => b.onclick = () => {
-    const id = b.dataset.logpick;
-    const i = state.logPicked.indexOf(id);
-    if(i >= 0) state.logPicked.splice(i,1); else state.logPicked.push(id);
-    b.setAttribute('aria-pressed', String(i < 0));
-    const btn = document.getElementById('logSaveBtn');
-    if(btn) btn.textContent = 'えらんだ ' + state.logPicked.length + 'ほんを きろくする';
-  });
+  const logBox = document.getElementById('logResults');
+  if(logBox) bindLogPicks(logBox);
   const logSaveBtn = document.getElementById('logSaveBtn');
   if(logSaveBtn) logSaveBtn.onclick = () => {
     if(!state.logPicked.length) return toast('ゲームを えらんで ください');
