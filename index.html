@@ -1258,13 +1258,25 @@ function viewDetail(id){
     /* --- タイマー --- */
     '<div class="section"><h2>タイマー</h2>' +
       '<div id="timerBox" style="text-align:center">' +
-        '<p id="timerView" style="font-size:34px;color:var(--accent);margin:4px 0 12px">'+timerText((Number(g.playTime)||30)*60)+'</p>' +
+        '<p id="timerView" style="font-size:34px;color:var(--accent);margin:4px 0 12px">'+timerText(timerLeft || (Number(g.playTime)||30)*60)+'</p>' +
+
+        '<div class="chips" style="justify-content:center;margin-bottom:10px">' +
+          [Number(g.playTime)||30, 5, 10, 15, 30, 45, 60].filter((v,i,a) => a.indexOf(v)===i).map(m =>
+            '<button class="chip sm" data-timerset="'+m+'">'+m+'分</button>').join('') +
+        '</div>' +
+
+        '<div class="row" style="margin-bottom:10px">' +
+          '<input type="number" id="timerMin" min="1" max="300" inputmode="numeric" placeholder="ふん" value="'+(Number(g.playTime)||30)+'" style="flex:1">' +
+          '<span style="flex:0 0 auto;color:var(--muted)">分</span>' +
+          '<button class="mini" data-timerset="input" style="flex:0 0 auto">この じかんに する</button>' +
+        '</div>' +
+
         '<div class="btn-row">' +
           '<button class="btn small" style="flex:1" data-timer="start" data-min="'+(Number(g.playTime)||30)+'">はじめる</button>' +
           '<button class="btn small" style="flex:1" data-timer="stop">とめる</button>' +
           '<button class="btn small" style="flex:1" data-timer="reset" data-min="'+(Number(g.playTime)||30)+'">もどす</button>' +
         '</div>' +
-        '<p class="count" style="margin:8px 0 0">この ゲームの めやす '+(Number(g.playTime)||30)+'分で カウントダウン します。</p>' +
+        '<p class="count" style="margin:8px 0 0">じかんを えらぶか、すうじを いれて きめられます。<br>この ゲームの めやすは '+(Number(g.playTime)||30)+'分。</p>' +
       '</div></div>' +
 
     /* --- あそんだ きろく --- */
@@ -1276,14 +1288,16 @@ function viewDetail(id){
         '<input type="date" id="playDate" value="'+todayStr()+'" style="flex:1.4">' +
         '<input type="number" id="playN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+(state.today||'')+'" style="flex:1">' +
       '</div>' +
-      '<div class="row" style="margin-bottom:8px">' +
-        '<input type="text" id="playWin" placeholder="かった人（にんい）" style="flex:2">' +
-        '<button class="mini" id="addPlayBtn" style="flex:0 0 auto">きろくする</button></div>' +
+      '<input type="text" id="playWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
+      '<textarea id="playMemo" placeholder="かんそう・おぼえがき（にんい）&#10;れい：4人が ちょうど よかった。せつめい 5分。" style="min-height:74px;margin-bottom:8px"></textarea>' +
+      '<button class="btn small" id="addPlayBtn" style="width:100%">この ないようで きろくする</button>' +
       (playsOf(g).length ?
         '<div style="margin-top:6px">' + playsOf(g).slice().sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,5).map((pl,i) =>
           '<div class="admin-row" style="padding:6px 9px">' +
             '<div class="t"><b style="font-size:13px">'+esc(dateLabel(pl.d))+'</b>' +
-            '<span>'+(pl.n?esc(pl.n)+'人':'')+(pl.w?'／かち：'+esc(pl.w):'')+'</span></div>' +
+            '<span>'+(pl.n?esc(pl.n)+'人':'')+(pl.w?'／かち：'+esc(pl.w):'')+'</span>' +
+            (pl.m ? '<span style="display:block;color:var(--text);font-size:12.5px;white-space:pre-wrap;margin-top:4px">'+esc(pl.m)+'</span>' : '') +
+            '</div>' +
             '<button class="mini warn" data-delplay="'+esc(pl.d||'')+'|'+esc(pl.w||'')+'">けす</button></div>').join('') +
         '</div>' : '') +
     '</div>' +
@@ -1484,12 +1498,13 @@ function viewBulk(){
 
   if(state.bulkIndex >= targets.length) state.bulkIndex = 0;
   const g = targets[state.bulkIndex];
+  state.formImages = (g.images || []).slice();   /* 画像は 編集画面と おなじ しくみを つかう */
   const quick = ['初心者','家族向け','盛り上がる','パーティー','対戦','協力','頭脳戦','運要素','軽量級','ブラフ','ワードゲーム','アクション'];
 
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
     '<h1 class="lede">まとめて にゅうりょく</h1>' +
-    '<p class="sub">のこり '+targets.length+'さくひん（'+(state.bulkIndex+1)+'／'+targets.length+'）<br>にんずうと じかんだけでも いれると、けんさくに でて くるように なります。</p>' +
+    '<p class="sub">のこり '+targets.length+'さくひん（'+(state.bulkIndex+1)+'／'+targets.length+'）<br>にんずうと じかんだけでも いれると けんさくに でて きます。<br>しゃしんや ルールも ここで いれられます。</p>' +
 
     '<div class="win" style="margin-bottom:14px">' +
       '<h2 style="font-size:20px;color:var(--accent);margin:0 0 12px">'+esc(g.title)+'</h2>' +
@@ -1519,9 +1534,49 @@ function viewBulk(){
       '</div>' +
 
       '<label class="lbl" for="bSummary">ひとこと しょうかい</label>' +
-      '<input type="text" id="bSummary" value="'+esc(g.summary||'')+'" placeholder="どんな ゲーム？ 一行で" style="margin-bottom:6px">' +
-      '<label class="lbl" for="bReading" style="margin-top:8px">よみがな<span class="hint">にんい</span></label>' +
-      '<input type="text" id="bReading" value="'+esc(g.reading||'')+'" placeholder="ひらがなで">' +
+      '<input type="text" id="bSummary" value="'+esc(g.summary||'')+'" placeholder="どんな ゲーム？ 一行で" style="margin-bottom:12px">' +
+
+      '<label class="lbl" for="bReading">よみがな<span class="hint">にんい</span></label>' +
+      '<input type="text" id="bReading" value="'+esc(g.reading||'')+'" placeholder="ひらがなで" style="margin-bottom:12px">' +
+
+      '<label class="lbl">はこ画像・プレイ画像<span class="hint">1まいめが はこ画像</span></label>' +
+      '<label class="filebtn">＋ 画像を えらぶ<input type="file" id="f-images" accept="image/*" multiple></label>' +
+      '<div class="row" style="margin-top:9px">' +
+        '<input type="text" id="f-imgurl" placeholder="画像の URL を はりつけ" style="flex:2">' +
+        '<button type="button" class="mini" id="addUrlBtn" style="flex:0 0 auto">URLを ついか</button></div>' +
+      '<div class="imgs-preview" id="imgPreview" style="margin-bottom:12px"></div>' +
+
+      '<div class="row" style="margin-bottom:12px">' +
+        '<div><label class="lbl" for="bAge">たいしょう年齢</label>' +
+          '<input type="number" id="bAge" min="1" max="99" inputmode="numeric" value="'+esc(g.age||8)+'"></div>' +
+        '<div><label class="lbl">ほしい ゲーム</label>' +
+          '<label class="row" style="gap:8px;align-items:center;padding:9px 0">' +
+            '<input type="checkbox" id="bWish" '+(g.wish?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px">' +
+            '<span style="font-size:12.5px;color:var(--muted)">まだ もって いない</span></label></div>' +
+      '</div>' +
+
+      '<details style="margin-bottom:10px"><summary>そのほかの タグ（ぜんぶ から えらぶ）</summary>' +
+        '<div style="margin-top:10px">' +
+        TAG_CATEGORIES.concat(['その他']).map(cat => {
+          const list = state.tags.filter(t =>
+            quick.indexOf(t.name) < 0 &&
+            (cat === 'その他' ? !TAG_CATEGORIES.includes(t.category) : t.category === cat));
+          if(!list.length) return '';
+          return '<div class="catlabel">'+esc(cat)+'</div><div class="chips" style="margin-bottom:8px">' +
+            list.map(t => '<button class="chip sm" data-btag="'+esc(t.name)+'" aria-pressed="'+((g.tags||[]).includes(t.name))+'">'+esc(t.name)+'</button>').join('') +
+            '</div>';
+        }).join('') +
+        '</div></details>' +
+
+      '<details><summary>ルール・おすすめ ポイントも かく</summary>' +
+        '<div style="margin-top:10px">' +
+        '<label class="lbl" for="bQuick">30びょうルール</label>' +
+        '<textarea id="bQuick" placeholder="1. ○○する&#10;2. ○○する" style="margin-bottom:10px">'+esc(g.quickRule||'')+'</textarea>' +
+        '<label class="lbl" for="bReco">おすすめ ポイント</label>' +
+        '<textarea id="bReco" placeholder="・○人が いちばん たのしい" style="margin-bottom:10px">'+esc(g.recommendation||'')+'</textarea>' +
+        '<label class="lbl" for="bDetail">くわしい ルール</label>' +
+        '<textarea id="bDetail" style="min-height:150px">'+esc(g.detailRule||'')+'</textarea>' +
+        '</div></details>' +
     '</div>' +
 
     '<div class="btn-row" style="margin-bottom:10px">' +
@@ -1889,6 +1944,19 @@ function bind(r){
   };
 
   /* タイマー */
+  app.querySelectorAll('[data-timerset]').forEach(b => b.onclick = () => {
+    let m = b.dataset.timerset;
+    if(m === 'input') m = (document.getElementById('timerMin')||{value:''}).value;
+    m = Math.min(300, Math.max(1, Number(m) || 0));
+    if(!m) return toast('ふんを いれて ください');
+    stopTimer();
+    timerLeft = Math.round(m * 60);
+    const inp = document.getElementById('timerMin');
+    if(inp) inp.value = m;
+    app.querySelectorAll('[data-timer]').forEach(x => { if(x.dataset.min !== undefined) x.dataset.min = m; });
+    paintTimer();
+    toast(m + '分に セット しました');
+  });
   app.querySelectorAll('[data-timer]').forEach(b => b.onclick = () => {
     const kind = b.dataset.timer, min = Number(b.dataset.min) || 30;
     if(kind === 'start'){ if(!timerLeft) timerLeft = min*60; startTimer(min); }
@@ -1905,7 +1973,8 @@ function bind(r){
     const d = (document.getElementById('playDate')||{value:''}).value || todayStr();
     const n = Number((document.getElementById('playN')||{value:''}).value) || 0;
     const w = (document.getElementById('playWin')||{value:''}).value.trim();
-    g.plays = playsOf(g).concat([{d, n: n || undefined, w: w || undefined}]);
+    const memo = (document.getElementById('playMemo')||{value:''}).value.trim();
+    g.plays = playsOf(g).concat([{d, n: n || undefined, w: w || undefined, m: memo || undefined}]);
     saveGames(); render();
     toast('きろく しました');
   };
@@ -1964,12 +2033,18 @@ function bind(r){
     g.difficulty = Math.min(5, Math.max(1, num('bDiff')));
     g.summary = (document.getElementById('bSummary')||{value:''}).value.trim();
     g.reading = (document.getElementById('bReading')||{value:''}).value.trim();
+    g.age = num('bAge') || g.age || 8;
+    g.images = state.formImages.slice();
+    g.wish = !!(document.getElementById('bWish')||{}).checked;
+    g.quickRule = (document.getElementById('bQuick')||{value:''}).value;
+    g.recommendation = (document.getElementById('bReco')||{value:''}).value;
+    g.detailRule = (document.getElementById('bDetail')||{value:''}).value;
     const picked = [];
     app.querySelectorAll('[data-btag]').forEach(b => {
       if(b.getAttribute('aria-pressed') === 'true') picked.push(b.dataset.btag);
     });
     const keep = (g.tags||[]).filter(t => t !== 'データみきにゅう' && picked.indexOf(t) < 0);
-    g.tags = keep.concat(picked);
+    g.tags = keep.concat(picked).filter((t,i,a) => a.indexOf(t) === i);
     saveGames();
     toast(g.title + ' を ほぞん しました');
     render();
