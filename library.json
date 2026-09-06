@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-06T16:53:39.532Z",
+  "version": "2026-09-06T17:33:43.562Z",
   "tags": [
     {
       "name": "初心者",
@@ -107,7 +107,10 @@
       "id": "g001",
       "title": "3秒トライ！",
       "reading": "さんびょうとらい",
-      "video": "https://m.youtube.com/watch?v=hx7jMulhJ2Y&pp=ygUNM-enkuODiOODqeOCpA%3D%3D&ra=m",
+      "videos": [
+        "https://m.youtube.com/watch?v=hx7jMulhJ2Y&pp=ygUNM-enkuODiOODqeOCpA%3D%3D&ra=m",
+        "https://m.youtube.com/shorts/az3XVDOD12o?ra=m"
+      ],
       "wish": false,
       "images": [
         "https://www.itten-games.com/wp/wp-content/uploads/2021/11/FB-3_3S.jpg"
