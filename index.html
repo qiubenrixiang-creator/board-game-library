@@ -375,6 +375,7 @@ const KEY = {
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
+const FAV_TAG = '★おきにいり';   /* 「その他」に つくる おすすめの タグ */
 
 const DEFAULT_TAGS = [
   {name:'初心者', category:'難易度'},
@@ -1234,8 +1235,12 @@ function viewAdmin(){
     '<p class="count">タグは じゆうに ついか・さくじょ できます。けすと 各ゲームからも はずれます。</p>' + tagRows +
     '<div class="row" style="margin-top:10px">' +
       '<input type="text" id="newTag" placeholder="あたらしい タグ" style="flex:2">' +
-      '<select id="newTagCat" style="flex:1">'+TAG_CATEGORIES.map(c=>'<option>'+esc(c)+'</option>').join('')+'</select>' +
+      '<select id="newTagCat" style="flex:1">'+TAG_CATEGORIES.concat(['その他']).map(c=>'<option>'+esc(c)+'</option>').join('')+'</select>' +
       '<button class="mini" id="addTagBtn" style="flex:0 0 auto">ついか</button></div>' +
+    (state.tags.some(t => t.name === FAV_TAG) ? '' :
+      '<p class="count" style="margin:8px 0 0">' +
+      '<button class="mini" id="addFavBtn">' + esc(FAV_TAG) + ' タグを つくる</button> ' +
+      'すきな ゲームに つけて おくと、さがす画面から すぐ よびだせます。</p>') +
 
     (pendingSiteData ?
       '<div class="note" style="margin-bottom:14px;border-color:var(--accent);color:var(--text)">' +
@@ -1575,6 +1580,13 @@ function bind(r){
     if(state.tags.some(t => t.name === name)) return toast('おなじ なまえの タグが あります');
     state.tags.push({name, category: document.getElementById('newTagCat').value});
     saveTags(); render(); toast('タグを ついかしました');
+  };
+  const addFavBtn = document.getElementById('addFavBtn');
+  if(addFavBtn) addFavBtn.onclick = () => {
+    if(state.tags.some(t => t.name === FAV_TAG)) return toast('もう あります');
+    state.tags.push({name:FAV_TAG, category:'その他'});
+    saveTags(); render();
+    toast(FAV_TAG + ' を つくりました');
   };
   const exportBtn = document.getElementById('exportBtn');
   if(exportBtn) exportBtn.onclick = exportLibrary;
