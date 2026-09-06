@@ -608,6 +608,46 @@ const sound = {
 function currentTrack(){
   return BGM_TRACKS.find(t => t.id === sound.trackId) || BGM_TRACKS[0];
 }
+/* iPhone は「画面を さわった 直後」でないと おとを ならせない しくみが あり、
+   ふつうの Audio では 数びょう たつと なりません。
+   Web Audio に よみこんで おくと、なんぷん あとでも かくじつに ならせます。 */
+let audioCtx = null;
+const buffers = {};      /* click / fanfare / timer の おとの データ */
+
+function b64ToArrayBuffer(dataUri){
+  const b64 = String(dataUri).split(',')[1] || '';
+  const bin = atob(b64);
+  const len = bin.length;
+  const bytes = new Uint8Array(len);
+  for(let i = 0; i < len; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes.buffer;
+}
+function prepareBuffers(){
+  if(!audioCtx) return;
+  [['click', AUDIO.click], ['fanfare', AUDIO.fanfare], ['timer', AUDIO.timer]].forEach(pair => {
+    const key = pair[0], src = pair[1];
+    if(buffers[key] || !src) return;
+    try{
+      audioCtx.decodeAudioData(b64ToArrayBuffer(src),
+        buf => { buffers[key] = buf; },
+        () => {});
+    }catch(e){ /* つかえない ブラウザでは ふつうの Audio を つかう */ }
+  });
+}
+function playBuffer(key, volume){
+  if(!audioCtx || !buffers[key]) return false;
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+  try{
+    const src = audioCtx.createBufferSource();
+    const gain = audioCtx.createGain();
+    gain.gain.value = (volume === undefined ? 0.9 : volume);
+    src.buffer = buffers[key];
+    src.connect(gain).connect(audioCtx.destination);
+    src.start(0);
+    return true;
+  }catch(e){ return false; }
+}
+
 function initAudio(){
   sound.bgm = new Audio();
   sound.bgm.loop = true;
@@ -634,6 +674,19 @@ function initAudio(){
 function unlockAudioOnce(){
   if(sound.unlocked) return;
   sound.unlocked = true;
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(Ctx){
+      audioCtx = new Ctx();
+      if(audioCtx.state === 'suspended') audioCtx.resume();
+      /* むおんを 1つ ならして iPhone の ロックを はずす */
+      const s0 = audioCtx.createBufferSource();
+      s0.buffer = audioCtx.createBuffer(1, 1, 22050);
+      s0.connect(audioCtx.destination);
+      s0.start(0);
+      prepareBuffers();
+    }
+  }catch(e){ /* つかえなければ ふつうの Audio のまま */ }
   syncBgm();
   document.removeEventListener('pointerdown', unlockAudioOnce);
 }
@@ -647,21 +700,29 @@ function syncBgm(){
   }
 }
 function playClick(){
-  if(!sound.seOn || !sound.click) return;
+  if(!sound.seOn) return;
+  if(playBuffer('click', 0.6)) return;
+  if(!sound.click) return;
   const n = sound.click.cloneNode();
   n.volume = sound.click.volume;
   n.play().catch(()=>{});
 }
 function playTimerSe(){
-  if(!sound.seOn || !sound.timerSe) return;
-  const n = sound.timerSe.cloneNode();
-  n.volume = sound.timerSe.volume;
-  n.play().catch(()=>{});
-  /* きこえやすい ように 2かい ならす */
-  setTimeout(() => { const m = sound.timerSe.cloneNode(); m.volume = sound.timerSe.volume; m.play().catch(()=>{}); }, 850);
+  if(!sound.seOn) return;
+  const once = () => {
+    if(playBuffer('timer', 0.9)) return;
+    if(!sound.timerSe) return;
+    const n = sound.timerSe.cloneNode();
+    n.volume = sound.timerSe.volume;
+    n.play().catch(()=>{});
+  };
+  once();
+  setTimeout(once, 850);   /* きこえやすい ように 2かい */
 }
 function playFanfare(){
-  if(!sound.seOn || !sound.fanfare) return;
+  if(!sound.seOn) return;
+  if(playBuffer('fanfare', 0.85)) return;
+  if(!sound.fanfare) return;
   const n = sound.fanfare.cloneNode();
   n.volume = sound.fanfare.volume;
   n.play().catch(()=>{});
@@ -982,7 +1043,7 @@ function render(){
 }
 
 /* ---------------- タイマー ---------------- */
-let timerId = null, timerLeft = 0;
+let timerId = null, timerLeft = 0, timerEndAt = 0, timerDone = false;
 function timerText(sec){
   sec = Math.max(0, Math.floor(sec));
   const m = Math.floor(sec/60), s2 = sec % 60;
@@ -994,25 +1055,34 @@ function paintTimer(){
 }
 function stopTimer(){
   if(timerId){ clearInterval(timerId); timerId = null; }
+  timerEndAt = 0;
+}
+/* setInterval は 画面を みて いない あいだ 止まったり おそく なったり する。
+   おわる 時こくを おぼえて おき、いつも 時計と くらべて のこりを だす。 */
+function tickTimer(){
+  if(!timerEndAt) return;
+  const left = Math.max(0, Math.round((timerEndAt - Date.now()) / 1000));
+  timerLeft = left;
+  paintTimer();
+  if(left <= 0 && !timerDone){
+    timerDone = true;
+    stopTimer();
+    playTimerSe();
+    toast('じかんです！');
+  }
 }
 function startTimer(minutes){
   if(!timerLeft) timerLeft = Math.round(Number(minutes||30) * 60);
+  if(timerLeft <= 0) return;
   stopTimer();
-  timerId = setInterval(() => {
-    timerLeft--;
-    paintTimer();
-    if(timerLeft <= 0){
-      stopTimer();
-      timerLeft = 0;
-      paintTimer();
-      playTimerSe();
-      toast('じかんです！');
-    }
-  }, 1000);
+  timerDone = false;
+  timerEndAt = Date.now() + timerLeft * 1000;
+  timerId = setInterval(tickTimer, 250);
   paintTimer();
 }
 function resetTimer(minutes){
   stopTimer();
+  timerDone = false;
   timerLeft = Math.round(Number(minutes||30) * 60);
   paintTimer();
 }
@@ -1961,6 +2031,7 @@ function bind(r){
     if(total <= 0) return toast('じかんを いれて ください');
     stopTimer();
     timerLeft = total;
+    timerDone = false;
     /* 「もどす」で この じかんに もどる ように しておく */
     app.querySelectorAll('[data-timer]').forEach(x => { if(x.dataset.min !== undefined) x.dataset.min = String(total / 60); });
     paintTimer();
@@ -2351,6 +2422,9 @@ document.querySelectorAll('.tab').forEach(t => {
   };
 });
 window.addEventListener('hashchange', render);
+/* ほかの アプリから もどって きた ときに、のこり じかんを 合わせなおす */
+document.addEventListener('visibilitychange', () => { if(!document.hidden) tickTimer(); });
+window.addEventListener('focus', tickTimer);
 
 paintIcons(document);
 initAudio();
