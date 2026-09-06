@@ -151,7 +151,7 @@ img{image-rendering:auto}
   background:var(--panel);border-top:3px solid var(--frame);
   padding-bottom:env(safe-area-inset-bottom);
 }
-.tabbar-in{display:grid;grid-template-columns:repeat(4,1fr);max-width:600px;margin:0 auto}
+.tabbar-in{display:grid;grid-template-columns:repeat(5,1fr);max-width:600px;margin:0 auto}
 .tab{
   border:0;background:none;padding:8px 0 10px;display:grid;gap:1px;justify-items:center;
   color:var(--muted);font-size:11px;cursor:pointer;letter-spacing:.06em;
@@ -161,7 +161,7 @@ img{image-rendering:auto}
 .tab[aria-current="true"] .i{filter:drop-shadow(0 0 3px currentColor)}
 .tab{position:relative}
 .tab .dot{
-  position:absolute;top:4px;right:calc(50% - 22px);
+  position:absolute;top:4px;right:calc(50% - 18px);
   width:9px;height:9px;background:var(--accent);border:2px solid var(--panel);
 }
 
@@ -375,6 +375,7 @@ h2.sec::before{content:"■ ";font-size:12px}
     <button class="tab" data-go="#/"><span class="i" data-icon="search"></span>さがす</button>
     <button class="tab" data-go="#/list"><span class="i" data-icon="book"></span>ずかん</button>
     <button class="tab" data-go="#/random"><span class="i" data-icon="die"></span>おまかせ</button>
+    <button class="tab" data-go="#/tools"><span class="i" data-icon="sword"></span>どうぐ</button>
     <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり<span class="dot" id="dirtyDot" hidden></span></button>
   </div>
 </nav>
@@ -821,7 +822,7 @@ const state = {
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
   lastRandomId: null,
-  formImages: [], formTags: []
+  formImages: [], formTags: [], formVideos: []
 };
 
 function loadAll(){
@@ -1066,11 +1067,11 @@ function render(){
 
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
-                  print:viewPrint, playlog:viewPlayLog, lend:viewLend };
+                  print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
-  const map = { home:'#/', list:'#/list', random:'#/random', admin:'#/admin' };
+  const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', admin:'#/admin' };
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   syncBgm();
   paintSoundBtns();
@@ -1150,16 +1151,28 @@ function youtubeId(url){
   if(/^[A-Za-z0-9_-]{11}$/.test(u)) return u;   /* IDだけ はりつけた ばあい */
   return '';
 }
+/* 1つの ゲームに どうがを 何本でも つけられる。
+   ふるい データ（video が 1本だけ）も そのまま よめる ように する。 */
+function videosOf(g){
+  const list = Array.isArray(g.videos) ? g.videos.slice() : [];
+  if(!list.length && g.video) list.push(g.video);
+  return list.filter(u => youtubeId(u));
+}
 function videoHTML(g){
-  const id = youtubeId(g.video);
-  if(!id) return '';
-  return '<div class="section"><h2>どうがで みる</h2>' +
-    '<div class="video-box" id="videoBox" data-vid="'+esc(id)+'">' +
-      '<img src="https://i.ytimg.com/vi/'+esc(id)+'/hqdefault.jpg" alt="" loading="lazy">' +
-      '<button class="video-play" id="videoPlay" aria-label="どうがを さいせい">▶</button>' +
-    '</div>' +
-    '<p class="count" style="margin:8px 0 0">タップで さいせい します。' +
-    '<a href="https://www.youtube.com/watch?v='+esc(id)+'" target="_blank" rel="noopener">YouTubeで ひらく</a></p>' +
+  const list = videosOf(g);
+  if(!list.length) return '';
+  return '<div class="section"><h2>どうがで みる'+(list.length>1?'（'+list.length+'本）':'')+'</h2>' +
+    list.map((u, i) => {
+      const id = youtubeId(u);
+      return '<div style="margin-bottom:'+(i === list.length-1 ? '0' : '14px')+'">' +
+        '<div class="video-box" data-vid="'+esc(id)+'">' +
+          '<img src="https://i.ytimg.com/vi/'+esc(id)+'/hqdefault.jpg" alt="" loading="lazy">' +
+          '<button class="video-play" data-videoplay="'+i+'" aria-label="どうがを さいせい">▶</button>' +
+        '</div>' +
+        '<p class="count" style="margin:6px 0 0">タップで さいせい。' +
+        '<a href="https://www.youtube.com/watch?v='+esc(id)+'" target="_blank" rel="noopener">YouTubeで ひらく</a></p>' +
+      '</div>';
+    }).join('') +
   '</div>';
 }
 
@@ -1240,7 +1253,7 @@ function gameCard(g, hitTags){
   const marks =
     (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
     (isLent(g) ? '<span class="badge">かしだし中</span>' : '') +
-    (youtubeId(g.video) ? '<span class="badge" style="border-color:var(--accent-2);color:var(--accent-2)">どうが</span>' : '') +
+    (videosOf(g).length ? '<span class="badge" style="border-color:var(--accent-2);color:var(--accent-2)">どうが'+(videosOf(g).length>1?' '+videosOf(g).length:'')+'</span>' : '') +
     (playCount(g) ? '<span class="badge">'+playCount(g)+'かい</span>' : '');
   return '<button class="gcard" data-open="'+esc(g.id)+'">' + thumbHTML(g) +
     '<div><h3>'+esc(g.title)+beginner+marks+'</h3>' +
@@ -1359,12 +1372,8 @@ function viewRandom(){
       '<button class="btn primary big" id="rollBtn">▶ ひく</button>' +
     '</div>' +
 
-    '<div class="divider"></div><h2 class="sec">さいしょの人を きめる</h2>' +
-    '<p class="count">なまえを 「、」か スペースで くぎって いれます。<br>なまえの かわりに にんずう（すうじ）だけでも OKです。</p>' +
-    '<div class="row" style="margin-bottom:10px">' +
-      '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" style="flex:2">' +
-      '<button class="mini" id="firstBtn" style="flex:0 0 auto">きめる</button></div>' +
-    '<div id="firstResult"></div>' +
+    '<div class="divider"></div>' +
+    '<button class="btn small" style="width:100%" data-go2="#/tools">さいしょの人・タイマーは「どうぐ」へ</button>' +
   '</section>';
 }
 
@@ -1410,56 +1419,13 @@ function viewDetail(id){
       '<dt>じかん</dt><dd>やく'+(Number(g.playTime)||0)+'分</dd>' +
       '<dt>たいしょう年齢</dt><dd>'+(g.age ? esc(g.age)+'さい〜' : '—')+'</dd>' +
       '<dt>むずかしさ</dt><dd>'+stars(g.difficulty)+'</dd>' + optional.join('') +
+      (playCount(g) ? '<dt>あそんだ かず</dt><dd>'+playCount(g)+'かい（さいご '+esc(dateLabel(lastPlayed(g)))+'）</dd>' : '') +
       '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+((g.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')||'—')+'</div></dd>' +
     '</dl></div>' +
 
     (g.detailRule ? '<div class="section"><h2>くわしい ルール</h2><div class="body">'+esc(g.detailRule)+'</div></div>' : '') +
 
     videoHTML(g) +
-
-    /* --- タイマー --- */
-    '<div class="section"><h2>タイマー</h2>' +
-      '<div id="timerBox" style="text-align:center">' +
-        '<p id="timerView" style="font-size:34px;color:var(--accent);margin:4px 0 12px">'+timerText(timerLeft || (Number(g.playTime)||30)*60)+'</p>' +
-
-        '<div class="row" style="margin-bottom:8px;justify-content:center">' +
-          '<input type="number" id="timerMin" min="0" max="300" inputmode="numeric" value="'+(Number(g.playTime)||30)+'" style="flex:1;text-align:center">' +
-          '<span style="flex:0 0 auto;color:var(--muted)">分</span>' +
-          '<input type="number" id="timerSec" min="0" max="59" step="5" inputmode="numeric" value="0" style="flex:1;text-align:center">' +
-          '<span style="flex:0 0 auto;color:var(--muted)">秒</span>' +
-        '</div>' +
-        '<button class="btn small" data-timerset="input" style="width:100%;margin-bottom:10px">この じかんに セットする</button>' +
-
-        '<div class="btn-row">' +
-          '<button class="btn small" style="flex:1" data-timer="start" data-min="'+(Number(g.playTime)||30)+'">はじめる</button>' +
-          '<button class="btn small" style="flex:1" data-timer="stop">とめる</button>' +
-          '<button class="btn small" style="flex:1" data-timer="reset" data-min="'+(Number(g.playTime)||30)+'">もどす</button>' +
-        '</div>' +
-        '<p class="count" style="margin:8px 0 0">分と 秒を いれて セットできます。<br>なにも しなければ この ゲームの めやす '+(Number(g.playTime)||30)+'分で はじまります。</p>' +
-      '</div></div>' +
-
-    /* --- あそんだ きろく --- */
-    '<div class="section"><h2>あそんだ きろく</h2>' +
-      '<p class="count" style="margin:0 0 10px">' +
-        (playCount(g) ? 'つうさん '+playCount(g)+'かい／さいご は '+esc(dateLabel(lastPlayed(g)))
-                      : 'まだ きろくが ありません。') + '</p>' +
-      '<div class="row" style="margin-bottom:8px">' +
-        '<input type="date" id="playDate" value="'+todayStr()+'" style="flex:1.4">' +
-        '<input type="number" id="playN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+(state.today||'')+'" style="flex:1">' +
-      '</div>' +
-      '<input type="text" id="playWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
-      '<textarea id="playMemo" placeholder="かんそう・おぼえがき（にんい）&#10;れい：4人が ちょうど よかった。せつめい 5分。" style="min-height:74px;margin-bottom:8px"></textarea>' +
-      '<button class="btn small" id="addPlayBtn" style="width:100%">この ないようで きろくする</button>' +
-      (playsOf(g).length ?
-        '<div style="margin-top:6px">' + playsOf(g).slice().sort((a,b)=>(b.d||'').localeCompare(a.d||'')).slice(0,5).map((pl,i) =>
-          '<div class="admin-row" style="padding:6px 9px">' +
-            '<div class="t"><b style="font-size:13px">'+esc(dateLabel(pl.d))+'</b>' +
-            '<span>'+(pl.n?esc(pl.n)+'人':'')+(pl.w?'／かち：'+esc(pl.w):'')+'</span>' +
-            (pl.m ? '<span style="display:block;color:var(--text);font-size:12.5px;white-space:pre-wrap;margin-top:4px">'+esc(pl.m)+'</span>' : '') +
-            '</div>' +
-            '<button class="mini warn" data-delplay="'+esc(pl.d||'')+'|'+esc(pl.w||'')+'">けす</button></div>').join('') +
-        '</div>' : '') +
-    '</div>' +
 
     /* --- かしだし（じょうきょうだけ。とうろくは かんり画面から） --- */
     (isLent(g) ?
@@ -1489,6 +1455,7 @@ function viewForm(id){
 
   state.formImages = g ? (g.images||[]).slice() : [];
   state.formTags = g ? (g.tags||[]).slice() : [];
+  state.formVideos = g ? videosOf(g) : [];
   const v = (k,d) => g ? (g[k] != null ? g[k] : d) : d;
 
   const tagChips = TAG_CATEGORIES.concat(['その他']).map(cat => {
@@ -1546,9 +1513,12 @@ function viewForm(id){
       '<span style="font-size:13px">まだ もって いない（ほしいリストに いれる）<br>' +
       '<span style="color:var(--muted);font-size:11.5px">ほしいリストの ゲームは、さがす・おまかせには でて きません。</span></span></label>' +
 
-    '<div class="form-group"><label class="lbl" for="f-video">しょうかい どうがの URL<span class="hint">YouTube・にんい</span></label>' +
-      '<input type="text" id="f-video" value="'+esc(v('video',''))+'" placeholder="https://www.youtube.com/watch?v=..." autocapitalize="off">' +
-      '<p class="count" style="margin:6px 0 0">ルール説明や プレイ動画を いれると、文章より わかりやすく なります。</p></div>' +
+    '<div class="form-group"><label class="lbl">しょうかい どうが<span class="hint">YouTube・何本でも</span></label>' +
+      '<div class="row">' +
+        '<input type="text" id="f-video" placeholder="https://www.youtube.com/watch?v=..." autocapitalize="off" style="flex:2">' +
+        '<button type="button" class="mini" id="addVideoBtn" style="flex:0 0 auto">ついか</button></div>' +
+      '<div id="videoList"></div>' +
+      '<p class="count" style="margin:6px 0 0">ルール説明と プレイ動画を わけて いれる、といった つかいかたが できます。</p></div>' +
 
     '<div class="form-group"><label class="lbl" for="f-summary">ひとこと しょうかい</label>' +
       '<input type="text" id="f-summary" value="'+esc(v('summary',''))+'" placeholder="れい：宝石を集めて発展する戦略ゲーム"></div>' +
@@ -1660,6 +1630,7 @@ function viewBulk(){
   if(state.bulkIndex >= targets.length) state.bulkIndex = 0;
   const g = targets[state.bulkIndex];
   state.formImages = (g.images || []).slice();   /* 画像は 編集画面と おなじ しくみを つかう */
+  state.formVideos = videosOf(g);
   const quick = ['初心者','家族向け','盛り上がる','パーティー','対戦','協力','頭脳戦','運要素','軽量級','ブラフ','ワードゲーム','アクション'];
 
   return '<section class="page">' +
@@ -1700,8 +1671,11 @@ function viewBulk(){
       '<label class="lbl" for="bReading">よみがな<span class="hint">にんい</span></label>' +
       '<input type="text" id="bReading" value="'+esc(g.reading||'')+'" placeholder="ひらがなで" style="margin-bottom:12px">' +
 
-      '<label class="lbl" for="bVideo">しょうかい どうがの URL<span class="hint">YouTube・にんい</span></label>' +
-      '<input type="text" id="bVideo" value="'+esc(g.video||'')+'" placeholder="https://youtu.be/..." autocapitalize="off" style="margin-bottom:12px">' +
+      '<label class="lbl">しょうかい どうが<span class="hint">YouTube・何本でも</span></label>' +
+      '<div class="row" style="margin-bottom:4px">' +
+        '<input type="text" id="f-video" placeholder="https://youtu.be/..." autocapitalize="off" style="flex:2">' +
+        '<button type="button" class="mini" id="addVideoBtn" style="flex:0 0 auto">ついか</button></div>' +
+      '<div id="videoList" style="margin-bottom:12px"></div>' +
 
       '<label class="lbl">はこ画像・プレイ画像<span class="hint">1まいめが はこ画像</span></label>' +
       '<label class="filebtn">＋ 画像を えらぶ<input type="file" id="f-images" accept="image/*" multiple></label>' +
@@ -1892,6 +1866,52 @@ function bindLendPicks(box){
     state.lendPick = (state.lendPick === b.dataset.lendpick) ? '' : b.dataset.lendpick;
     updateLendList();
   });
+}
+
+/* ゲームを あそぶ ときに やくだつ どうぐを ここに まとめる */
+function viewTools(){
+  const mins = Math.floor((timerLeft || 0) / 60);
+  const secs = (timerLeft || 0) % 60;
+  return '<section class="page">' +
+    '<h1 class="lede">あそびの どうぐ</h1>' +
+    '<p class="sub">あそんで いる あいだに つかう どうぐを あつめました。</p>' +
+
+    /* --- タイマー --- */
+    '<div class="section"><h2>タイマー</h2>' +
+      '<div id="timerBox" style="text-align:center">' +
+        '<p id="timerView" style="font-size:38px;color:var(--accent);margin:4px 0 12px">'+timerText(timerLeft || 30*60)+'</p>' +
+        '<div class="row" style="margin-bottom:8px;justify-content:center">' +
+          '<input type="number" id="timerMin" min="0" max="300" inputmode="numeric" value="'+(timerLeft ? mins : 30)+'" style="flex:1;text-align:center">' +
+          '<span style="flex:0 0 auto;color:var(--muted)">分</span>' +
+          '<input type="number" id="timerSec" min="0" max="59" step="5" inputmode="numeric" value="'+(timerLeft ? secs : 0)+'" style="flex:1;text-align:center">' +
+          '<span style="flex:0 0 auto;color:var(--muted)">秒</span>' +
+        '</div>' +
+        '<button class="btn small" data-timerset="input" style="width:100%;margin-bottom:10px">この じかんに セットする</button>' +
+        '<div class="btn-row">' +
+          '<button class="btn small" style="flex:1" data-timer="start" data-min="30">はじめる</button>' +
+          '<button class="btn small" style="flex:1" data-timer="stop">とめる</button>' +
+          '<button class="btn small" style="flex:1" data-timer="reset" data-min="30">もどす</button>' +
+        '</div>' +
+        '<p class="count" style="margin:8px 0 0">ほかの がめんに いっても うごき つづけます。<br>0に なると おとで しらせます。</p>' +
+      '</div></div>' +
+
+    /* --- さいしょの人 --- */
+    '<div class="section"><h2>さいしょの人を きめる</h2>' +
+      '<p class="count" style="margin:0 0 8px">なまえを 「、」か スペースで くぎって いれます。<br>なまえの かわりに にんずう（すうじ）だけでも OKです。</p>' +
+      '<div class="row" style="margin-bottom:10px">' +
+        '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" style="flex:2">' +
+        '<button class="mini" id="firstBtn" style="flex:0 0 auto">きめる</button></div>' +
+      '<div id="firstResult"></div>' +
+    '</div>' +
+
+    /* --- ほかの どうぐへの 入り口 --- */
+    '<div class="section"><h2>そのほか</h2>' +
+      '<div class="btn-row" style="margin-bottom:10px">' +
+        '<button class="btn small" style="flex:1" data-go2="#/random">おまかせで きめる</button>' +
+        '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button></div>' +
+      '<p class="count" style="margin:0">「きょう あそんだ」では、あそんだ ゲームを まとめて きろく できます。</p>' +
+    '</div>' +
+  '</section>';
 }
 
 function viewAdmin(){
@@ -2194,6 +2214,24 @@ function copyText(text){
 }
 
 /* ---------------- 画像プレビュー ---------------- */
+function paintVideoList(){
+  const box = document.getElementById('videoList');
+  if(!box) return;
+  const list = state.formVideos || [];
+  box.innerHTML = list.length ? list.map((u,i) => {
+    const id = youtubeId(u);
+    return '<div class="admin-row" style="padding:6px 8px;margin-top:8px">' +
+      '<img src="https://i.ytimg.com/vi/'+esc(id)+'/default.jpg" alt="" style="width:52px;height:39px;object-fit:cover;border:2px solid var(--frame);flex:0 0 auto">' +
+      '<div class="t"><b style="font-size:12.5px">どうが '+(i+1)+'</b><span style="word-break:break-all">'+esc(u)+'</span></div>' +
+      '<button class="mini warn" data-rmvideo="'+i+'">けす</button></div>';
+  }).join('') : '<p class="count" style="margin:8px 0 0">まだ ありません。</p>';
+
+  box.querySelectorAll('[data-rmvideo]').forEach(b => b.onclick = () => {
+    state.formVideos.splice(Number(b.dataset.rmvideo), 1);
+    paintVideoList();
+  });
+}
+
 function paintImgPreview(){
   const box = document.getElementById('imgPreview');
   if(!box) return;
@@ -2348,16 +2386,15 @@ function bind(r){
     if(i >= 0){ g.plays.splice(i,1); saveGames(); render(); toast('けしました'); }
   });
 
-  const videoPlay = document.getElementById('videoPlay');
-  if(videoPlay) videoPlay.onclick = () => {
-    const box = document.getElementById('videoBox');
+  app.querySelectorAll('[data-videoplay]').forEach(b => b.onclick = () => {
+    const box = b.closest('.video-box');
     if(!box) return;
     const vid = box.dataset.vid;
     /* youtube-nocookie を つかうと 見た人の じょうほうが のこりにくい */
     box.innerHTML = '<iframe src="https://www.youtube-nocookie.com/embed/'+encodeURIComponent(vid)+'?autoplay=1&playsinline=1" ' +
       'title="どうが" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" ' +
       'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
-  };
+  });
 
   /* かしだし */
   const lendQ = document.getElementById('lendQ');
@@ -2427,7 +2464,8 @@ function bind(r){
     g.difficulty = Math.min(5, Math.max(1, num('bDiff')));
     g.summary = (document.getElementById('bSummary')||{value:''}).value.trim();
     g.reading = (document.getElementById('bReading')||{value:''}).value.trim();
-    g.video = (document.getElementById('bVideo')||{value:''}).value.trim();
+    g.videos = state.formVideos.slice();
+    delete g.video;
     g.age = num('bAge') || g.age || 8;
     g.images = state.formImages.slice();
     g.wish = !!(document.getElementById('bWish')||{}).checked;
@@ -2466,6 +2504,21 @@ function bind(r){
       if(!btn) return;
       state.formImages.splice(Number(btn.dataset.rmimg),1);
       paintImgPreview();
+    };
+  }
+  const addVideoBtn = document.getElementById('addVideoBtn');
+  if(addVideoBtn){
+    paintVideoList();
+    addVideoBtn.onclick = () => {
+      const inp = document.getElementById('f-video');
+      const u = inp.value.trim();
+      if(!u) return toast('どうがの URLを いれて ください');
+      if(!youtubeId(u)) return toast('YouTubeの URLに みえません');
+      if(state.formVideos.some(x => youtubeId(x) === youtubeId(u))) return toast('もう ついか されて います');
+      state.formVideos.push(u);
+      inp.value = '';
+      paintVideoList();
+      toast('どうがを ついか しました');
     };
   }
   const addUrlBtn = document.getElementById('addUrlBtn');
@@ -2688,7 +2741,7 @@ function saveForm(id){
   const data = {
     id: id || uid(), title,
     reading: val('f-reading').trim(),
-    video: val('f-video').trim(),
+    videos: state.formVideos.slice(),
     wish: !!(document.getElementById('f-wish') || {}).checked,
     plays: before ? playsOf(before) : [],
     lentTo: before ? (before.lentTo || '') : '',
