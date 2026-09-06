@@ -253,6 +253,21 @@ img{image-rendering:auto}
 
 /* ---------- 詳細 ---------- */
 .detail-title{font-size:22px;line-height:1.45;margin:0 0 14px;color:var(--text)}
+.die-face{
+  width:56px;height:56px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  gap:2px;padding:7px;border:3px solid var(--frame);background:var(--panel);flex:0 0 auto;
+}
+.die-face span{display:block}
+.die-face span.on{background:var(--accent);border-radius:50%}
+.dice-row{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:10px}
+.score-table{width:100%;border-collapse:collapse}
+.score-table th,.score-table td{border:2px solid var(--frame);padding:4px;text-align:center;font-size:13px}
+.score-table th{color:var(--accent-2);font-weight:400}
+.score-table input.score-input{
+  width:100%;min-width:52px;padding:6px 4px;border:0;background:transparent;text-align:center;font-size:15px;
+}
+.score-total td{font-size:16px;color:var(--text)}
+.score-total td.win{color:var(--accent)}
 .video-box{position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--frame);overflow:hidden}
 .video-box img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
 .video-box iframe{width:100%;height:100%;border:0;display:block}
@@ -403,6 +418,9 @@ const KEY = {
   dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
   sharePriv:'bgl.sharePrivate',  /* かんそう・かしだしも こうかいするか */
+  score:'bgl.scoreSheet',        /* てんすう表 */
+  counters:'bgl.counters',       /* カウンター */
+  names:'bgl.lastNames',         /* まえに いれた なまえ */
   today:'bgl.todayPlayers'  /* きょうの メンバーの にんずう */
 };
 
@@ -821,6 +839,10 @@ const state = {
   bulkIndex: 0,                                     /* まとめて入力の いちばんめ */
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
+  score: {names:[], rows:[]},                       /* てんすう表 */
+  counters: [],                                     /* カウンター */
+  dice: {count:2, values:[]},                       /* サイコロ */
+  lastNames: '',                                    /* なまえの いれもの（くじ・チーム分け 共通） */
   lastRandomId: null,
   formImages: [], formTags: [], formVideos: []
 };
@@ -829,6 +851,11 @@ function loadAll(){
   state.games = store.read(KEY.games, null) || SEED_GAMES.map(g=>({...g}));
   state.tags  = store.read(KEY.tags, null)  || DEFAULT_TAGS.map(t=>({...t}));
   state.today = store.read(KEY.today, null);
+  const sc = store.read(KEY.score, null);
+  if(sc && Array.isArray(sc.names)) state.score = {names:sc.names, rows:Array.isArray(sc.rows)?sc.rows:[]};
+  const cn = store.read(KEY.counters, null);
+  if(Array.isArray(cn)) state.counters = cn;
+  state.lastNames = store.read(KEY.names, '') || '';
   const f = store.read(KEY.filters, null);
   if(f && typeof f === 'object'){
     state.filters = { time:f.time||null, players:f.players||null,
@@ -1868,7 +1895,181 @@ function bindLendPicks(box){
   });
 }
 
+/* ---------------- どうぐ ぜんぱんの しくみ ---------------- */
+function saveScore(){ store.write(KEY.score, state.score); }
+function saveCounters(){ store.write(KEY.counters, state.counters); }
+function saveNames(v){ state.lastNames = v; store.write(KEY.names, v); }
+
+/* 「たろう はなこ、じろう」→ ['たろう','はなこ','じろう']
+   すうじ だけの ときは 「1ばんめの 人」…に する */
+function parseNames(text){
+  const t = String(text || '').trim();
+  if(!t) return [];
+  if(/^\d+$/.test(t)){
+    const n = Math.min(20, Math.max(1, Number(t)));
+    const out = [];
+    for(let i = 1; i <= n; i++) out.push(i + 'ばんめの 人');
+    return out;
+  }
+  return t.split(/[、,\s]+/).map(x => x.trim()).filter(Boolean).slice(0, 20);
+}
+function shuffled(arr){
+  const a = arr.slice();
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    const t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+/* サイコロの め（ドット絵ふうに 9マスで あらわす） */
+function pipsHTML(n){
+  const map = {
+    1:[0,0,0, 0,1,0, 0,0,0],
+    2:[1,0,0, 0,0,0, 0,0,1],
+    3:[1,0,0, 0,1,0, 0,0,1],
+    4:[1,0,1, 0,0,0, 1,0,1],
+    5:[1,0,1, 0,1,0, 1,0,1],
+    6:[1,0,1, 1,0,1, 1,0,1]
+  };
+  const cells = (map[n] || map[1]).map(v => '<span'+(v?' class="on"':'')+'></span>').join('');
+  return '<div class="die-face">'+cells+'</div>';
+}
+
 /* ゲームを あそぶ ときに やくだつ どうぐを ここに まとめる */
+
+/* --- サイコロ --- */
+function diceHTML(){
+  const d = state.dice;
+  return '<div class="chips" style="margin-bottom:10px">' +
+      [1,2,3,4,5,6].map(n => '<button class="chip sm" data-dicecount="'+n+'" aria-pressed="'+(d.count===n)+'">'+n+'こ</button>').join('') +
+    '</div>' +
+    '<div id="diceResult">' + diceResultHTML() + '</div>' +
+    '<button class="btn primary" id="diceRollBtn" style="margin-top:10px">▶ ふる</button>';
+}
+function diceResultHTML(){
+  const v = state.dice.values;
+  if(!v.length) return '<p class="count" style="text-align:center;margin:14px 0">ボタンを おすと ふります。</p>';
+  const sum = v.reduce((a,b) => a+b, 0);
+  return '<div class="dice-row">' + v.map(n => pipsHTML(n)).join('') + '</div>' +
+    '<p class="encounter" style="text-align:center;margin:10px 0 0">ごうけい '+sum+'</p>';
+}
+
+/* --- てんすう表 --- */
+function scoreHTML(){
+  const sc = state.score;
+  if(!sc.names.length){
+    return '<p class="count" style="margin:0 0 8px">あそぶ 人の なまえを いれて はじめます。</p>' +
+      '<div class="row"><input type="text" id="scoreNames" placeholder="たろう はなこ じろう" style="flex:2">' +
+      '<button class="mini" id="scoreStart" style="flex:0 0 auto">はじめる</button></div>';
+  }
+  const totals = sc.names.map((_, i) => sc.rows.reduce((a, r) => a + (Number(r[i]) || 0), 0));
+  const best = Math.max.apply(null, totals);
+
+  return '<div style="overflow-x:auto">' +
+    '<table class="score-table"><thead><tr><th>かい</th>' +
+      sc.names.map(n => '<th>'+esc(n)+'</th>').join('') + '</tr></thead><tbody>' +
+      sc.rows.map((r, ri) =>
+        '<tr><td>'+(ri+1)+'</td>' + sc.names.map((_, ci) =>
+          '<td><input type="number" inputmode="numeric" class="score-input" data-r="'+ri+'" data-c="'+ci+'" value="'+(r[ci] === undefined || r[ci] === '' ? '' : esc(r[ci]))+'"></td>').join('') +
+        '</tr>').join('') +
+      '<tr class="score-total"><td>ごうけい</td>' +
+        totals.map(t => '<td'+(t === best && best !== 0 ? ' class="win"' : '')+'>'+t+'</td>').join('') +
+      '</tr>' +
+    '</tbody></table></div>' +
+    '<div class="btn-row" style="margin-top:10px">' +
+      '<button class="btn small" style="flex:1" id="scoreAddRow">＋ かいを ふやす</button>' +
+      '<button class="btn small" style="flex:1" id="scoreClear">さいしょから</button></div>';
+}
+
+/* --- カウンター --- */
+function counterHTML(){
+  if(!state.counters.length){
+    return '<p class="count" style="margin:0 0 8px">ライフ・とくてん・のこりかず など、なんにでも つかえます。</p>' +
+      '<div class="row"><input type="text" id="counterNames" placeholder="たろう はなこ／または ライフ" style="flex:2">' +
+      '<button class="mini" id="counterStart" style="flex:0 0 auto">つくる</button></div>';
+  }
+  return state.counters.map((c, i) =>
+    '<div class="admin-row" style="align-items:center">' +
+      '<div class="t"><b>'+esc(c.name)+'</b></div>' +
+      '<button class="mini" data-cnt="'+i+'" data-step="-5">-5</button>' +
+      '<button class="mini" data-cnt="'+i+'" data-step="-1">-1</button>' +
+      '<b style="min-width:2.6em;text-align:center;font-size:19px;color:var(--accent)" id="cntv'+i+'">'+c.value+'</b>' +
+      '<button class="mini" data-cnt="'+i+'" data-step="1">+1</button>' +
+      '<button class="mini" data-cnt="'+i+'" data-step="5">+5</button>' +
+    '</div>').join('') +
+    '<div class="btn-row" style="margin-top:10px">' +
+      '<button class="btn small" style="flex:1" id="counterZero">ぜんぶ 0に</button>' +
+      '<button class="btn small" style="flex:1" id="counterClear">やめる</button></div>';
+}
+
+function bindScore(){
+  const box = document.getElementById('scoreBox');
+  if(!box) return;
+
+  box.querySelectorAll('.score-input').forEach(inp => {
+    inp.oninput = () => {
+      const r = Number(inp.dataset.r), c = Number(inp.dataset.c);
+      if(!state.score.rows[r]) state.score.rows[r] = [];
+      state.score.rows[r][c] = inp.value;
+      saveScore();
+      repaintScoreTotals(box);
+    };
+  });
+
+  const add = document.getElementById('scoreAddRow');
+  if(add) add.onclick = () => {
+    state.score.rows.push(state.score.names.map(() => ''));
+    saveScore();
+    box.innerHTML = scoreHTML(); bindScore();
+  };
+  const clear = document.getElementById('scoreClear');
+  if(clear) clear.onclick = () => {
+    if(!confirm('てんすう表を さいしょから やりなおしますか？')) return;
+    state.score = {names:[], rows:[]};
+    saveScore();
+    box.innerHTML = scoreHTML(); bindScore();
+  };
+}
+/* ごうけいの ぶぶんだけ かきかえる（入力中に 画面が とばない ように） */
+function repaintScoreTotals(box){
+  const sc = state.score;
+  const totals = sc.names.map((_, i) => sc.rows.reduce((a, r) => a + (Number(r[i]) || 0), 0));
+  const best = Math.max.apply(null, totals);
+  const cells = box.querySelectorAll('.score-total td');
+  totals.forEach((t, i) => {
+    const cell = cells[i + 1];
+    if(!cell) return;
+    cell.textContent = t;
+    cell.className = (t === best && best !== 0) ? 'win' : '';
+  });
+}
+
+function bindCounters(){
+  const box = document.getElementById('counterBox');
+  if(!box) return;
+  box.querySelectorAll('[data-cnt]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.cnt), step = Number(b.dataset.step);
+    if(!state.counters[i]) return;
+    state.counters[i].value += step;
+    saveCounters();
+    const v = document.getElementById('cntv' + i);
+    if(v) v.textContent = state.counters[i].value;
+  });
+  const zero = document.getElementById('counterZero');
+  if(zero) zero.onclick = () => {
+    state.counters.forEach(c => { c.value = 0; });
+    saveCounters();
+    box.innerHTML = counterHTML(); bindCounters();
+  };
+  const clear = document.getElementById('counterClear');
+  if(clear) clear.onclick = () => {
+    if(!confirm('カウンターを やめますか？')) return;
+    state.counters = [];
+    saveCounters();
+    box.innerHTML = counterHTML(); bindCounters();
+  };
+}
+
 function viewTools(){
   const mins = Math.floor((timerLeft || 0) / 60);
   const secs = (timerLeft || 0) % 60;
@@ -1892,24 +2093,48 @@ function viewTools(){
           '<button class="btn small" style="flex:1" data-timer="stop">とめる</button>' +
           '<button class="btn small" style="flex:1" data-timer="reset" data-min="30">もどす</button>' +
         '</div>' +
-        '<p class="count" style="margin:8px 0 0">ほかの がめんに いっても うごき つづけます。<br>0に なると おとで しらせます。</p>' +
+        '<p class="count" style="margin:8px 0 0">ほかの がめんに いっても うごき つづけます。</p>' +
       '</div></div>' +
 
-    /* --- さいしょの人 --- */
-    '<div class="section"><h2>さいしょの人を きめる</h2>' +
-      '<p class="count" style="margin:0 0 8px">なまえを 「、」か スペースで くぎって いれます。<br>なまえの かわりに にんずう（すうじ）だけでも OKです。</p>' +
-      '<div class="row" style="margin-bottom:10px">' +
-        '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" style="flex:2">' +
-        '<button class="mini" id="firstBtn" style="flex:0 0 auto">きめる</button></div>' +
+    /* --- サイコロ --- */
+    '<div class="section"><h2>サイコロ</h2>' + diceHTML() + '</div>' +
+
+    /* --- くじ引き --- */
+    '<div class="section"><h2>くじ引き</h2>' +
+      '<p class="count" style="margin:0 0 8px">さいしょの人・かたづける人・せつめいする人 などを きめます。<br>' +
+        'なまえを くぎって いれるか、にんずう（すうじ）だけでも OKです。</p>' +
+      '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" value="'+esc(state.lastNames)+'" style="margin-bottom:8px">' +
+      '<div class="chips" style="margin-bottom:10px">' +
+        ['さいしょの人','かたづける人','せつめいする人','おごる人'].map(p =>
+          '<button class="chip sm" data-lotpurpose="'+esc(p)+'">'+esc(p)+'</button>').join('') +
+      '</div>' +
+      '<button class="btn small" id="firstBtn" style="width:100%">ひく</button>' +
       '<div id="firstResult"></div>' +
     '</div>' +
 
+    /* --- チーム分け --- */
+    '<div class="section"><h2>チーム分け</h2>' +
+      '<p class="count" style="margin:0 0 8px">コードネームや テレストレーションの チームを ランダムに わけます。</p>' +
+      '<input type="text" id="teamNames" placeholder="れい：たろう はなこ じろう しろう" value="'+esc(state.lastNames)+'" style="margin-bottom:8px">' +
+      '<div class="chips" style="margin-bottom:10px">' +
+        [2,3,4].map(n => '<button class="chip sm" data-teamn="'+n+'">'+n+'チーム</button>').join('') +
+      '</div>' +
+      '<div id="teamResult"></div>' +
+    '</div>' +
+
+    /* --- てんすう表 --- */
+    '<div class="section"><h2>てんすう表</h2>' +
+      '<div id="scoreBox">' + scoreHTML() + '</div></div>' +
+
+    /* --- カウンター --- */
+    '<div class="section"><h2>カウンター</h2>' +
+      '<div id="counterBox">' + counterHTML() + '</div></div>' +
+
     /* --- ほかの どうぐへの 入り口 --- */
     '<div class="section"><h2>そのほか</h2>' +
-      '<div class="btn-row" style="margin-bottom:10px">' +
+      '<div class="btn-row">' +
         '<button class="btn small" style="flex:1" data-go2="#/random">おまかせで きめる</button>' +
         '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button></div>' +
-      '<p class="count" style="margin:0">「きょう あそんだ」では、あそんだ ゲームを まとめて きろく できます。</p>' +
     '</div>' +
   '</section>';
 }
@@ -2314,6 +2539,90 @@ function bind(r){
     state.listMode = b.dataset.listmode;
     render();
   });
+
+  /* --- サイコロ --- */
+  app.querySelectorAll('[data-dicecount]').forEach(b => b.onclick = () => {
+    state.dice.count = Number(b.dataset.dicecount) || 1;
+    state.dice.values = [];
+    app.querySelectorAll('[data-dicecount]').forEach(x =>
+      x.setAttribute('aria-pressed', String(Number(x.dataset.dicecount) === state.dice.count)));
+    const box = document.getElementById('diceResult');
+    if(box) box.innerHTML = diceResultHTML();
+  });
+  const diceRollBtn = document.getElementById('diceRollBtn');
+  if(diceRollBtn) diceRollBtn.onclick = () => {
+    const box = document.getElementById('diceResult');
+    if(!box) return;
+    let n = 0;
+    /* ころがって いる ふうに 6かい かえてから とめる */
+    const spin = setInterval(() => {
+      state.dice.values = Array.from({length: state.dice.count}, () => 1 + Math.floor(Math.random()*6));
+      box.innerHTML = diceResultHTML();
+      if(++n >= 6){
+        clearInterval(spin);
+        playClick();
+      }
+    }, 70);
+  };
+
+  /* --- くじ引き --- */
+  app.querySelectorAll('[data-lotpurpose]').forEach(b => b.onclick = () => {
+    const names = parseNames((document.getElementById('firstNames')||{value:''}).value);
+    if(!names.length) return toast('なまえか にんずうを いれて ください');
+    saveNames((document.getElementById('firstNames')||{value:''}).value);
+    const who = shuffled(names)[0];
+    const box = document.getElementById('firstResult');
+    if(box) box.innerHTML = '<div class="win" style="margin-top:12px;text-align:center">' +
+      '<p class="encounter" style="margin:0">'+esc(b.dataset.lotpurpose)+' は<br>' +
+      '<span style="font-size:22px">'+esc(who)+'</span></p></div>';
+    playFanfare();
+  });
+
+  /* --- チーム分け --- */
+  app.querySelectorAll('[data-teamn]').forEach(b => b.onclick = () => {
+    const raw = (document.getElementById('teamNames')||{value:''}).value;
+    const names = parseNames(raw);
+    if(names.length < 2) return toast('2人いじょう いれて ください');
+    saveNames(raw);
+    const tn = Number(b.dataset.teamn) || 2;
+    const mixed = shuffled(names);
+    const teams = Array.from({length: tn}, () => []);
+    mixed.forEach((nm, i) => teams[i % tn].push(nm));
+    const labels = ['あか','あお','みどり','きいろ'];
+    const box = document.getElementById('teamResult');
+    if(box) box.innerHTML = teams.map((t, i) =>
+      '<div class="win" style="margin-bottom:10px">' +
+        '<p class="encounter" style="margin:0 0 4px">'+esc(labels[i])+' チーム</p>' +
+        '<p style="margin:0">'+ (t.map(esc).join('、') || '（なし）') +'</p></div>').join('');
+    playClick();
+  });
+
+  /* --- てんすう表 --- */
+  const scoreStart = document.getElementById('scoreStart');
+  if(scoreStart) scoreStart.onclick = () => {
+    const raw = (document.getElementById('scoreNames')||{value:''}).value;
+    const names = parseNames(raw);
+    if(!names.length) return toast('なまえを いれて ください');
+    saveNames(raw);
+    state.score = {names: names, rows: [names.map(() => '')]};
+    saveScore();
+    const box = document.getElementById('scoreBox');
+    if(box){ box.innerHTML = scoreHTML(); bindScore(); }
+  };
+  bindScore();
+
+  /* --- カウンター --- */
+  const counterStart = document.getElementById('counterStart');
+  if(counterStart) counterStart.onclick = () => {
+    const raw = (document.getElementById('counterNames')||{value:''}).value;
+    const names = parseNames(raw);
+    if(!names.length) return toast('なまえを いれて ください');
+    state.counters = names.map(n => ({name:n, value:0}));
+    saveCounters();
+    const box = document.getElementById('counterBox');
+    if(box){ box.innerHTML = counterHTML(); bindCounters(); }
+  };
+  bindCounters();
 
   /* さいしょの人を きめる */
   const firstBtn = document.getElementById('firstBtn');
