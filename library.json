@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-06T17:33:43.562Z",
+  "version": "2026-09-06T17:39:14.306Z",
   "tags": [
     {
       "name": "初心者",
@@ -194,6 +194,11 @@
       "id": "g004",
       "title": "KLASK(クラスク)",
       "reading": "くらすく",
+      "videos": [
+        "https://m.youtube.com/watch?v=DgA3r-AAN9I&pp=ygUM44Kv44Op44K544Kv&ra=m",
+        "https://m.youtube.com/shorts/4wqXjY3oj2w?ra=m"
+      ],
+      "wish": false,
       "images": [
         "https://sugorokuya.jp/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6MjM1MDYsInB1ciI6ImJsb2JfaWQifX0=--d97e110da0c0e01bc1891d51fb61f68a0fb242b2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJ3ZWJwIiwicmVzaXplX3RvX2xpbWl0IjpbNTAwLDUwMF0sInNhdmVyIjp7InF1YWxpdHkiOjUwLCJzaGFycF95dXYiOnRydWV9fSwicHVyIjoidmFyaWF0aW9uIn19--1128949799fb2fe65fff5727923fbbb93eb8d883/220227.webp",
         "https://baseec-img-mng.akamaized.net/images/item/origin/74354af0461da0cf315416de9670fd89.jpg?imformat=generic"
