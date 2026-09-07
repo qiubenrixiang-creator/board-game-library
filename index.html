@@ -1885,7 +1885,8 @@ function viewBulk(){
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
     '<h1 class="lede">まとめて にゅうりょく</h1>' +
-    '<p class="sub">のこり '+targets.length+'さくひん（'+(state.bulkIndex+1)+'／'+targets.length+'）<br>にんずうと じかんだけでも いれると けんさくに でて きます。<br>しゃしんや ルールも ここで いれられます。</p>' +
+    '<p class="sub">のこり '+targets.length+'さくひん（'+(state.bulkIndex+1)+'／'+targets.length+'）<br>にんずうと じかんだけでも いれると けんさくに でて きます。<br>' +
+      '「ひとこと しょうかい」を かくと この リストから ぬけます。</p>' +
 
     '<div class="win" style="margin-bottom:14px">' +
       '<h2 style="font-size:20px;color:var(--accent);margin:0 0 12px">'+esc(g.title)+'</h2>' +
@@ -3090,12 +3091,25 @@ function bind(r){
     const keep = (g.tags||[]).filter(t => t !== 'データみきにゅう' && picked.indexOf(t) < 0);
     g.tags = keep.concat(picked).filter((t,i,a) => a.indexOf(t) === i);
     saveGames();
-    toast(g.title + ' を ほぞん しました');
+
+    /* ほぞんした あと、この ゲームが まだ「みきにゅう」の ままでも
+       おなじ 画面に とどまらない ように、かならず つぎへ すすめる。
+       （ひとこと しょうかいが 空の ままだと リストに のこる ため） */
+    const rest = ownedGames().filter(needsData);
+    const stillHere = rest.findIndex(x => x.id === g.id);
+    if(stillHere >= 0){
+      state.bulkIndex = stillHere + 1;              /* のこって いる → その つぎへ */
+    }
+    if(state.bulkIndex >= rest.length) state.bulkIndex = 0;   /* さいごまで いったら はじめへ */
+
+    toast(g.title + ' を ほぞん しました' +
+      (stillHere >= 0 ? '（ひとこと しょうかいが まだなので リストに のこります）' : ''));
     render();
   };
   const bulkSkip = document.getElementById('bulkSkip');
   if(bulkSkip) bulkSkip.onclick = () => {
-    state.bulkIndex++;
+    const rest = ownedGames().filter(needsData);
+    state.bulkIndex = (state.bulkIndex + 1) % Math.max(1, rest.length);
     render();
   };
 
