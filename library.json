@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-07T16:13:03.823Z",
+  "version": "2026-09-07T16:33:45.750Z",
   "tags": [
     {
       "name": "初心者",
@@ -301,19 +301,28 @@
     {
       "id": "g008",
       "title": "あいうえバトル",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://imagedelivery.net/QondspN4HIUvB_R16-ddAQ/61a34bff7d278d299b0a70a2/a764753e78b87e5ae5b8.jpg/fit=cover,w=805,h=575"
+      ],
+      "summary": "だんだんと明かされる文字。あの言葉はいったい何!?",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 15,
       "age": 8,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
-      ]
+        "初心者",
+        "盛り上がる",
+        "対戦"
+      ],
+      "reading": "あいうえばとる",
+      "videos": [
+        "https://youtu.be/Yx2VDWOo4Uc?si=GAPIDzNqsgBYy1ma"
+      ],
+      "wish": false
     },
     {
       "id": "g009",
@@ -355,20 +364,26 @@
     {
       "id": "g011",
       "title": "赤ずきんは眠らない",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2015/11/ace219f131478186976d9918eef1214b-575x575.jpg"
+      ],
+      "summary": "罠にかける？食べられちゃう？簡単ルールの心理戦！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
-      "playersMin": 2,
+      "playersMin": 3,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playTime": 20,
+      "age": 6,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
+        "ブラフ"
       ],
-      "reading": "あかずきんはねむらない"
+      "reading": "あかずきんはねむらない",
+      "videos": [
+        "https://youtu.be/K7vDBc-2lco?si=QbgH-72mgVPSmBSi"
+      ],
+      "wish": false
     },
     {
       "id": "g012",
@@ -412,37 +427,54 @@
     {
       "id": "g015",
       "title": "いかだの5人",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://oinkgames.com/images/flatview/rafter-five_ja_front.png",
+        "https://oinkgames.com/images/description/rafter-five/image99.png",
+        "https://oinkgames.com/images/description/rafter-five/image01.png"
+      ],
+      "summary": "不思議な釣り合いで、崩れなかったり、崩れたりするのが面白い、頭脳派バランスゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
-      "playersMin": 2,
+      "playersMin": 1,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playTime": 20,
+      "age": 7,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
+        "初心者",
+        "パーティー",
+        "頭脳戦"
       ],
-      "reading": "いかだのごにん"
+      "reading": "いかだのごにん",
+      "videos": [
+        "https://youtu.be/6P2iecmmgu4?si=sNdyVCRW8gKj8NTH"
+      ],
+      "wish": false
     },
     {
       "id": "g016",
       "title": "いぬポーカー",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://m.media-amazon.com/images/I/7113gHkUooL.jpg",
+        "https://img.gamemarket.jp/20240926_180811_inupoker_bnr_chirasi.png"
+      ],
+      "summary": "あつめて、まわして、めざせ、トップワン！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
-      ]
+        "対戦",
+        "運要素"
+      ],
+      "reading": "いぬぽーかー",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g017",
@@ -487,19 +519,28 @@
     {
       "id": "g019",
       "title": "インパクト",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://m.media-amazon.com/images/I/61vuIJ1qA6L._AC_UF894,1000_QL80_.jpg"
+      ],
+      "summary": "“その1投が運命を変える！” 手汗必至のダイスサバイバルゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 15,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 1,
       "tags": [
-        "データみきにゅう"
-      ]
+        "対戦",
+        "運要素",
+        "アクション"
+      ],
+      "reading": "いんぱくと",
+      "videos": [
+        "https://youtu.be/tuvw9vk7vlk?si=4VXCLiBJ2eOjv2Fd"
+      ],
+      "wish": false
     },
     {
       "id": "g020",
@@ -524,19 +565,29 @@
     {
       "id": "g021",
       "title": "ウナギかヘビか",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://oinkgames.com/images/flatview/wriggle-roulette_ja_front.png",
+        "https://oinkgames.com/images/description/wriggle-roulette/image99.png",
+        "https://oinkgames.com/images/description/wriggle-roulette/image01.png"
+      ],
+      "summary": "運命(うなぎ)を掴み取れ",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 8,
+      "playTime": 20,
       "age": 8,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
-      ]
+        "盛り上がる",
+        "運要素"
+      ],
+      "reading": "うなぎかへびか",
+      "videos": [
+        "https://youtube.com/watch?v=dDBUUSTYxm0&si=ND1A_3QQXSyHCEcS"
+      ],
+      "wish": false
     },
     {
       "id": "g022",
