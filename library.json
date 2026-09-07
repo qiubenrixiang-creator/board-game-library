@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-07T13:03:47.351Z",
+  "version": "2026-09-07T13:22:45.796Z",
   "tags": [
     {
       "name": "初心者",
@@ -230,19 +230,23 @@
       ],
       "playersMin": 2,
       "playersMax": 6,
-      "playTime": 30,
+      "playTime": 15,
       "age": 8,
       "difficulty": 2,
       "strategy": 0,
       "excitement": 0,
       "luck": 0,
       "tags": [
+        "家族向け",
+        "頭脳戦",
         "データみきにゅう"
       ],
       "summary": "",
       "quickRule": "",
       "detailRule": "",
-      "recommendation": ""
+      "recommendation": "",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g006",
