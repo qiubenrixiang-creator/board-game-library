@@ -277,7 +277,11 @@ img{image-rendering:auto}
   color:#fff;font-size:20px;cursor:pointer;line-height:1;
 }
 .hero-strip{display:flex;gap:10px;overflow-x:auto;padding:0 0 10px;margin:0 0 14px}
-.hero-strip img{height:170px;border:3px solid var(--frame);object-fit:cover;flex:0 0 auto}
+.hero-strip img{height:170px;border:3px solid var(--frame);object-fit:cover;flex:0 0 auto;cursor:zoom-in}
+.hero-strip img:active{opacity:.75}
+.hero-strip .zoom-hint{
+  position:sticky;left:0;align-self:flex-end;color:var(--muted);font-size:11px;padding:0 0 4px;flex:0 0 auto;
+}
 .section{
   background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
   padding:14px 15px;margin:0 0 14px;
@@ -357,6 +361,30 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th, .print-table td{border:1px solid var(--line, #999);padding:5px 6px;font-size:12px;text-align:left}
 .print-table th{color:var(--accent)}
 
+/* しゃしんの かくだい */
+.lb-back{
+  position:fixed;inset:0;z-index:130;background:rgba(6,8,18,.94);
+  display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+}
+.lb-back[hidden]{display:none}
+.lb-bar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 14px;color:var(--text);font-size:13px;flex:0 0 auto;
+}
+.lb-stage{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;min-height:0;padding:0 6px}
+.lb-stage img{
+  max-width:100%;max-height:100%;object-fit:contain;display:block;
+  border:3px solid var(--frame);background:#000;touch-action:pinch-zoom;
+}
+.lb-nav{
+  flex:0 0 auto;width:42px;height:64px;border:2px solid var(--frame);
+  background:rgba(0,0,0,.5);color:var(--text);font-size:16px;cursor:pointer;
+}
+.lb-nav[hidden]{visibility:hidden;display:block}
+.lb-hint{
+  flex:0 0 auto;text-align:center;color:var(--muted);font-size:11.5px;margin:8px 14px 12px;line-height:1.6;
+}
+
 /* かくにん ウィンドウ（iPhone の そっけない ひょうじの かわり） */
 .dialog-back{
   position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:22px;
@@ -412,6 +440,19 @@ h2.sec::before{content:"■ ";font-size:12px}
 </nav>
 
 <div id="toast" role="status" aria-live="polite"></div>
+
+<div id="lightbox" class="lb-back" hidden>
+  <div class="lb-bar">
+    <span id="lbCount"></span>
+    <button class="icon-btn" id="lbClose" aria-label="とじる">✕ とじる</button>
+  </div>
+  <div class="lb-stage">
+    <button class="lb-nav" id="lbPrev" aria-label="まえの しゃしん">◀</button>
+    <img id="lbImg" src="" alt="">
+    <button class="lb-nav" id="lbNext" aria-label="つぎの しゃしん">▶</button>
+  </div>
+  <p class="lb-hint">がめんを タップすると とじます。しゃしんは 2ほんゆびで もっと 大きく できます。</p>
+</div>
 
 <div id="dialog" class="dialog-back" hidden>
   <div class="dialog-win" role="dialog" aria-modal="true" aria-labelledby="dialogMsg">
@@ -956,6 +997,44 @@ const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
 ));
 const uid = () => 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
 
+/* ---------------- しゃしんの かくだい ----------------
+   ずかんの しゃしんを タップすると、大きく みられる。
+   なんまいか あれば ◀▶ で めくれる。 */
+let lbImages = [], lbIndex = 0;
+
+function openLightbox(images, index){
+  lbImages = (images || []).filter(Boolean);
+  if(!lbImages.length) return;
+  lbIndex = Math.max(0, Math.min(lbImages.length - 1, Number(index) || 0));
+  const back = document.getElementById('lightbox');
+  if(!back) return;
+  back.hidden = false;
+  paintLightbox();
+}
+function paintLightbox(){
+  const img = document.getElementById('lbImg');
+  const cnt = document.getElementById('lbCount');
+  const prev = document.getElementById('lbPrev');
+  const next = document.getElementById('lbNext');
+  if(!img) return;
+  img.src = lbImages[lbIndex] || '';
+  if(cnt) cnt.textContent = (lbImages.length > 1) ? (lbIndex + 1) + ' / ' + lbImages.length : '';
+  const many = lbImages.length > 1;
+  if(prev) prev.hidden = !many;
+  if(next) next.hidden = !many;
+}
+function closeLightbox(){
+  const back = document.getElementById('lightbox');
+  if(back) back.hidden = true;
+  const img = document.getElementById('lbImg');
+  if(img) img.src = '';
+}
+function stepLightbox(d){
+  if(!lbImages.length) return;
+  lbIndex = (lbIndex + d + lbImages.length) % lbImages.length;
+  paintLightbox();
+}
+
 /* はい／いいえ を きく ウィンドウ。
    こたえが かえって きたら つづきを する（confirm の かわり）。 */
 function ask(msg, onYes, opts){
@@ -1491,7 +1570,11 @@ function viewDetail(id){
     '<div style="margin-top:16px"><button class="btn small" data-go2="#/list">ずかんへ もどる</button></div></div></section>';
 
   const gallery = (g.images||[]).length
-    ? '<div class="hero-strip">'+g.images.map(s=>'<img src="'+esc(s)+'" alt="">').join('')+'</div>' : '';
+    ? '<div class="hero-strip">' +
+        g.images.map((src, i) => '<img src="'+esc(src)+'" alt="" data-zoom="'+i+'">').join('') +
+        (g.images.length > 1 ? '' : '') +
+      '</div>' +
+      '<p class="count" style="margin:-6px 0 14px">しゃしんを タップすると 大きく みられます。</p>' : '';
   const optional = [];
   if(g.strategy) optional.push('<dt>せんりゃく性</dt><dd>'+stars(g.strategy)+'</dd>');
   if(g.excitement) optional.push('<dt>もりあがり</dt><dd>'+stars(g.excitement)+'</dd>');
@@ -2785,6 +2868,10 @@ function bind(r){
     if(i >= 0){ g.plays.splice(i,1); saveGames(); render(); toast('けしました'); }
   });
 
+  app.querySelectorAll('[data-zoom]').forEach(im => im.onclick = () => {
+    const g = state.games.find(x => x.id === currentRoute().param);
+    openLightbox(g ? (g.images || []) : [], Number(im.dataset.zoom) || 0);
+  });
   app.querySelectorAll('[data-videoplay]').forEach(b => b.onclick = () => {
     const box = b.closest('.video-box');
     if(!box) return;
@@ -3275,6 +3362,25 @@ window.addEventListener('hashchange', render);
 /* ほかの アプリから もどって きた ときに、のこり じかんを 合わせなおす */
 document.addEventListener('visibilitychange', () => { if(!document.hidden) tickTimer(); });
 window.addEventListener('focus', tickTimer);
+
+/* 拡大ひょうじの ボタン（さいしょに 1かいだけ つける） */
+(function setupLightbox(){
+  const back = document.getElementById('lightbox');
+  if(!back) return;
+  document.getElementById('lbClose').onclick = closeLightbox;
+  document.getElementById('lbPrev').onclick = e => { e.stopPropagation(); stepLightbox(-1); };
+  document.getElementById('lbNext').onclick = e => { e.stopPropagation(); stepLightbox(1); };
+  back.onclick = e => {
+    /* しゃしん そのものを タップした ときは とじない（ひろげて 見られる ように） */
+    if(e.target.id !== 'lbImg') closeLightbox();
+  };
+  document.addEventListener('keydown', e => {
+    if(back.hidden) return;
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowLeft') stepLightbox(-1);
+    if(e.key === 'ArrowRight') stepLightbox(1);
+  });
+})();
 
 paintIcons(document);
 initAudio();
