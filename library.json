@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-06T17:39:14.306Z",
+  "version": "2026-09-07T06:57:24.706Z",
   "tags": [
     {
       "name": "初心者",
@@ -247,20 +247,32 @@
     {
       "id": "g006",
       "title": "Poi(ポイ)",
-      "images": [],
-      "summary": "",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "ぽい",
+      "videos": [
+        "https://m.youtube.com/watch?v=8mLbJ4SenbQ&pp=ygUWUE9JIOODnOODvOODieOCsuODvOODoA%3D%3D&ra=m"
+      ],
+      "wish": false,
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2021/08/ac550fb1564feaaca5c8c25ad51805f0-575x575.jpg",
+        "https://arclightgames.jp/wp-content/uploads/2021/12/3b474bfb4bf94923624f7796322a9866.png"
+      ],
       "playersMin": 2,
       "playersMax": 6,
       "playTime": 30,
       "age": 8,
       "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
       "tags": [
-        "データみきにゅう"
+        "協力",
+        "軽量級",
+        "家族向け"
       ],
-      "reading": "ぽい"
+      "summary": "ゴミの分別を考える協力クイズゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g007",
@@ -622,22 +634,36 @@
     {
       "id": "g026",
       "title": "おばけキャッチ",
-      "images": [],
-      "summary": "条件に合う駒を誰よりも早くつかむ反射神経ゲーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "",
+      "videos": [
+        "https://m.youtube.com/shorts/q2m0eBKD0Ak",
+        "https://m.youtube.com/shorts/3BWl-0lYWxc"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_91.jpg",
+        "https://saikoro-table.com/wp-content/uploads/2019/03/obake-catch_003.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 8,
       "playTime": 20,
       "age": 8,
       "difficulty": 1,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
       "tags": [
         "初心者",
         "家族向け",
         "盛り上がる",
-        "アクション"
-      ]
+        "アクション",
+        "軽量級",
+        "対戦"
+      ],
+      "summary": "条件に合う駒を誰よりも早くつかむ反射神経ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g027",
@@ -1065,24 +1091,36 @@
     {
       "id": "g050",
       "title": "ごきぶりポーカー",
-      "images": [],
+      "reading": "",
+      "videos": [
+        "https://m.youtube.com/shorts/npAHaM6OH28?ra=m",
+        "https://m.youtube.com/watch?v=JmOS1EAuxIA&pp=ygUY44K044Kt44OW44Oq44G944O844GL44O8&ra=m"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_114.jpg",
+        "https://img1.kakaku.k-img.com/images/maga/icv/sp1200/9519/thumbnail_l.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 6,
       "playTime": 20,
       "age": 8,
       "difficulty": 1,
+      "strategy": 3,
+      "excitement": 4,
+      "luck": 3,
       "tags": [
         "初心者",
         "対戦",
-        "運要素",
         "盛り上がる",
         "家族向け",
-        "軽量級"
+        "軽量級",
+        "ブラフ"
       ],
       "summary": "「これはカエルだよ」の一言を、信じるか疑うかだけのブラフ合戦。",
       "quickRule": "1. 手札から1枚を裏向きで誰かに渡し、生き物の名前を宣言する\n2. 渡された人は「当たり」か「はずれ」を答える\n3. 外した方がそのカードを引き取る\n4. 同じ生き物を4枚集めてしまった人の負け",
-      "recommendation": "・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀",
-      "detailRule": "8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。"
+      "detailRule": "8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。",
+      "recommendation": "・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀"
     },
     {
       "id": "g051",
