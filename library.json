@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-07T13:23:24.743Z",
+  "version": "2026-09-07T15:28:49.903Z",
   "tags": [
     {
       "name": "初心者",
@@ -405,26 +405,6 @@
       "difficulty": 2,
       "tags": [
         "対戦",
-        "頭脳戦",
-        "静か"
-      ]
-    },
-    {
-      "id": "g014",
-      "title": "アンコンシャス・マインド",
-      "images": [],
-      "summary": "心理学の黎明期を舞台にした重量級ワーカープレイスメント。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
-      "playersMin": 1,
-      "playersMax": 4,
-      "playTime": 120,
-      "age": 14,
-      "difficulty": 5,
-      "tags": [
-        "重量級",
-        "ワーカープレイスメント",
         "頭脳戦",
         "静か"
       ]
