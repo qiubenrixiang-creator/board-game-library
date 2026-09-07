@@ -371,12 +371,16 @@ h2.sec::before{content:"■ ";font-size:12px}
 }
 .lb-back[hidden]{display:none}
 .lb-bar{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;
   padding:10px 14px;flex:0 0 auto;
 }
+/* そうさボタンは しゃしんの 下に おく（しゃしんに かぶせない） */
+.lb-foot{
+  flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:18px;
+  padding:12px 14px 2px;
+}
 #lbCount{
-  font-size:15px;color:var(--lb-fg);border:2px solid var(--lb-fg);
-  background:rgba(0,0,0,.55);padding:4px 12px;letter-spacing:.08em;
+  font-size:15px;color:var(--lb-fg);letter-spacing:.08em;min-width:5.5em;text-align:center;
 }
 #lbCount:empty{display:none}
 #lbClose{
@@ -391,20 +395,17 @@ h2.sec::before{content:"■ ";font-size:12px}
   max-width:100%;max-height:100%;object-fit:contain;display:block;
   border:3px solid var(--lb-fg);background:#000;touch-action:pinch-zoom;
 }
-/* やじるしは しゃしんの 上に かさねる（そとに おしだされない ように） */
+/* やじるしは しゃしんの 下（しゃしんの じゃまを しない） */
 .lb-nav{
-  position:absolute;top:50%;transform:translateY(-50%);z-index:2;
-  width:52px;height:76px;border:3px solid var(--lb-fg);
-  background:rgba(0,0,0,.7);color:var(--lb-fg);font-size:22px;cursor:pointer;
+  width:74px;height:46px;border:3px solid var(--lb-fg);
+  background:rgba(0,0,0,.55);color:var(--lb-fg);font-size:20px;cursor:pointer;
   display:grid;place-items:center;
 }
-#lbPrev{left:2px}
-#lbNext{right:2px}
-.lb-nav:active{background:rgba(0,0,0,.9);transform:translateY(-50%) scale(.94)}
+.lb-nav:active{background:rgba(255,255,255,.2);transform:scale(.94)}
 .lb-nav[hidden]{display:none}
 .lb-hint{
-  flex:0 0 auto;text-align:center;color:var(--lb-fg);opacity:.75;
-  font-size:11.5px;margin:8px 14px 12px;line-height:1.6;
+  flex:0 0 auto;text-align:center;color:var(--lb-fg);opacity:.7;
+  font-size:11px;margin:6px 14px 10px;line-height:1.5;
 }
 
 /* かくにん ウィンドウ（iPhone の そっけない ひょうじの かわり） */
@@ -465,12 +466,14 @@ h2.sec::before{content:"■ ";font-size:12px}
 
 <div id="lightbox" class="lb-back" hidden>
   <div class="lb-bar">
-    <span id="lbCount"></span>
     <button class="icon-btn" id="lbClose" aria-label="とじる">✕ とじる</button>
   </div>
   <div class="lb-stage">
-    <button class="lb-nav" id="lbPrev" aria-label="まえの しゃしん">◀</button>
     <img id="lbImg" src="" alt="">
+  </div>
+  <div class="lb-foot">
+    <button class="lb-nav" id="lbPrev" aria-label="まえの しゃしん">◀</button>
+    <span id="lbCount"></span>
     <button class="lb-nav" id="lbNext" aria-label="つぎの しゃしん">▶</button>
   </div>
   <p class="lb-hint" id="lbHint">がめんを タップすると とじます。しゃしんは 2ほんゆびで もっと 大きく できます。</p>
@@ -1045,8 +1048,10 @@ function paintLightbox(){
   if(cnt) cnt.textContent = many ? (lbIndex + 1) + ' / ' + lbImages.length + 'まい' : '';
   if(prev) prev.hidden = !many;
   if(next) next.hidden = !many;
+  const foot = document.querySelector('.lb-foot');
+  if(foot) foot.style.display = many ? 'flex' : 'none';
   if(hint) hint.textContent = many
-    ? '◀▶ か よこに スワイプで つぎの しゃしんへ。／ しゃしんの そとを タップで とじる。'
+    ? 'よこに スワイプ、または 下の ◀▶ で つぎの しゃしんへ。'
     : 'しゃしんの そとを タップすると とじます。2ほんゆびで もっと 大きく できます。';
 }
 function closeLightbox(){
