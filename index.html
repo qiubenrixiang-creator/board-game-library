@@ -212,6 +212,20 @@ img{image-rendering:auto}
 
 /* ---------- ゲームカード ---------- */
 .card-list{display:grid;gap:12px}
+.tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:360px){.tile-grid{grid-template-columns:repeat(2,1fr)}}
+.gtile{
+  display:flex;flex-direction:column;gap:5px;padding:7px;width:100%;
+  background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
+  color:var(--text);text-align:center;cursor:pointer;
+}
+.gtile:active{transform:translate(2px,2px);box-shadow:none}
+.thumb.tile{width:100%;height:auto;aspect-ratio:1/1;min-height:0}
+.thumb.tile .glyph{font-size:26px}
+.gtile-name{font-size:11.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gtile-meta{font-size:10.5px;color:var(--muted)}
+.gtile-marks{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.gtile-marks .badge{margin:0;font-size:9.5px;padding:0 4px}
 .gcard{
   display:grid;grid-template-columns:88px 1fr;gap:12px;width:100%;text-align:left;
   background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
@@ -357,6 +371,13 @@ h2.sec::before{content:"■ ";font-size:12px}
   .print-table th{background:#eee}
   .print-title{font-size:15pt;margin:0 0 6pt}
 }
+.meter{
+  width:100%;height:18px;border:2px solid var(--frame);background:var(--bg-2);
+  display:block;overflow:hidden;
+}
+.meter span{display:block;height:100%;background:var(--accent-2)}
+.meter-warn span{background:var(--accent-2)}
+.meter-ng span{background:var(--danger)}
 .print-table{width:100%;border-collapse:collapse;margin-top:10px}
 .print-table th, .print-table td{border:1px solid var(--line, #999);padding:5px 6px;font-size:12px;text-align:left}
 .print-table th{color:var(--accent)}
@@ -513,6 +534,7 @@ const KEY = {
   score:'bgl.scoreSheet',        /* てんすう表 */
   counters:'bgl.counters',       /* カウンター */
   names:'bgl.lastNames',         /* まえに いれた なまえ */
+  backupAt:'bgl.lastBackup',     /* さいごに ひかえを つくった日 */
   today:'bgl.todayPlayers'  /* きょうの メンバーの にんずう */
 };
 
@@ -940,7 +962,7 @@ function setSeOn(v){
 const state = {
   games: [], tags: [],
   filters: { time:null, players:null, playersN:6, tags:[] },
-  listQuery:'', listSort:'title', listMode:'own',   /* own / wish / lent */
+  listQuery:'', listSort:'title', listView: store.read('bgl.listView', 'list'), listMode:'own',   /* own / wish / lent */
   today: null,                                      /* きょうの にんずう */
   bulkIndex: 0,                                     /* まとめて入力の いちばんめ */
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
@@ -1447,6 +1469,19 @@ function viewHome(){
   '</section>';
 }
 
+/* しゃしんを 大きく ならべる かたち（たなを ながめる かんじ） */
+function gameTile(g){
+  const marks =
+    (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
+    (isLent(g) ? '<span class="badge">かしだし中</span>' : '');
+  return '<button class="gtile" data-open="'+esc(g.id)+'">' +
+    thumbHTML(g, 'tile') +
+    '<span class="gtile-name">'+esc(g.title)+'</span>' +
+    '<span class="gtile-meta">'+playersText(g)+'・'+(Number(g.playTime)||0)+'分</span>' +
+    (marks ? '<span class="gtile-marks">'+marks+'</span>' : '') +
+  '</button>';
+}
+
 function gameCard(g, hitTags){
   const tags = (g.tags||[]).slice(0,4).map(t =>
     '<span class="tag'+((hitTags||[]).includes(t)?' hit':'')+'">'+esc(t)+'</span>').join('');
@@ -1514,7 +1549,11 @@ function listResultsHTML(){
     return html;
   }
 
-  if(list.length) html += '<div class="card-list">' + list.map(g => gameCard(g, f.tags)).join('') + '</div>';
+  if(list.length){
+    html += (state.listView === 'grid')
+      ? '<div class="tile-grid">' + list.map(g => gameTile(g)).join('') + '</div>'
+      : '<div class="card-list">' + list.map(g => gameCard(g, f.tags)).join('') + '</div>';
+  }
   else html += '<div class="note" style="margin-bottom:14px">ぴったりの ゲームは いなかった。ちかい ゲームを だします。</div>';
 
   if(c.filtered && res.near.length && !c.q){
@@ -1539,6 +1578,8 @@ function viewList(){
     '<div class="searchbar">' +
       '<input type="search" id="listQ" placeholder="なまえで さがす（かな・漢字 どちらでも）" ' +
         'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">' +
+      '<button class="mini" id="listViewBtn" style="flex:0 0 auto" aria-label="ならべかたを かえる">' +
+        (state.listView === 'grid' ? '▤ リスト' : '▦ しゃしん') + '</button>' +
       '<select id="listSort">' +
         ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順','recent:さいきん あそんだ順','sleeping:あそんで ない順'].map(o => {
           const parts = o.split(':');
@@ -2119,7 +2160,7 @@ function pipsHTML(n){
 function diceHTML(){
   const d = state.dice;
   return '<div class="chips" style="margin-bottom:10px">' +
-      [1,2,3,4,5,6,7,8,9,10].map(n => '<button class="chip sm" data-dicecount="'+n+'" aria-pressed="'+(d.count===n)+'">'+n+'</button>').join('') +
+      [1,2,3,4,5,6,7,8,9,10,11,12].map(n => '<button class="chip sm" data-dicecount="'+n+'" aria-pressed="'+(d.count===n)+'">'+n+'</button>').join('') +
     '</div>' +
     '<div id="diceResult">' + diceResultHTML() + '</div>' +
     '<button class="btn primary" id="diceRollBtn" style="margin-top:10px">▶ ふる</button>';
@@ -2426,6 +2467,10 @@ function viewAdmin(){
       '</div></details>' +
 
     '<p class="count" style="margin-bottom:6px">スマホを かえる ときや、まえの ないように もどす ときは こちら。</p>' +
+    storageMeterHTML() +
+    '<div style="height:14px"></div>' +
+    backupNoticeHTML() +
+
     '<div class="btn-row" style="margin-bottom:8px">' +
       '<button class="btn small" id="backupBtn" style="flex:1">じぶん用の ひかえを つくる</button>' +
       '<label class="btn small" style="flex:1;cursor:pointer;display:flex">ほぞんした データを よみこむ' +
@@ -2475,6 +2520,45 @@ function viewAdmin(){
     '<div class="divider"></div><h2 class="sec">そのた</h2>' +
     '<button class="mini warn" id="resetBtn">さいしょの サンプルに もどす</button>' +
   '</section>';
+}
+
+/* ---------------- ほぞん容量 ----------------
+   しゃしんは 文字に なおして 端末に ためて いる。
+   ブラウザの 上限（だいたい 5MB）に ちかづくと ほぞん できなく なるので、
+   いま どれくらい つかって いるかを みえる ように する。 */
+const STORAGE_LIMIT = 5 * 1024 * 1024;
+
+function storageUsed(){
+  let total = 0;
+  try{
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.indexOf('bgl.') === 0){
+        const v = localStorage.getItem(k) || '';
+        total += (k.length + v.length) * 2;   /* 1もじ 2バイトで かぞえる */
+      }
+    }
+  }catch(e){ return 0; }
+  return total;
+}
+function formatBytes(n){
+  if(n >= 1024*1024) return (n / (1024*1024)).toFixed(1) + 'MB';
+  if(n >= 1024) return Math.round(n / 1024) + 'KB';
+  return n + 'バイト';
+}
+function storageRatio(){ return Math.min(1, storageUsed() / STORAGE_LIMIT); }
+
+function storageMeterHTML(){
+  const used = storageUsed();
+  const pct = Math.round(storageRatio() * 100);
+  const level = pct >= 85 ? 'ng' : (pct >= 60 ? 'warn' : 'ok');
+  const msg = pct >= 85
+    ? 'いっぱいに ちかづいて います。これいじょう しゃしんを ふやすと ほぞん できなく なることが あります。'
+    : (pct >= 60
+      ? 'はんぶんを こえました。あたらしい しゃしんは URLで いれると 容量を つかいません。'
+      : 'まだ よゆうが あります。');
+  return '<div class="meter meter-'+level+'"><span style="width:'+pct+'%"></span></div>' +
+    '<p class="count" style="margin:6px 0 0">つかって いる 容量：'+formatBytes(used)+' ／ やく5MB（'+pct+'%）<br>'+esc(msg)+'</p>';
 }
 
 /* ---------------- こうかい するとき に かくす もの ----------------
@@ -2706,6 +2790,13 @@ function bind(r){
   }
   const listSort = document.getElementById('listSort');
   if(listSort) listSort.onchange = e => { state.listSort = e.target.value; updateListResults(); };
+  const listViewBtn = document.getElementById('listViewBtn');
+  if(listViewBtn) listViewBtn.onclick = () => {
+    state.listView = (state.listView === 'grid') ? 'list' : 'grid';
+    store.write('bgl.listView', state.listView);
+    listViewBtn.textContent = (state.listView === 'grid') ? '▤ リスト' : '▦ しゃしん';
+    updateListResults();
+  };
 
   const rollBtn = document.getElementById('rollBtn');
   if(rollBtn) rollBtn.onclick = roll;
@@ -3009,6 +3100,9 @@ function bind(r){
   if(fileInput){
     paintImgPreview();
     fileInput.onchange = async e => {
+      if(storageRatio() >= 0.85){
+        toast('ほぞん容量が いっぱいに ちかいです。URLで いれるか、ひかえを つくって ください');
+      }
       for(const f of Array.from(e.target.files||[])){
         try{ state.formImages.push(await readImage(f)); }
         catch(err){ toast('よみこめない 画像が ありました'); }
@@ -3332,7 +3426,29 @@ function exportLibrary(){
 function backupLibrary(){
   const payload = { version:new Date().toISOString(), backup:true, tags:state.tags, games:state.games };
   downloadJSON(payload, 'bgl-backup-' + todayStr() + '.json');
+  store.write(KEY.backupAt, todayStr());
   toast('じぶん用の ひかえを ほぞんしました');
+}
+/* さいごに ひかえを つくってから 何日 たったか */
+function daysSinceBackup(){
+  const last = store.read(KEY.backupAt, '');
+  if(!last) return null;
+  const d = new Date(last + 'T00:00:00');
+  if(isNaN(d.getTime())) return null;
+  return Math.floor((Date.now() - d.getTime()) / 86400000);
+}
+function backupNoticeHTML(){
+  const days = daysSinceBackup();
+  if(days === null){
+    return '<div class="note" style="margin-bottom:12px">' +
+      'まだ 一度も ひかえを つくって いません。<br>' +
+      'ブラウザの データを けすと ぜんぶ きえて しまうので、ときどき ひかえを ほぞん して ください。</div>';
+  }
+  if(days >= 30){
+    return '<div class="note" style="margin-bottom:12px;border-style:solid;border-color:var(--accent);color:var(--text)">' +
+      '▶ さいごに ひかえを つくってから '+days+'日 たちました。<br>あたらしい ひかえを ほぞん して おきましょう。</div>';
+  }
+  return '<p class="count" style="margin:0 0 12px">さいごの ひかえ：'+days+'日まえ</p>';
 }
 
 function importLibrary(e){
