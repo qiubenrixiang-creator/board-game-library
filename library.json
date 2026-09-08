@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-08T00:08:02.425Z",
+  "version": "2026-09-08T05:21:53.519Z",
   "tags": [
     {
       "name": "初心者",
@@ -99,6 +99,10 @@
     },
     {
       "name": "★おきにいり",
+      "category": "その他"
+    },
+    {
+      "name": "未プレイ",
       "category": "その他"
     }
   ],
@@ -214,7 +218,8 @@
       "tags": [
         "対戦",
         "アクション",
-        "盛り上がる"
+        "盛り上がる",
+        "初心者"
       ],
       "summary": "世界で人気なお手軽テーブルホッケー！",
       "quickRule": "",
@@ -854,9 +859,13 @@
       "age": 8,
       "difficulty": 2,
       "tags": [
+        "盛り上がる",
+        "軽量級",
         "データみきにゅう"
       ],
-      "reading": "がりゅうくんふーきわめろーど"
+      "reading": "がりゅうくんふーきわめろーど",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g034",
@@ -889,10 +898,16 @@
       "playersMax": 6,
       "playTime": 30,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 1,
       "tags": [
+        "初心者",
+        "盛り上がる",
+        "軽量級",
         "データみきにゅう"
-      ]
+      ],
+      "reading": "",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g037",
@@ -946,8 +961,13 @@
       "age": 8,
       "difficulty": 2,
       "tags": [
+        "対戦",
+        "頭脳戦",
         "データみきにゅう"
-      ]
+      ],
+      "reading": "",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g040",
@@ -961,10 +981,17 @@
       "playersMax": 6,
       "playTime": 30,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 3,
       "tags": [
+        "対戦",
+        "頭脳戦",
+        "中級者",
+        "ドラフト",
         "データみきにゅう"
-      ]
+      ],
+      "reading": "",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g041",
@@ -1037,11 +1064,16 @@
       "playersMax": 6,
       "playTime": 30,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 1,
       "tags": [
+        "初心者",
+        "対戦",
+        "軽量級",
         "データみきにゅう"
       ],
-      "reading": "くくじゃん"
+      "reading": "くくじゃん",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g045",
