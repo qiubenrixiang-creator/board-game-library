@@ -1943,12 +1943,11 @@ function viewBulk(){
             '<span style="font-size:12.5px;color:var(--muted)">まだ もって いない</span></label></div>' +
       '</div>' +
 
-      '<details style="margin-bottom:10px"><summary>そのほかの タグ（ぜんぶ から えらぶ）</summary>' +
+      '<details style="margin-bottom:10px"><summary>ぜんぶの タグから えらぶ（'+state.tags.length+'こ）</summary>' +
         '<div style="margin-top:10px">' +
         TAG_CATEGORIES.concat(['その他']).map(cat => {
           const list = state.tags.filter(t =>
-            quick.indexOf(t.name) < 0 &&
-            (cat === 'その他' ? !TAG_CATEGORIES.includes(t.category) : t.category === cat));
+            cat === 'その他' ? !TAG_CATEGORIES.includes(t.category) : t.category === cat);
           if(!list.length) return '';
           return '<div class="catlabel">'+esc(cat)+'</div><div class="chips" style="margin-bottom:8px">' +
             list.map(t => '<button class="chip sm" data-btag="'+esc(t.name)+'" aria-pressed="'+((g.tags||[]).includes(t.name))+'">'+esc(t.name)+'</button>').join('') +
@@ -3062,7 +3061,10 @@ function bind(r){
       x.setAttribute('aria-pressed', String(x.dataset.bdiff === b.dataset.bdiff)));
   });
   app.querySelectorAll('[data-btag]').forEach(b => b.onclick = () => {
-    b.setAttribute('aria-pressed', String(b.getAttribute('aria-pressed') !== 'true'));
+    const on = b.getAttribute('aria-pressed') !== 'true';
+    /* おなじ タグの ボタンが 2か所に あるので、まとめて そろえる */
+    app.querySelectorAll('[data-btag="' + (window.CSS && CSS.escape ? CSS.escape(b.dataset.btag) : b.dataset.btag) + '"]')
+      .forEach(x => x.setAttribute('aria-pressed', String(on)));
   });
   const bulkSave = document.getElementById('bulkSave');
   if(bulkSave) bulkSave.onclick = () => {
@@ -3086,7 +3088,9 @@ function bind(r){
     g.detailRule = (document.getElementById('bDetail')||{value:''}).value;
     const picked = [];
     app.querySelectorAll('[data-btag]').forEach(b => {
-      if(b.getAttribute('aria-pressed') === 'true') picked.push(b.dataset.btag);
+      if(b.getAttribute('aria-pressed') === 'true' && picked.indexOf(b.dataset.btag) < 0){
+        picked.push(b.dataset.btag);
+      }
     });
     const keep = (g.tags||[]).filter(t => t !== 'データみきにゅう' && picked.indexOf(t) < 0);
     g.tags = keep.concat(picked).filter((t,i,a) => a.indexOf(t) === i);
