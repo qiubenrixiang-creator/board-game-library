@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-07T16:33:45.750Z",
+  "version": "2026-09-08T00:08:02.425Z",
   "tags": [
     {
       "name": "初心者",
@@ -238,8 +238,7 @@
       "luck": 0,
       "tags": [
         "家族向け",
-        "頭脳戦",
-        "データみきにゅう"
+        "頭脳戦"
       ],
       "summary": "答えの数字を予想して、カードを正しい順番にならべるゲーム！",
       "quickRule": "",
@@ -790,19 +789,28 @@
     {
       "id": "g031",
       "title": "カイト",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://m.media-amazon.com/images/I/51Xx6rGuF1L._AC_UF894,1000_QL80_.jpg"
+      ],
+      "summary": "色に合う砂時計ひっくり返せ！ハラハラドキドキ協力ゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
+      "playTime": 10,
+      "age": 10,
+      "difficulty": 3,
       "tags": [
-        "データみきにゅう"
-      ]
+        "協力",
+        "リアルタイム"
+      ],
+      "reading": "かいと",
+      "videos": [
+        "https://youtube.com/watch?v=-n9zqYW3t00&si=mW8MBqAdUMkdtPK6",
+        "https://youtu.be/4gwfsYg94Vw"
+      ],
+      "wish": false
     },
     {
       "id": "g032",
