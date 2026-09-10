@@ -1692,7 +1692,8 @@ function viewDetail(id){
                 '<p class="count" style="margin:0;flex:1">'+esc(dateLabel(r.pl.d))+
                   (r.pl.n ? '／'+esc(r.pl.n)+'人' : '')+(r.pl.w ? '／かち：'+esc(r.pl.w) : '')+'</p>' +
                 (isEditing(g.id, r.i) ? '' :
-                  '<button class="mini" data-editrec="'+esc(g.id)+'|'+r.i+'" style="flex:0 0 auto">なおす</button>') +
+                  '<button class="mini" data-editrec="'+esc(g.id)+'|'+r.i+'" style="flex:0 0 auto">なおす</button>' +
+                  '<button class="mini warn" data-delrec="'+esc(g.id)+'|'+r.i+'" style="flex:0 0 auto">けす</button>') +
               '</div>' +
               (isEditing(g.id, r.i)
                 ? playEditHTML(g.id, r.i, r.pl)
@@ -2392,6 +2393,10 @@ function allPlays(){
   out.sort((a,b) => String(b.pl.d||'').localeCompare(String(a.pl.d||'')));
   return out;
 }
+/* なにも かいて いない きろくか どうか */
+function isEmptyPlay(pl){
+  return !pl.n && !pl.w && !(pl.m && String(pl.m).trim());
+}
 function dateFullLabel(str){
   if(!str) return '日づけ なし';
   const p = String(str).split('-');
@@ -2435,6 +2440,13 @@ function viewRecords(){
       'autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:10px">' +
     '<p class="count">ぜんぶで '+total+'かい'+(q ? '／ みつかった きろく '+list.length+'けん' : '')+'</p>';
 
+  const empties = allPlays().filter(r => isEmptyPlay(r.pl)).length;
+  if(empties){
+    html += '<div class="note" style="margin-bottom:12px">' +
+      'なにも かいて いない きろくが '+empties+'けん あります。<br>' +
+      '<button class="mini warn" id="delEmptyBtn" style="margin-top:8px">まとめて けす</button></div>';
+  }
+
   if(!list.length){
     html += '<div class="empty"><span class="mark" data-icon="book"></span>' +
       (q ? 'その ことばの きろくは みつかりません でした。'
@@ -2466,7 +2478,9 @@ function viewRecords(){
       '</div>' +
       (isEditing(r.g.id, r.i)
         ? playEditHTML(r.g.id, r.i, r.pl)
-        : (r.pl.m ? '<p style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>' : '')) +
+        : (r.pl.m
+            ? '<p style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>'
+            : (isEmptyPlay(r.pl) ? '<p class="count" style="margin:8px 0 0">（なにも かいて いない きろく）</p>' : ''))) +
     '</div>';
   });
 
@@ -3011,6 +3025,18 @@ function bind(r){
     recQ.addEventListener('compositionend', () => { composing = false; later(); });
     recQ.addEventListener('input', () => { if(!composing) later(); });
   }
+  const delEmptyBtn = document.getElementById('delEmptyBtn');
+  if(delEmptyBtn) delEmptyBtn.onclick = () => {
+    const n = allPlays().filter(r => isEmptyPlay(r.pl)).length;
+    ask('なにも かいて いない きろく '+n+'けんを けします。\nよろしいですか？', () => {
+      state.games.forEach(g => {
+        const ps = playsOf(g).filter(pl => !isEmptyPlay(pl));
+        if(ps.length !== playsOf(g).length) g.plays = ps;
+      });
+      saveGames(); render(); toast(n + 'けんの きろくを けしました');
+    });
+  };
+
   app.querySelectorAll('[data-editrec]').forEach(b => b.onclick = () => {
     state.recEdit = b.dataset.editrec;
     render();
