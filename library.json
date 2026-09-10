@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-08T05:21:53.519Z",
+  "version": "2026-09-10T01:48:40.087Z",
   "tags": [
     {
       "name": "初心者",
@@ -107,6 +107,36 @@
     }
   ],
   "games": [
+    {
+      "id": "gmtuvc2n3eabmx",
+      "title": "TOSSIT",
+      "reading": "としっと",
+      "videos": [],
+      "wish": true,
+      "images": [
+        "https://m.media-amazon.com/images/I/71i093TqGWL._AC_UF1000,1000_QL80_.jpg"
+      ],
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 3,
+      "strategy": 4,
+      "excitement": 5,
+      "luck": 3,
+      "tags": [
+        "初心者",
+        "軽量級",
+        "対戦",
+        "アクション",
+        "パーティー",
+        "盛り上がる"
+      ],
+      "summary": "新感覚シリコンダーツ！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
     {
       "id": "g001",
       "title": "3秒トライ！",
