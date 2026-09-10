@@ -2025,26 +2025,39 @@ function viewPrint(){
    iPhone の 予測変換が きえて しまうので、ゲームの 一覧だけを 入れかえる。 */
 function logListHTML(){
   const q = normalizeText(state.logQuery || '');
-  let list = ownedGames();
+  /* もって いない ゲーム（ほしい ゲーム）でも あそぶ ことが あるので、
+     ここでは ずかんの ぜんぶを えらべる ように する。 */
+  let list = state.games.slice();
   if(q) list = list.filter(g => searchIndex(g).includes(q));
-  list = list.slice().sort((a,b) => (lastPlayed(b)||'').localeCompare(lastPlayed(a)||'') || a.title.localeCompare(b.title,'ja'));
+  list.sort((a,b) =>
+    (isWish(a) ? 1 : 0) - (isWish(b) ? 1 : 0) ||                    /* もって いる ものを さきに */
+    (lastPlayed(b)||'').localeCompare(lastPlayed(a)||'') ||
+    a.title.localeCompare(b.title,'ja'));
 
   const picked = state.logPicked || [];
+  const wishCount = list.filter(isWish).length;
+
   return '<p class="count">えらんで いる ゲーム：'+picked.length+
-      (q ? '／「'+esc(state.logQuery)+'」で しぼりこみ中（'+list.length+'）' : '') + '</p>' +
+      (q ? '／「'+esc(state.logQuery)+'」で しぼりこみ中（'+list.length+'）' : '') +
+      (wishCount ? '<br>☆が ついて いるのは まだ もって いない ゲームです。' : '') + '</p>' +
     '<div class="chips" style="margin-bottom:14px">' +
       (list.length ? list.slice(0,60).map(g =>
-        '<button class="chip sm" data-logpick="'+esc(g.id)+'" aria-pressed="'+(picked.indexOf(g.id)>=0)+'">'+esc(g.title)+'</button>').join('')
-      : '<span class="count">みつかりません でした。</span>') +
+        '<button class="chip sm" data-logpick="'+esc(g.id)+'" aria-pressed="'+(picked.indexOf(g.id)>=0)+'">' +
+        (isWish(g) ? '☆' : '') + esc(g.title)+'</button>').join('')
+      : '<span class="count">みつかりません でした。<br>ずかんに ない ゲームは、さきに ずかんへ ついか して ください。</span>') +
     '</div>';
 }
 
 function viewPlayLog(){
   const picked = state.logPicked || [];
+  /* この画面に 入って きた ときだけ 画像の 作業リストを からに する
+     （画面の 中の 書きかえでは のこす） */
+  if(render._routeKey !== 'playlog/') state.formImages = [];
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
     '<h1 class="lede">きょう あそんだ ゲーム</h1>' +
-    '<p class="sub">あそんだ ゲームを えらんで、まとめて きろく できます。</p>' +
+    '<p class="sub">あそんだ ゲームを えらんで、まとめて きろく できます。<br>' +
+      'もって いない ゲーム（ほしい ゲーム）も えらべます。</p>' +
 
     '<div class="win" style="margin-bottom:14px">' +
       '<div class="row" style="margin-bottom:8px">' +
@@ -2053,6 +2066,28 @@ function viewPlayLog(){
       '<input type="text" id="logWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
       '<textarea id="logMemo" placeholder="かんそう（えらんだ ぜんぶに つきます・にんい）" style="min-height:66px"></textarea>' +
     '</div>' +
+
+    '<details style="margin-bottom:14px"><summary>ずかんに ない ゲームを ついか する</summary>' +
+      '<div class="win" style="margin-top:10px">' +
+        '<p class="count" style="margin:0 0 10px">なまえだけでも ついか できます。<br>' +
+          'にんずうや ルールは あとで「まとめて にゅうりょく」に でて くるので、そこで かけば OKです。</p>' +
+
+        '<label class="lbl" for="newGName">なまえ</label>' +
+        '<input type="text" id="newGName" placeholder="れい：アーク・ノヴァ" style="margin-bottom:12px">' +
+
+        '<label class="lbl">しゃしん<span class="hint">にんい</span></label>' +
+        '<label class="filebtn">＋ 画像を えらぶ<input type="file" id="f-images" accept="image/*" multiple></label>' +
+        '<div class="row" style="margin-top:9px">' +
+          '<input type="text" id="f-imgurl" placeholder="画像の URL を はりつけ" style="flex:2">' +
+          '<button type="button" class="mini" id="addUrlBtn" style="flex:0 0 auto">URLを ついか</button></div>' +
+        '<div class="imgs-preview" id="imgPreview" style="margin-bottom:12px"></div>' +
+
+        '<label class="row" style="align-items:center;gap:9px;margin-bottom:12px">' +
+          '<input type="checkbox" id="newGWish" checked style="flex:0 0 auto;width:20px;height:20px">' +
+          '<span style="font-size:13px">まだ もって いない（ほしい ゲーム）</span></label>' +
+
+        '<button class="btn small primary" id="newGAdd" style="width:100%">ずかんに ついかして えらぶ</button>' +
+      '</div></details>' +
 
     '<input type="search" id="logQ" placeholder="なまえで しぼる" value="'+esc(state.logQuery||'')+'" ' +
       'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:10px">' +
@@ -2417,7 +2452,9 @@ function viewRecords(){
     html += '<div class="section" style="padding:12px 13px;margin-bottom:10px">' +
       '<div class="row" style="align-items:flex-start;gap:10px">' +
         '<div class="t" style="flex:1;min-width:0">' +
-          '<button class="mini" data-open="'+esc(r.g.id)+'" style="margin-bottom:6px">'+esc(r.g.title)+' ▶</button>' +
+          '<button class="mini" data-open="'+esc(r.g.id)+'" style="margin-bottom:6px">' +
+            (isWish(r.g) ? '☆' : '') + esc(r.g.title)+' ▶</button>' +
+          (isWish(r.g) ? '<span class="badge" style="margin:0 0 6px">まだ もって いない</span>' : '') +
           '<div class="meta">' +
             (r.pl.n ? '<span><b>'+esc(r.pl.n)+'人</b></span>' : '') +
             (r.pl.w ? '<span>かち：<b>'+esc(r.pl.w)+'</b></span>' : '') +
@@ -3418,6 +3455,49 @@ function bind(r){
   }
   const logBox = document.getElementById('logResults');
   if(logBox) bindLogPicks(logBox);
+  const newGAdd = document.getElementById('newGAdd');
+  if(newGAdd) newGAdd.onclick = () => {
+    const inp = document.getElementById('newGName');
+    const title = (inp ? inp.value : '').trim();
+    if(!title) return toast('なまえを いれて ください');
+
+    const nq = normalizeText(title);
+    const same = state.games.find(x => normalizeText(x.title) === nq);
+    if(same){
+      /* すでに ある ときは、あたらしく つくらずに その ゲームを えらぶ */
+      if(state.logPicked.indexOf(same.id) < 0) state.logPicked.push(same.id);
+      if(inp) inp.value = '';
+      state.formImages = [];
+      render();
+      return toast('「'+same.title+'」は もう ずかんに あります。えらびました');
+    }
+
+    const wish = !!(document.getElementById('newGWish')||{}).checked;
+    const g = {
+      id: uid(),
+      title: title,
+      reading: '',
+      images: state.formImages.slice(),
+      videos: [],
+      playersMin: 2, playersMax: 6, playTime: 30, age: 8, difficulty: 2,
+      tags: ['データみきにゅう'],          /* あとで「まとめて にゅうりょく」に でて くる */
+      summary: '', quickRule: '', detailRule: '', recommendation: '',
+      wish: wish
+    };
+    /* 「データみきにゅう」タグが ない ばあいは つくって おく */
+    if(!state.tags.some(t => t.name === 'データみきにゅう')){
+      state.tags.push({name:'データみきにゅう', category:'そのた'});
+      saveTags();
+    }
+    state.games.unshift(g);
+    state.logPicked.push(g.id);
+    state.formImages = [];
+    if(inp) inp.value = '';
+    saveGames();
+    render();
+    toast(title + ' を ずかんに ついか しました（くわしくは あとで）');
+  };
+
   const logSaveBtn = document.getElementById('logSaveBtn');
   if(logSaveBtn) logSaveBtn.onclick = () => {
     if(!state.logPicked.length) return toast('ゲームを えらんで ください');
