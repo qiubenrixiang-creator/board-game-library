@@ -971,6 +971,7 @@ const state = {
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
   recQuery: '',                                     /* きろく画面の けんさく */
+  recEdit: '',                                      /* いま なおして いる きろく（"ゲームid|ばんごう"） */
   score: {names:[], rows:[]},                       /* てんすう表 */
   counters: [],                                     /* カウンター */
   dice: {count:2, values:[]},                       /* サイコロ */
@@ -1683,11 +1684,19 @@ function viewDetail(id){
       '<div class="section"><h2>あそんだ きろく（'+playCount(g)+'かい）</h2>' +
         '<details><summary>きろくと かんそうを みる</summary>' +
           '<div style="margin-top:10px">' +
-          playsOf(g).slice().sort((a,b) => String(b.d||'').localeCompare(String(a.d||''))).map(pl =>
+          playsOf(g).map((pl, i) => ({pl:pl, i:i}))
+            .sort((a,b) => String(b.pl.d||'').localeCompare(String(a.pl.d||'')))
+            .map(r =>
             '<div style="border-left:3px solid var(--frame);padding:0 0 0 10px;margin-bottom:12px">' +
-              '<p class="count" style="margin:0">'+esc(dateLabel(pl.d))+
-                (pl.n ? '／'+esc(pl.n)+'人' : '')+(pl.w ? '／かち：'+esc(pl.w) : '')+'</p>' +
-              (pl.m ? '<p style="margin:4px 0 0;white-space:pre-wrap;font-size:14px">'+esc(pl.m)+'</p>' : '') +
+              '<div class="row" style="align-items:flex-start;gap:8px">' +
+                '<p class="count" style="margin:0;flex:1">'+esc(dateLabel(r.pl.d))+
+                  (r.pl.n ? '／'+esc(r.pl.n)+'人' : '')+(r.pl.w ? '／かち：'+esc(r.pl.w) : '')+'</p>' +
+                (isEditing(g.id, r.i) ? '' :
+                  '<button class="mini" data-editrec="'+esc(g.id)+'|'+r.i+'" style="flex:0 0 auto">なおす</button>') +
+              '</div>' +
+              (isEditing(g.id, r.i)
+                ? playEditHTML(g.id, r.i, r.pl)
+                : (r.pl.m ? '<p style="margin:4px 0 0;white-space:pre-wrap;font-size:14px">'+esc(r.pl.m)+'</p>' : '')) +
             '</div>').join('') +
           '<button class="btn small" data-go2="#/records" style="width:100%">ぜんぶの きろくを みる</button>' +
           '</div></details>' +
@@ -2247,6 +2256,19 @@ function bindScore(){
   const box = document.getElementById('scoreBox');
   if(!box) return;
 
+  /* さいしょの「はじめる」ボタン。
+     けした あと ここを つなぎ直さないと、もう一度 はじめられなく なる。 */
+  const start = document.getElementById('scoreStart');
+  if(start) start.onclick = () => {
+    const raw = (document.getElementById('scoreNames')||{value:''}).value;
+    const names = parseNames(raw);
+    if(!names.length) return toast('なまえを いれて ください');
+    saveNames(raw);
+    state.score = {names: names, rows: [names.map(() => '')]};
+    saveScore();
+    box.innerHTML = scoreHTML(); bindScore();
+  };
+
   box.querySelectorAll('.score-input').forEach(inp => {
     inp.oninput = () => {
       const r = Number(inp.dataset.r), c = Number(inp.dataset.c);
@@ -2289,6 +2311,18 @@ function repaintScoreTotals(box){
 function bindCounters(){
   const box = document.getElementById('counterBox');
   if(!box) return;
+
+  /* こちらも おなじ。けした あとの「つくる」を つなぎ直す */
+  const start = document.getElementById('counterStart');
+  if(start) start.onclick = () => {
+    const raw = (document.getElementById('counterNames')||{value:''}).value;
+    const names = parseNames(raw);
+    if(!names.length) return toast('なまえを いれて ください');
+    saveNames(raw);
+    state.counters = names.map(n => ({name:n, value:0}));
+    saveCounters();
+    box.innerHTML = counterHTML(); bindCounters();
+  };
   box.querySelectorAll('[data-cnt]').forEach(b => b.onclick = () => {
     const i = Number(b.dataset.cnt), step = Number(b.dataset.step);
     if(!state.counters[i]) return;
@@ -2333,6 +2367,21 @@ function dateFullLabel(str){
   return Number(p[0]) + '年' + Number(p[1]) + '月' + Number(p[2]) + '日' + wd;
 }
 
+/* きろくを なおす ための 入力欄。いちどに 1つだけ ひらく。 */
+function playEditHTML(gid, i, pl){
+  return '<div class="win" style="margin-top:10px">' +
+    '<div class="row" style="margin-bottom:8px">' +
+      '<input type="date" id="recD" value="'+esc(pl.d||todayStr())+'" style="flex:1.4">' +
+      '<input type="number" id="recN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+esc(pl.n||'')+'" style="flex:1"></div>' +
+    '<input type="text" id="recW" placeholder="かった人（にんい）" value="'+esc(pl.w||'')+'" style="margin-bottom:8px">' +
+    '<textarea id="recM" placeholder="かんそう・おぼえがき" style="min-height:110px">'+esc(pl.m||'')+'</textarea>' +
+    '<div class="btn-row" style="margin-top:10px">' +
+      '<button class="btn small" style="flex:1" data-cancelrec="1">やめる</button>' +
+      '<button class="btn small primary" style="flex:1" data-saverec="'+esc(gid)+'|'+i+'">ほぞんする</button></div>' +
+  '</div>';
+}
+function isEditing(gid, i){ return state.recEdit === gid + '|' + i; }
+
 function viewRecords(){
   const q = normalizeText(state.recQuery || '');
   let list = allPlays();
@@ -2374,9 +2423,13 @@ function viewRecords(){
             (r.pl.w ? '<span>かち：<b>'+esc(r.pl.w)+'</b></span>' : '') +
           '</div>' +
         '</div>' +
-        '<button class="mini warn" data-delrec="'+esc(r.g.id)+'|'+r.i+'" style="flex:0 0 auto">けす</button>' +
+        (isEditing(r.g.id, r.i) ? '' :
+          '<button class="mini" data-editrec="'+esc(r.g.id)+'|'+r.i+'" style="flex:0 0 auto">なおす</button>' +
+          '<button class="mini warn" data-delrec="'+esc(r.g.id)+'|'+r.i+'" style="flex:0 0 auto">けす</button>') +
       '</div>' +
-      (r.pl.m ? '<p style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>' : '') +
+      (isEditing(r.g.id, r.i)
+        ? playEditHTML(r.g.id, r.i, r.pl)
+        : (r.pl.m ? '<p style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>' : '')) +
     '</div>';
   });
 
@@ -2921,6 +2974,39 @@ function bind(r){
     recQ.addEventListener('compositionend', () => { composing = false; later(); });
     recQ.addEventListener('input', () => { if(!composing) later(); });
   }
+  app.querySelectorAll('[data-editrec]').forEach(b => b.onclick = () => {
+    state.recEdit = b.dataset.editrec;
+    render();
+    /* なおす 欄が ひらいた あと、かんそうの ところまで うつる */
+    setTimeout(() => {
+      const m = document.getElementById('recM');
+      if(m) m.scrollIntoView({block:'center'});
+    }, 30);
+  });
+  app.querySelectorAll('[data-cancelrec]').forEach(b => b.onclick = () => {
+    state.recEdit = '';
+    render();
+  });
+  app.querySelectorAll('[data-saverec]').forEach(b => b.onclick = () => {
+    const parts = String(b.dataset.saverec).split('|');
+    const g = state.games.find(x => x.id === parts[0]);
+    const i = Number(parts[1]);
+    if(!g || !playsOf(g)[i]) return;
+    const ps = playsOf(g).slice();
+    const n = Number((document.getElementById('recN')||{value:''}).value) || 0;
+    const w = (document.getElementById('recW')||{value:''}).value.trim();
+    const m = (document.getElementById('recM')||{value:''}).value.trim();
+    ps[i] = {
+      d: (document.getElementById('recD')||{value:''}).value || ps[i].d || todayStr(),
+      n: n || undefined,
+      w: w || undefined,
+      m: m || undefined
+    };
+    g.plays = ps;
+    state.recEdit = '';
+    saveGames(); render(); toast('きろくを なおしました');
+  });
+
   app.querySelectorAll('[data-delrec]').forEach(b => b.onclick = () => {
     const parts = String(b.dataset.delrec).split('|');
     const g = state.games.find(x => x.id === parts[0]);
@@ -2980,30 +3066,9 @@ function bind(r){
   });
 
   /* --- てんすう表 --- */
-  const scoreStart = document.getElementById('scoreStart');
-  if(scoreStart) scoreStart.onclick = () => {
-    const raw = (document.getElementById('scoreNames')||{value:''}).value;
-    const names = parseNames(raw);
-    if(!names.length) return toast('なまえを いれて ください');
-    saveNames(raw);
-    state.score = {names: names, rows: [names.map(() => '')]};
-    saveScore();
-    const box = document.getElementById('scoreBox');
-    if(box){ box.innerHTML = scoreHTML(); bindScore(); }
-  };
   bindScore();
 
   /* --- カウンター --- */
-  const counterStart = document.getElementById('counterStart');
-  if(counterStart) counterStart.onclick = () => {
-    const raw = (document.getElementById('counterNames')||{value:''}).value;
-    const names = parseNames(raw);
-    if(!names.length) return toast('なまえを いれて ください');
-    state.counters = names.map(n => ({name:n, value:0}));
-    saveCounters();
-    const box = document.getElementById('counterBox');
-    if(box){ box.innerHTML = counterHTML(); bindCounters(); }
-  };
   bindCounters();
 
   /* さいしょの人を きめる */
