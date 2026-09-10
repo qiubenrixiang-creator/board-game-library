@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-10T01:48:40.087Z",
+  "version": "2026-09-10T08:05:39.893Z",
   "tags": [
     {
       "name": "初心者",
@@ -112,7 +112,7 @@
       "title": "TOSSIT",
       "reading": "としっと",
       "videos": [],
-      "wish": true,
+      "wish": false,
       "images": [
         "https://m.media-amazon.com/images/I/71i093TqGWL._AC_UF1000,1000_QL80_.jpg"
       ],
