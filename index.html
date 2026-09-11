@@ -293,13 +293,15 @@ img{image-rendering:auto}
   min-width:54px;padding:9px 4px;font-size:16px;cursor:pointer;
 }
 .score-table td.score-cell.sel{
-  background:var(--accent);color:var(--panel);
+  /* えらんで いる マスは わくで しめす（いろを ぬりつぶさない） */
+  outline:3px solid var(--accent);outline-offset:-3px;color:var(--accent);
 }
 .score-table input.score-input{
   width:100%;min-width:52px;padding:6px 4px;border:0;background:transparent;text-align:center;font-size:15px;
 }
 .score-total td{font-size:16px;color:var(--text)}
-.score-total td.win{color:var(--accent)}
+/* いちばん てんすうが 高い 人は 数字の 色だけ かえる */
+.score-total td.win{color:var(--accent);background:transparent}
 .video-box{position:relative;width:100%;aspect-ratio:16/9;background:#000;border:2px solid var(--frame);overflow:hidden}
 .video-box img{width:100%;height:100%;object-fit:cover;display:block;opacity:.85}
 .video-box iframe{width:100%;height:100%;border:0;display:block}
@@ -429,10 +431,23 @@ body.big-tool .mini{font-size:14px;padding:9px 13px}
 body.big-tool .admin-row b{font-size:18px}
 body.big-tool .admin-row .mini{padding:11px 14px;font-size:16px}
 body.big-tool .lede{font-size:26px}
-/* よこ むきに した ときは よこに ならべる */
+/* よこ むきに した ときは、スクロール しないで ぜんぶ 見える ように
+   表と ボタンを 左右に ならべ、文字も すこし おさえる */
 @media (orientation:landscape){
-  body.big-tool .tool-full .section{max-width:900px;margin:0 auto}
-  body.big-tool .tool-big{font-size:56px;margin:2px 0 10px}
+  body.big-tool .page{padding:6px 0 10px}
+  body.big-tool .lede{font-size:19px;margin:0 0 6px}
+  body.big-tool .section{padding:10px 12px;margin-bottom:8px}
+  body.big-tool .tool-big{font-size:44px;margin:0 0 8px}
+  body.big-tool .die-face{width:54px;height:54px}
+  body.big-tool .chip{font-size:15px;padding:9px 14px}
+  body.big-tool .btn.small{font-size:15px;padding:10px}
+
+  body.big-tool .score-layout{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start}
+  body.big-tool .score-controls .chips{justify-content:flex-start}
+  body.big-tool .score-table td.score-cell{font-size:19px;padding:9px 6px;min-width:58px}
+  body.big-tool .score-table th,body.big-tool .score-total td{font-size:15px;padding:6px}
+
+  body.big-tool .tool-full .section{max-width:1000px;margin-left:auto;margin-right:auto}
 }
 
 /* しゃしんの かくだい */
@@ -498,6 +513,15 @@ body.big-tool .lede{font-size:26px}
 .dialog-win p::before{content:"▼ ";color:var(--accent)}
 .dialog-win .btn-row{gap:10px}
 
+/* うごいて いる タイマーを どの画面でも みえる ように する */
+#timerBadge{
+  position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:95;
+  background:var(--panel);border:3px solid var(--accent);color:var(--accent);
+  box-shadow:var(--shadow);padding:7px 13px;font-size:16px;letter-spacing:.06em;cursor:pointer;
+}
+#timerBadge[hidden]{display:none}
+body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
+
 #toast{
   position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:var(--panel);color:var(--text);border:3px solid var(--frame);box-shadow:var(--shadow);
@@ -535,6 +559,8 @@ body.big-tool .lede{font-size:26px}
     <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり<span class="dot" id="dirtyDot" hidden></span></button>
   </div>
 </nav>
+
+<button id="timerBadge" hidden aria-label="タイマーを ひらく"></button>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -1455,7 +1481,6 @@ function render(){
   /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
      いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
   const sameScreen = (render._routeKey === routeKey);
-  if(!sameScreen){ stopTimer(); timerLeft = 0; }
   const keepY = window.scrollY || window.pageYOffset || 0;
 
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
@@ -1471,6 +1496,7 @@ function render(){
   syncBgm();
   paintSoundBtns();
   paintDirtyDot();
+  paintTimer();
 
   render._routeKey = routeKey;
   if(sameScreen){
@@ -1490,6 +1516,15 @@ function timerText(sec){
 function paintTimer(){
   const el = document.getElementById('timerView');
   if(el) el.textContent = timerText(timerLeft);
+
+  /* 画面の すみの ひょうじ（うごいて いる あいだ だけ だす） */
+  const badge = document.getElementById('timerBadge');
+  if(badge){
+    const running = !!timerId && timerLeft > 0;
+    const here = currentRoute().name === 'tool' && currentRoute().param === 'timer';
+    badge.hidden = !running || here;
+    if(running) badge.textContent = '⏳ ' + timerText(timerLeft);
+  }
 }
 function stopTimer(){
   if(timerId){ clearInterval(timerId); timerId = null; }
@@ -2418,7 +2453,8 @@ function scoreHTML(){
   const sel = state.scoreSel || {r:0, c:0};
   const selName = sc.names[sel.c] || '';
 
-  return '<div style="overflow-x:auto">' +
+  return '<div class="score-layout">' +
+    '<div class="score-table-wrap" style="overflow-x:auto">' +
     '<table class="score-table"><thead><tr><th>かい</th>' +
       sc.names.map(n => '<th>'+esc(n)+'</th>').join('') + '</tr></thead><tbody>' +
       sc.rows.map((r, ri) =>
@@ -2431,6 +2467,7 @@ function scoreHTML(){
       '</tr>' +
     '</tbody></table></div>' +
 
+    '<div class="score-controls">' +
     /* えらんだ マスを ボタンで ふやしたり へらしたり する（キーボードを つかわない） */
     '<p class="count" style="margin:10px 0 6px">いま えらんで いる：' +
       (sc.rows.length ? (sel.r+1)+'かいめ の <span style="color:var(--accent)">'+esc(selName)+'</span>' : '—') +
@@ -2445,7 +2482,8 @@ function scoreHTML(){
 
     '<div class="btn-row">' +
       '<button class="btn small" style="flex:1" id="scoreAddRow">＋ かいを ふやす</button>' +
-      '<button class="btn small" style="flex:1" id="scoreClear">さいしょから</button></div>';
+      '<button class="btn small" style="flex:1" id="scoreClear">さいしょから</button></div>' +
+    '</div></div>';
 }
 
 /* --- カウンター --- */
@@ -4107,12 +4145,16 @@ window.addEventListener('focus', tickTimer);
   }, {passive:true});
 })();
 
+const timerBadgeEl = document.getElementById('timerBadge');
+if(timerBadgeEl) timerBadgeEl.onclick = () => { playClick(); go('#/tool/timer'); };
+
 paintIcons(document);
 initAudio();
 initSoundButtons();
 document.addEventListener('pointerdown', unlockAudioOnce, {once:true});
 document.addEventListener('click', e => {
-  if(e.target.closest('.btn, .chip, .tab, .mini, .gcard, .icon-btn, .filebtn, .starpick button')) playClick();
+  if(e.target.closest('.btn, .chip, .tab, .mini, .gcard, .icon-btn, .filebtn, .starpick button, ' +
+    '.tool-card, .gtile, .score-cell, .lb-nav, #timerBadge, summary')) playClick();
 });
 initTheme();
 loadAll();
