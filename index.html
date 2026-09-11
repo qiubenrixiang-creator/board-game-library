@@ -433,19 +433,30 @@ body.big-tool .admin-row .mini{padding:11px 14px;font-size:16px}
 body.big-tool .lede{font-size:26px}
 /* よこ むきに した ときは、スクロール しないで ぜんぶ 見える ように
    表と ボタンを 左右に ならべ、文字も すこし おさえる */
+/* よこ むきの ときは、「大きく つかう」で なくても
+   スクロール しないで ぜんぶ 見える ならべかたに する。 */
 @media (orientation:landscape){
-  body.big-tool .page{padding:6px 0 10px}
-  body.big-tool .lede{font-size:19px;margin:0 0 6px}
-  body.big-tool .section{padding:10px 12px;margin-bottom:8px}
-  body.big-tool .tool-big{font-size:44px;margin:0 0 8px}
-  body.big-tool .die-face{width:54px;height:54px}
-  body.big-tool .chip{font-size:15px;padding:9px 14px}
-  body.big-tool .btn.small{font-size:15px;padding:10px}
+  /* どうぐの 画面ぜんたい */
+  body.tool-page .page{padding:6px 0 10px}
+  body.tool-page .lede{font-size:19px;margin:0 0 6px}
+  body.tool-page .section{padding:10px 12px;margin-bottom:8px}
+  body.tool-page .tool-big{font-size:44px;margin:0 0 8px}
+  body.tool-page .die-face{width:54px;height:54px}
+  body.tool-page .chip{font-size:15px;padding:9px 14px}
+  body.tool-page .btn.small{font-size:15px;padding:10px}
+  body.tool-page .wrap{max-width:1000px}
 
-  body.big-tool .score-layout{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start}
-  body.big-tool .score-controls .chips{justify-content:flex-start}
-  body.big-tool .score-table td.score-cell{font-size:19px;padding:9px 6px;min-width:58px}
-  body.big-tool .score-table th,body.big-tool .score-total td{font-size:15px;padding:6px}
+  /* てんすう表は 表と そうさボタンを 左右に */
+  body.tool-page .score-layout{display:grid;grid-template-columns:1.25fr 1fr;gap:14px;align-items:start}
+  body.tool-page .score-controls .chips{justify-content:flex-start}
+  body.tool-page .score-table td.score-cell{font-size:19px;padding:9px 6px;min-width:58px}
+  body.tool-page .score-table th,body.tool-page .score-total td{font-size:15px;padding:6px}
+
+  /* カウンターも よこに ならべる */
+  body.tool-page #counterBox .admin-row{width:calc(50% - 5px);display:inline-flex;margin-right:8px}
+
+  /* どうぐの えらび画面は よこに 4つ */
+  body.tool-page .tool-grid{grid-template-columns:repeat(4,1fr)}
 
   body.big-tool .tool-full .section{max-width:1000px;margin-left:auto;margin-right:auto}
 }
@@ -518,7 +529,9 @@ body.big-tool .lede{font-size:26px}
   position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:95;
   background:var(--panel);border:3px solid var(--accent);color:var(--accent);
   box-shadow:var(--shadow);padding:7px 13px;font-size:16px;letter-spacing:.06em;cursor:pointer;
+  display:flex;align-items:center;gap:8px;
 }
+#timerBadge .badge-ico{width:18px;height:18px;display:block;color:var(--accent)}
 #timerBadge[hidden]{display:none}
 body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
 
@@ -560,7 +573,9 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
   </div>
 </nav>
 
-<button id="timerBadge" hidden aria-label="タイマーを ひらく"></button>
+<button id="timerBadge" hidden aria-label="タイマーを ひらく">
+  <span class="badge-ico" data-icon="hourglass"></span><span id="timerBadgeText"></span>
+</button>
 
 <div id="toast" role="status" aria-live="polite"></div>
 
@@ -797,14 +812,14 @@ const ICONS = {
   ],
   /* すなどけい（タイマー） */
   hourglass:[
-    '.######.',
+    '########',
+    '.#....#.',
     '.#....#.',
     '..#..#..',
-    '...##...',
-    '...##...',
     '..#..#..',
     '.#....#.',
-    '.######.'
+    '.#....#.',
+    '########'
   ],
   /* まきもの（てんすう表） */
   scroll:[
@@ -1478,6 +1493,8 @@ function render(){
     state.toolBig = false;
     document.body.classList.remove('big-tool');
   }
+  /* どうぐの 画面に いる あいだは、よこ むきの ならべかたを つかう */
+  document.body.classList.toggle('tool-page', r.name === 'tool' || r.name === 'tools');
   /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
      いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
   const sameScreen = (render._routeKey === routeKey);
@@ -1523,7 +1540,8 @@ function paintTimer(){
     const running = !!timerId && timerLeft > 0;
     const here = currentRoute().name === 'tool' && currentRoute().param === 'timer';
     badge.hidden = !running || here;
-    if(running) badge.textContent = '⏳ ' + timerText(timerLeft);
+    const txt = document.getElementById('timerBadgeText');
+    if(running && txt) txt.textContent = timerText(timerLeft);
   }
 }
 function stopTimer(){
