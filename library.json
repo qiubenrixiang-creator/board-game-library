@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-10T15:36:16.052Z",
+  "version": "2026-09-11T14:05:17.857Z",
   "tags": [
     {
       "name": "初心者",
@@ -107,6 +107,71 @@
     }
   ],
   "games": [
+    {
+      "id": "gmtx12v2nkb8og",
+      "title": "くらやみかくれんぼ",
+      "reading": "くらやみかくれんぼ",
+      "videos": [
+        "https://youtube.com/shorts/Gg9cJbROBI0?si=My9u2LuFyLfQjNs4"
+      ],
+      "wish": false,
+      "images": [
+        "https://images.ctfassets.net/xfvgazuefhm0/1rGIxYG9N4oTbllv7GOeIR/6056efc5e1bab3ab23c0624c1ebe84bd/keepitdark-package_obi_2000%C3%83_2000.jpg",
+        "https://prcdn.freetls.fastly.net/release_image/25254/55/25254-55-14d49776dfa6d1744804a990d292ecdb-2320x1684.png?width=1950&height=1350&quality=85%2C65&format=jpeg&auto=webp&fit=bounds&bg-color=fff"
+      ],
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 14,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "tags": [
+        "軽量級",
+        "対戦",
+        "未プレイ"
+      ],
+      "summary": "暗闇から封印の小瓶を探し出して、禁断の儀式を終わらせよう！",
+      "quickRule": "1.怪異チームはぬいぐるみと封印の小瓶、\n  マーカーを部屋に配置する\n2.探索者チームは懐中電灯で部屋を照らし、\n  封印の小瓶を探す。\n3.封印の小瓶を見つける前にぬいぐるみを照ら  \n  してしまった場合、その時点で探索者チーム    \n  の負け\n4.封印の小瓶を見つけた後に、ぬいぐるみを発      \n  見できた場合は、探索者チームの勝ち",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmtx0vknixh4g6",
+      "title": "ピクテル",
+      "reading": "ぴくてる",
+      "videos": [
+        "https://youtube.com/watch?v=VopduK36Ub0&si=Esgk0qL1dbecDx-b",
+        "https://youtube.com/shorts/vc5kkXhfk2U?si=3XDpmL4NB8mCftO7"
+      ],
+      "wish": false,
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2021/04/2e0e1472650cbe8132dd1b379c7bbe72-575x575.jpg",
+        "https://m.media-amazon.com/images/I/71BlsTKyqzL.jpg"
+      ],
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 2,
+      "strategy": 3,
+      "excitement": 3,
+      "luck": 3,
+      "tags": [
+        "初心者",
+        "軽量級",
+        "協力",
+        "パーティー",
+        "リアルタイム",
+        "盛り上がる",
+        "未プレイ"
+      ],
+      "summary": "ピクトグラムでお題を伝えよう！　透明なカードを組み合わせて遊ぶ想像力ゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
     {
       "id": "gmtuvc2n3eabmx",
       "title": "TOSSIT",
