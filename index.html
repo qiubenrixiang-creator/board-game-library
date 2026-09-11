@@ -140,9 +140,18 @@ img{image-rendering:auto}
 .icon-btn:active{transform:translate(1px,1px)}
 .icon-btn.snd{min-width:38px;padding:5px 8px;letter-spacing:0}
 .icon-btn.off{opacity:.4;text-decoration:line-through;color:var(--muted)}
-@media (max-width:420px){
-  .brand span.txt{display:none}       /* せまい画面では ロゴの文字を かくす */
-  .topbar-in{gap:7px}
+/* ひろい画面では えいごの フルネーム、せまい画面では みじかい 日本語 */
+.brand .txt-short{display:none}
+@media (max-width:560px){
+  .brand .txt-long{display:none}
+  .brand .txt-short{display:inline}
+  .brand{font-size:14px;letter-spacing:.04em}
+  .topbar-in{gap:7px;padding:0 12px}
+  .icon-btn.snd{min-width:34px;padding:5px 6px}
+  .icon-btn{padding:5px 8px}
+}
+@media (max-width:340px){
+  .brand .txt-short{display:none}     /* うんと せまい ときだけ アイコンだけに */
 }
 
 /* ---------- タブ ---------- */
@@ -463,7 +472,7 @@ h2.sec::before{content:"■ ";font-size:12px}
 
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="#/"><span class="ico" data-icon="chest"></span><span class="txt">BOARD GAME LIBRARY</span></a>
+    <a class="brand" href="#/"><span class="ico" data-icon="chest"></span><span class="txt txt-long">BOARD GAME LIBRARY</span><span class="txt txt-short">ボドゲずかん</span></a>
     <div class="spacer"></div>
     <button class="icon-btn snd" id="bgmBtn" aria-pressed="true">♪</button>
     <button class="icon-btn snd" id="seBtn" aria-pressed="true">SE</button>
