@@ -401,6 +401,40 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th, .print-table td{border:1px solid var(--line, #999);padding:5px 6px;font-size:12px;text-align:left}
 .print-table th{color:var(--accent)}
 
+/* ---------- どうぐ ---------- */
+.tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.tool-card{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;
+  background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
+  color:var(--text);cursor:pointer;text-align:center;
+}
+.tool-card:active{transform:translate(2px,2px);box-shadow:none}
+.tool-ico{width:40px;height:40px;display:block;color:var(--accent)}
+.tool-ico-s{width:20px;height:20px;display:inline-block;vertical-align:-3px;color:var(--accent)}
+.tool-name{font-size:14px}
+.tool-desc{font-size:10.5px;color:var(--muted)}
+.tool-big{font-size:44px;color:var(--accent);margin:4px 0 14px;letter-spacing:.04em}
+
+/* 「大きく つかう」…上下の メニューを かくし、文字を 大きく する */
+body.big-tool .topbar, body.big-tool .tabbar{display:none}
+body.big-tool{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+body.big-tool .wrap{max-width:none;padding:0 12px}
+body.big-tool .tool-big{font-size:64px}
+body.big-tool .die-face{width:72px;height:72px}
+body.big-tool .score-table td.score-cell{font-size:22px;padding:14px 6px;min-width:66px}
+body.big-tool .score-table th,body.big-tool .score-total td{font-size:17px}
+body.big-tool .chip{font-size:17px;padding:12px 18px}
+body.big-tool .btn.small{font-size:16px;padding:14px}
+body.big-tool .mini{font-size:14px;padding:9px 13px}
+body.big-tool .admin-row b{font-size:18px}
+body.big-tool .admin-row .mini{padding:11px 14px;font-size:16px}
+body.big-tool .lede{font-size:26px}
+/* よこ むきに した ときは よこに ならべる */
+@media (orientation:landscape){
+  body.big-tool .tool-full .section{max-width:900px;margin:0 auto}
+  body.big-tool .tool-big{font-size:56px;margin:2px 0 10px}
+}
+
 /* しゃしんの かくだい */
 .lb-back{
   position:fixed;inset:0;z-index:130;background:rgba(6,8,18,.95);
@@ -734,6 +768,83 @@ const ICONS = {
     '.####...',
     '##..#...',
     '#.......'
+  ],
+  /* すなどけい（タイマー） */
+  hourglass:[
+    '.######.',
+    '.#....#.',
+    '..#..#..',
+    '...##...',
+    '...##...',
+    '..#..#..',
+    '.#....#.',
+    '.######.'
+  ],
+  /* まきもの（てんすう表） */
+  scroll:[
+    '.######.',
+    '#......#',
+    '#.####.#',
+    '#......#',
+    '#.####.#',
+    '#......#',
+    '#.###..#',
+    '.######.'
+  ],
+  /* かぞえる たま（カウンター） */
+  abacus:[
+    '#......#',
+    '#.####.#',
+    '#......#',
+    '#..##..#',
+    '#......#',
+    '#.#..#.#',
+    '#......#',
+    '########'
+  ],
+  /* やじるしと まと（くじ引き） */
+  target:[
+    '..####..',
+    '.#....#.',
+    '#..##..#',
+    '#.####.#',
+    '#.####.#',
+    '#..##..#',
+    '.#....#.',
+    '..####..'
+  ],
+  /* ふたり（チーム分け） */
+  people:[
+    '.##..##.',
+    '.##..##.',
+    '........',
+    '####.###',
+    '#..#.#..',
+    '#..#.###',
+    '#..#...#',
+    '####.###'
+  ],
+  /* ほんを ひらく（きろく） */
+  notes:[
+    '########',
+    '#..##..#',
+    '#.####.#',
+    '#..##..#',
+    '#.####.#',
+    '#..##..#',
+    '#.####.#',
+    '########'
+  ],
+  /* 大きく つかう（ぜんがめん） */
+  expand:[
+    '###..###',
+    '#......#',
+    '#......#',
+    '........',
+    '........',
+    '#......#',
+    '#......#',
+    '###..###'
   ]
 };
 function pixSVG(name){
@@ -993,6 +1104,7 @@ const state = {
   recEdit: '',                                      /* いま なおして いる きろく（"ゲームid|ばんごう"） */
   score: {names:[], rows:[]},                       /* てんすう表 */
   scoreSel: {r:0, c:0},                             /* てんすう表で えらんで いる マス */
+  toolBig: false,                                   /* どうぐを 大きく つかう */
   counters: [],                                     /* カウンター */
   dice: {count:2, values:[]},                       /* サイコロ */
   lastNames: '',                                    /* なまえの いれもの（くじ・チーム分け 共通） */
@@ -1335,6 +1447,11 @@ const app = document.getElementById('app');
 function render(){
   const r = currentRoute();
   const routeKey = r.name + '/' + (r.param || '');
+  /* どうぐ画面から はなれたら、大きい ひょうじを もとに もどす */
+  if(r.name !== 'tool'){
+    state.toolBig = false;
+    document.body.classList.remove('big-tool');
+  }
   /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
      いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
   const sameScreen = (render._routeKey === routeKey);
@@ -1344,11 +1461,12 @@ function render(){
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
                   print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools,
-                  records:viewRecords };
+                  records:viewRecords, tool:viewTool };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
-  const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', admin:'#/admin' };
+  const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', tool:'#/tools',
+                records:'#/tools', playlog:'#/tools', admin:'#/admin' };
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   syncBgm();
   paintSoundBtns();
@@ -2569,81 +2687,124 @@ function viewRecords(){
   return html + '</section>';
 }
 
+/* どうぐは 1つずつ べつの 画面に する。
+   #/tools で えらび、#/tool/<なまえ> で その どうぐだけを ひらく。 */
+const TOOLS = [
+  {id:'timer',   name:'タイマー',     icon:'hourglass', desc:'じかんを はかる'},
+  {id:'dice',    name:'サイコロ',     icon:'die',       desc:'1〜12こ ふる'},
+  {id:'score',   name:'てんすう表',   icon:'scroll',    desc:'とくてんを つける'},
+  {id:'counter', name:'カウンター',   icon:'abacus',    desc:'ふやす・へらす'},
+  {id:'lot',     name:'くじ引き',     icon:'target',    desc:'ひとりを えらぶ'},
+  {id:'team',    name:'チーム分け',   icon:'people',    desc:'チームを つくる'},
+  {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'}
+];
+
 function viewTools(){
+  return '<section class="page">' +
+    '<h1 class="lede">どうぐ</h1>' +
+    '<p class="sub">あそんで いる あいだに つかう どうぐです。<br>えらぶと その どうぐだけの 画面に なります。</p>' +
+
+    '<div class="tool-grid">' +
+      TOOLS.map(t =>
+        '<button class="tool-card" data-go2="#/tool/'+esc(t.id)+'">' +
+          '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
+          '<span class="tool-name">'+esc(t.name)+'</span>' +
+          '<span class="tool-desc">'+esc(t.desc)+'</span>' +
+        '</button>').join('') +
+    '</div>' +
+
+    (timerLeft ? '<div class="note" style="margin-top:14px">タイマーが うごいて います：' +
+      '<span style="color:var(--accent)">'+timerText(timerLeft)+'</span></div>' : '') +
+
+    '<div class="divider"></div>' +
+    '<div class="btn-row">' +
+      '<button class="btn small" style="flex:1" data-go2="#/random">おまかせで きめる</button>' +
+      '<button class="btn small" style="flex:1" data-go2="#/stats">とうけいを みる</button></div>' +
+  '</section>';
+}
+
+/* --- どうぐ 1つずつの 中身 --- */
+function toolTimerHTML(){
   const mins = Math.floor((timerLeft || 0) / 60);
   const secs = (timerLeft || 0) % 60;
-  return '<section class="page">' +
-    '<h1 class="lede">あそびの どうぐ</h1>' +
-    '<p class="sub">あそんで いる あいだに つかう どうぐを あつめました。</p>' +
+  return '<div id="timerBox" style="text-align:center">' +
+    '<p id="timerView" class="tool-big">'+timerText(timerLeft || 30*60)+'</p>' +
+    '<div class="row" style="margin-bottom:10px;justify-content:center">' +
+      '<input type="number" id="timerMin" min="0" max="300" inputmode="numeric" value="'+(timerLeft ? mins : 30)+'" style="flex:1;text-align:center">' +
+      '<span style="flex:0 0 auto;color:var(--muted)">分</span>' +
+      '<input type="number" id="timerSec" min="0" max="59" step="5" inputmode="numeric" value="'+(timerLeft ? secs : 0)+'" style="flex:1;text-align:center">' +
+      '<span style="flex:0 0 auto;color:var(--muted)">秒</span>' +
+    '</div>' +
+    '<button class="btn small" data-timerset="input" style="width:100%;margin-bottom:10px">この じかんに セットする</button>' +
+    '<div class="btn-row">' +
+      '<button class="btn small" style="flex:1" data-timer="start" data-min="30">はじめる</button>' +
+      '<button class="btn small" style="flex:1" data-timer="stop">とめる</button>' +
+      '<button class="btn small" style="flex:1" data-timer="reset" data-min="30">もどす</button>' +
+    '</div>' +
+    '<p class="count" style="margin:10px 0 0">ほかの 画面に いっても うごき つづけます。0に なると おとで しらせます。</p>' +
+  '</div>';
+}
+function toolLotHTML(){
+  return '<p class="count" style="margin:0 0 8px">1. なにを きめるか えらぶ（じぶんで かいても OK）</p>' +
+    '<div class="chips" style="margin-bottom:8px">' +
+      LOT_PURPOSES.map(pp =>
+        '<button class="chip sm" data-lotpurpose="'+esc(pp)+'" aria-pressed="'+(state.lotPurpose===pp)+'">'+esc(pp)+'</button>').join('') +
+    '</div>' +
+    '<input type="text" id="lotPurpose" placeholder="じぶんで かく（れい：さいごに かたづける人）" value="'+esc(LOT_PURPOSES.indexOf(state.lotPurpose)<0 ? state.lotPurpose : '')+'" style="margin-bottom:14px">' +
+    '<p class="count" style="margin:0 0 8px">2. だれで くじを ひくか</p>' +
+    '<div class="row" style="margin-bottom:12px">' +
+      '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" value="'+esc(state.lastNames)+'" style="flex:2">' +
+      '<button class="mini warn" data-clearnames="firstNames" style="flex:0 0 auto">けす</button></div>' +
+    '<button class="btn primary" id="firstBtn" style="width:100%">▶ ちゅうせんを はじめる</button>' +
+    '<div id="firstResult"></div>';
+}
+function toolTeamHTML(){
+  return '<p class="count" style="margin:0 0 8px">なまえを いれて、チームの かずを えらびます。</p>' +
+    '<div class="row" style="margin-bottom:8px">' +
+      '<input type="text" id="teamNames" placeholder="れい：たろう はなこ じろう しろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
+      '<button class="mini warn" data-clearnames="teamNames" style="flex:0 0 auto">けす</button></div>' +
+    '<div class="chips" style="margin-bottom:10px">' +
+      [2,3,4].map(n => '<button class="chip sm" data-teamn="'+n+'">'+n+'チーム</button>').join('') +
+    '</div>' +
+    '<div id="teamResult"></div>';
+}
+function toolLogHTML(){
+  return '<p class="count" style="margin:0 0 10px">あそんだ ゲームの きろくを つけたり、これまでの きろくを よんだり できます。</p>' +
+    '<div class="btn-row">' +
+      '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button>' +
+      '<button class="btn small" style="flex:1" data-go2="#/records">きろくを みる' +
+        (allPlays().length ? '（'+allPlays().length+'）' : '') + '</button></div>';
+}
 
-    /* --- タイマー --- */
-    '<div class="section"><h2>タイマー</h2>' +
-      '<div id="timerBox" style="text-align:center">' +
-        '<p id="timerView" style="font-size:38px;color:var(--accent);margin:4px 0 12px">'+timerText(timerLeft || 30*60)+'</p>' +
-        '<div class="row" style="margin-bottom:8px;justify-content:center">' +
-          '<input type="number" id="timerMin" min="0" max="300" inputmode="numeric" value="'+(timerLeft ? mins : 30)+'" style="flex:1;text-align:center">' +
-          '<span style="flex:0 0 auto;color:var(--muted)">分</span>' +
-          '<input type="number" id="timerSec" min="0" max="59" step="5" inputmode="numeric" value="'+(timerLeft ? secs : 0)+'" style="flex:1;text-align:center">' +
-          '<span style="flex:0 0 auto;color:var(--muted)">秒</span>' +
-        '</div>' +
-        '<button class="btn small" data-timerset="input" style="width:100%;margin-bottom:10px">この じかんに セットする</button>' +
-        '<div class="btn-row">' +
-          '<button class="btn small" style="flex:1" data-timer="start" data-min="30">はじめる</button>' +
-          '<button class="btn small" style="flex:1" data-timer="stop">とめる</button>' +
-          '<button class="btn small" style="flex:1" data-timer="reset" data-min="30">もどす</button>' +
-        '</div>' +
-        '<p class="count" style="margin:8px 0 0">ほかの がめんに いっても うごき つづけます。</p>' +
-      '</div></div>' +
+function toolBodyHTML(id){
+  if(id === 'timer')   return toolTimerHTML();
+  if(id === 'dice')    return diceHTML();
+  if(id === 'score')   return '<div id="scoreBox">' + scoreHTML() + '</div>';
+  if(id === 'counter') return '<div id="counterBox">' + counterHTML() + '</div>';
+  if(id === 'lot')     return toolLotHTML();
+  if(id === 'team')    return toolTeamHTML();
+  if(id === 'log')     return toolLogHTML();
+  return '';
+}
 
-    /* --- サイコロ --- */
-    '<div class="section"><h2>サイコロ</h2>' + diceHTML() + '</div>' +
+function viewTool(id){
+  const t = TOOLS.find(x => x.id === id);
+  if(!t) return '<section class="page"><div class="empty">その どうぐは ありません' +
+    '<div style="margin-top:16px"><button class="btn small" data-go2="#/tools">どうぐへ もどる</button></div></div></section>';
 
-    /* --- くじ引き --- */
-    '<div class="section"><h2>くじ引き</h2>' +
-      '<p class="count" style="margin:0 0 8px">1. なにを きめるか えらぶ（じぶんで かいても OK）</p>' +
-      '<div class="chips" style="margin-bottom:8px">' +
-        LOT_PURPOSES.map(pp =>
-          '<button class="chip sm" data-lotpurpose="'+esc(pp)+'" aria-pressed="'+(state.lotPurpose===pp)+'">'+esc(pp)+'</button>').join('') +
-      '</div>' +
-      '<input type="text" id="lotPurpose" placeholder="じぶんで かく（れい：さいごに かたづける人）" value="'+esc(LOT_PURPOSES.indexOf(state.lotPurpose)<0 ? state.lotPurpose : '')+'" style="margin-bottom:14px">' +
-
-      '<p class="count" style="margin:0 0 8px">2. だれで くじを ひくか</p>' +
-      '<div class="row" style="margin-bottom:12px">' +
-        '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" value="'+esc(state.lastNames)+'" style="flex:2">' +
-        '<button class="mini warn" data-clearnames="firstNames" style="flex:0 0 auto">けす</button></div>' +
-
-      '<button class="btn primary" id="firstBtn" style="width:100%">▶ ちゅうせんを はじめる</button>' +
-      '<div id="firstResult"></div>' +
+  const big = !!state.toolBig;
+  return '<section class="page' + (big ? ' tool-full' : '') + '">' +
+    '<div class="row" style="align-items:center;gap:8px;margin-bottom:12px">' +
+      '<button class="mini" data-go2="#/tools" style="flex:0 0 auto">◀ どうぐ</button>' +
+      '<span style="flex:1"></span>' +
+      '<button class="mini" id="toolBigBtn" style="flex:0 0 auto">' +
+        '<span class="tool-ico-s" data-icon="expand"></span> ' + (big ? 'もとに もどす' : '大きく つかう') + '</button>' +
     '</div>' +
 
-    /* --- チーム分け --- */
-    '<div class="section"><h2>チーム分け</h2>' +
-      '<p class="count" style="margin:0 0 8px">コードネームや テレストレーションの チームを ランダムに わけます。</p>' +
-      '<div class="row" style="margin-bottom:8px">' +
-        '<input type="text" id="teamNames" placeholder="れい：たろう はなこ じろう しろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
-        '<button class="mini warn" data-clearnames="teamNames" style="flex:0 0 auto">けす</button></div>' +
-      '<div class="chips" style="margin-bottom:10px">' +
-        [2,3,4].map(n => '<button class="chip sm" data-teamn="'+n+'">'+n+'チーム</button>').join('') +
-      '</div>' +
-      '<div id="teamResult"></div>' +
-    '</div>' +
+    '<h1 class="lede" style="display:flex;align-items:center;gap:10px">' +
+      '<span class="tool-ico-s" data-icon="'+esc(t.icon)+'"></span>'+esc(t.name)+'</h1>' +
 
-    /* --- てんすう表 --- */
-    '<div class="section"><h2>てんすう表</h2>' +
-      '<div id="scoreBox">' + scoreHTML() + '</div></div>' +
-
-    /* --- カウンター --- */
-    '<div class="section"><h2>カウンター</h2>' +
-      '<div id="counterBox">' + counterHTML() + '</div></div>' +
-
-    /* --- ほかの どうぐへの 入り口 --- */
-    '<div class="section"><h2>そのほか</h2>' +
-      '<div class="btn-row" style="margin-bottom:10px">' +
-        '<button class="btn small" style="flex:1" data-go2="#/random">おまかせで きめる</button>' +
-        '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button></div>' +
-      '<button class="btn small" style="width:100%" data-go2="#/records">あそんだ きろくを みる' +
-        (allPlays().length ? '（'+allPlays().length+'）' : '') + '</button>' +
-    '</div>' +
+    '<div class="section" style="margin-top:12px">' + toolBodyHTML(t.id) + '</div>' +
   '</section>';
 }
 
@@ -3097,6 +3258,14 @@ function bind(r){
     state.listMode = b.dataset.listmode;
     render();
   });
+
+  const toolBigBtn = document.getElementById('toolBigBtn');
+  if(toolBigBtn) toolBigBtn.onclick = () => {
+    state.toolBig = !state.toolBig;
+    document.body.classList.toggle('big-tool', state.toolBig);
+    render();
+  };
+  document.body.classList.toggle('big-tool', !!state.toolBig && currentRoute().name === 'tool');
 
   /* --- あそんだ きろく --- */
   const recQ = document.getElementById('recQ');
