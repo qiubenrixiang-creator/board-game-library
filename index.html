@@ -528,9 +528,12 @@ body.big-tool .lede{font-size:26px}
 #timerBadge{
   position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:95;
   background:var(--panel);border:3px solid var(--accent);color:var(--accent);
-  box-shadow:var(--shadow);padding:7px 13px;font-size:16px;letter-spacing:.06em;cursor:pointer;
+  box-shadow:var(--shadow);padding:7px 13px;font-size:16px;letter-spacing:.06em;cursor:grab;
   display:flex;align-items:center;gap:8px;
+  touch-action:none;              /* ゆびで うごかす ので、ここでは スクロール させない */
+  user-select:none;-webkit-user-select:none;
 }
+#timerBadge.dragging{cursor:grabbing;opacity:.9;box-shadow:0 0 0 3px var(--accent)}
 #timerBadge .badge-ico{width:18px;height:18px;display:block;color:var(--accent)}
 #timerBadge[hidden]{display:none}
 body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
@@ -4163,8 +4166,66 @@ window.addEventListener('focus', tickTimer);
   }, {passive:true});
 })();
 
+/* タイマーの ひょうじは ゆびで すきな ばしょへ うごかせる。
+   すこしでも うごかしたら「はこぶ」、うごかさなければ「タップ」として あつかう。 */
 const timerBadgeEl = document.getElementById('timerBadge');
-if(timerBadgeEl) timerBadgeEl.onclick = () => { playClick(); go('#/tool/timer'); };
+if(timerBadgeEl){
+  const KEY_POS = 'bgl.timerBadgePos';
+  let drag = null;
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+  function placeBadge(x, y){
+    const w = timerBadgeEl.offsetWidth || 120;
+    const h = timerBadgeEl.offsetHeight || 40;
+    const nx = clamp(x, 4, window.innerWidth  - w - 4);
+    const ny = clamp(y, 4, window.innerHeight - h - 4);
+    timerBadgeEl.style.left = nx + 'px';
+    timerBadgeEl.style.top  = ny + 'px';
+    timerBadgeEl.style.right = 'auto';
+    timerBadgeEl.style.bottom = 'auto';
+    return {x:nx, y:ny};
+  }
+  /* まえに おいた ばしょを おぼえて おく */
+  const saved = store.read(KEY_POS, null);
+  if(saved && typeof saved.x === 'number'){
+    requestAnimationFrame(() => placeBadge(saved.x, saved.y));
+  }
+  /* 画面の むきが かわった ときは 画面の 中に もどす */
+  window.addEventListener('resize', () => {
+    if(timerBadgeEl.style.left){
+      const r = timerBadgeEl.getBoundingClientRect();
+      placeBadge(r.left, r.top);
+    }
+  });
+
+  timerBadgeEl.addEventListener('pointerdown', e => {
+    const r = timerBadgeEl.getBoundingClientRect();
+    drag = {dx: e.clientX - r.left, dy: e.clientY - r.top, moved:false};
+    timerBadgeEl.setPointerCapture(e.pointerId);
+    timerBadgeEl.classList.add('dragging');
+  });
+  timerBadgeEl.addEventListener('pointermove', e => {
+    if(!drag) return;
+    const x = e.clientX - drag.dx, y = e.clientY - drag.dy;
+    if(Math.abs(e.movementX) + Math.abs(e.movementY) > 0) drag.moved = true;
+    placeBadge(x, y);
+  });
+  const endDrag = e => {
+    if(!drag) return;
+    timerBadgeEl.classList.remove('dragging');
+    if(drag.moved){
+      const r = timerBadgeEl.getBoundingClientRect();
+      store.write(KEY_POS, {x:r.left, y:r.top});     /* ばしょを おぼえる */
+    }else{
+      playClick();
+      go('#/tool/timer');                            /* うごかさなければ タップ */
+    }
+    drag = null;
+  };
+  timerBadgeEl.addEventListener('pointerup', endDrag);
+  timerBadgeEl.addEventListener('pointercancel', endDrag);
+}
 
 paintIcons(document);
 initAudio();
