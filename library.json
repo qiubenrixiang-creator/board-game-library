@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-13T11:26:40.201Z",
+  "version": "2026-09-13T16:02:03.006Z",
   "tags": [
     {
       "name": "初心者",
@@ -1062,24 +1062,32 @@
     {
       "id": "g039",
       "title": "キューバーズ",
-      "images": [],
-      "summary": "",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "きゅーばーず",
+      "videos": [
+        "https://youtu.be/UUPNUdWJFHI?si=x4e4a316u20-f1Hg"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=630,cw=1200,ch=630,da=l,ds=s,q=84,cc=FFFFFF)/item_1726199c-68c9-4861-9e42-947d9927c1a2.jpeg"
+      ],
       "playersMin": 2,
-      "playersMax": 6,
+      "playersMax": 5,
       "playTime": 30,
       "age": 8,
       "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
       "tags": [
-        "対戦",
         "頭脳戦",
-        "データみきにゅう"
+        "対戦",
+        "軽量級",
+        "ドラフト"
       ],
-      "reading": "",
-      "videos": [],
-      "wish": false
+      "summary": "鳥をコレクションし、点数を競うゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g040",
