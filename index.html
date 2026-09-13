@@ -351,6 +351,11 @@ textarea{min-height:110px;resize:vertical;line-height:1.9}
 .imgs-preview{display:flex;gap:8px;flex-wrap:wrap;margin-top:9px}
 .imgs-preview figure{position:relative;margin:0}
 .imgs-preview img{width:72px;height:72px;object-fit:cover;border:2px solid var(--frame)}
+.play-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.play-photos img{
+  width:108px;height:81px;object-fit:cover;border:2px solid var(--frame);cursor:zoom-in;display:block;
+}
+.play-photos img:active{opacity:.75}
 .imgs-preview .x{
   position:absolute;top:-8px;right:-8px;width:22px;height:22px;
   background:var(--danger);color:#fff;border:2px solid var(--frame);font-size:11px;cursor:pointer;line-height:1;padding:0;
@@ -1146,6 +1151,7 @@ const state = {
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
   recQuery: '',                                     /* きろく画面の けんさく */
   recEdit: '',                                      /* いま なおして いる きろく（"ゲームid|ばんごう"） */
+  playPhotos: [],                                   /* いま つけようと している きろくの しゃしん */
   score: {names:[], rows:[]},                       /* てんすう表 */
   scoreSel: {r:0, c:0},                             /* てんすう表で えらんで いる マス */
   toolBig: false,                                   /* どうぐを 大きく つかう */
@@ -1457,8 +1463,13 @@ function condText(f){
 }
 
 /* ---------------- 画像 ---------------- */
-function readImage(file, maxSize){
+/* きろく用の しゃしんは 小さめに する（ながい へん 640px・しつ 65%）。
+   はこ画像は これまで どおり 900px・72%。 */
+const PLAY_PHOTO = {max:640, quality:0.65, limit:2};
+
+function readImage(file, maxSize, quality){
   maxSize = maxSize || 900;
+  quality = quality || 0.72;
   return new Promise((resolve, reject) => {
     const fr = new FileReader();
     fr.onerror = () => reject(new Error('read'));
@@ -1471,7 +1482,7 @@ function readImage(file, maxSize){
         const cv = document.createElement('canvas');
         cv.width = w; cv.height = h;
         cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(cv.toDataURL('image/jpeg', 0.72));
+        resolve(cv.toDataURL('image/jpeg', quality));
       };
       img.src = fr.result;
     };
@@ -1919,7 +1930,8 @@ function viewDetail(id){
               '</div>' +
               (isEditing(g.id, r.i)
                 ? playEditHTML(g.id, r.i, r.pl)
-                : (r.pl.m ? '<p style="margin:4px 0 0;white-space:pre-wrap;font-size:14px">'+esc(r.pl.m)+'</p>' : '')) +
+                : ((r.pl.m ? '<p style="margin:4px 0 0;white-space:pre-wrap;font-size:14px">'+esc(r.pl.m)+'</p>' : '')
+                   + playPhotosHTML(r.pl, g.id, r.i))) +
             '</div>').join('') +
           '<button class="btn small" data-go2="#/records" style="width:100%">ぜんぶの きろくを みる</button>' +
           '</div></details>' +
@@ -2275,7 +2287,7 @@ function viewPlayLog(){
   const picked = state.logPicked || [];
   /* この画面に 入って きた ときだけ 画像の 作業リストを からに する
      （画面の 中の 書きかえでは のこす） */
-  if(render._routeKey !== 'playlog/') state.formImages = [];
+  if(render._routeKey !== 'playlog/'){ state.formImages = []; state.playPhotos = []; }
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
     '<h1 class="lede">きょう あそんだ ゲーム</h1>' +
@@ -2288,6 +2300,7 @@ function viewPlayLog(){
         '<input type="number" id="logN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+(state.today||'')+'" style="flex:1"></div>' +
       '<input type="text" id="logWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
       '<textarea id="logMemo" placeholder="かんそう（えらんだ ぜんぶに つきます・にんい）" style="min-height:66px"></textarea>' +
+      '<div style="margin-top:12px">' + playPhotoPickerHTML() + '</div>' +
     '</div>' +
 
     '<details style="margin-bottom:14px"><summary>ずかんに ない ゲームを ついか する</summary>' +
@@ -2667,6 +2680,57 @@ function dateFullLabel(str){
 }
 
 /* きろくを なおす ための 入力欄。いちどに 1つだけ ひらく。 */
+/* きろくに つける しゃしんの 入力ぶひん。どの 画面でも おなじ かたちで つかう。 */
+function playPhotoPickerHTML(){
+  return '<label class="lbl">しゃしん<span class="hint">'+PLAY_PHOTO.limit+'まいまで・にんい</span></label>' +
+    '<label class="filebtn">＋ しゃしんを えらぶ' +
+      '<input type="file" id="playPhotoInput" accept="image/*" multiple></label>' +
+    '<p class="count" style="margin:6px 0 0">ちいさく して ほぞんします（1まい およそ 30〜60KB）。<br>' +
+      'この しゃしんは サイトには でません。</p>' +
+    '<div class="imgs-preview" id="playPhotoPreview"></div>';
+}
+function paintPlayPhotos(){
+  const box = document.getElementById('playPhotoPreview');
+  if(!box) return;
+  box.innerHTML = (state.playPhotos || []).map((src, i) =>
+    '<figure><img src="'+esc(src)+'" alt=""><button class="x" data-rmphoto="'+i+'" aria-label="けす">✕</button></figure>').join('');
+  box.querySelectorAll('[data-rmphoto]').forEach(b => b.onclick = () => {
+    state.playPhotos.splice(Number(b.dataset.rmphoto), 1);
+    paintPlayPhotos();
+  });
+}
+function bindPlayPhotoInput(){
+  const inp = document.getElementById('playPhotoInput');
+  if(!inp) return;
+  paintPlayPhotos();
+  inp.onchange = async e => {
+    const files = Array.from(e.target.files || []);
+    for(const f of files){
+      if((state.playPhotos || []).length >= PLAY_PHOTO.limit){
+        toast('しゃしんは '+PLAY_PHOTO.limit+'まいまでです');
+        break;
+      }
+      if(storageRatio() >= 0.85){
+        toast('ほぞん容量が いっぱいに ちかいです。ひかえを つくって ください');
+        break;
+      }
+      try{
+        state.playPhotos.push(await readImage(f, PLAY_PHOTO.max, PLAY_PHOTO.quality));
+      }catch(err){ toast('よみこめない しゃしんが ありました'); }
+    }
+    e.target.value = '';
+    paintPlayPhotos();
+  };
+}
+/* きろくに ついて いる しゃしんを ならべて みせる */
+function playPhotosHTML(pl, gid, i){
+  const ps = Array.isArray(pl.p) ? pl.p : [];
+  if(!ps.length) return '';
+  return '<div class="play-photos">' +
+    ps.map((src, k) => '<img src="'+esc(src)+'" alt="" loading="lazy" data-playzoom="'+esc(gid)+'|'+i+'|'+k+'">').join('') +
+  '</div>';
+}
+
 function playEditHTML(gid, i, pl){
   return '<div class="win" style="margin-top:10px">' +
     '<div class="row" style="margin-bottom:8px">' +
@@ -2674,6 +2738,7 @@ function playEditHTML(gid, i, pl){
       '<input type="number" id="recN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+esc(pl.n||'')+'" style="flex:1"></div>' +
     '<input type="text" id="recW" placeholder="かった人（にんい）" value="'+esc(pl.w||'')+'" style="margin-bottom:8px">' +
     '<textarea id="recM" placeholder="かんそう・おぼえがき" style="min-height:110px">'+esc(pl.m||'')+'</textarea>' +
+    '<div style="margin-top:12px">' + playPhotoPickerHTML() + '</div>' +
     '<div class="btn-row" style="margin-top:10px">' +
       '<button class="btn small" style="flex:1" data-cancelrec="1">やめる</button>' +
       '<button class="btn small primary" style="flex:1" data-saverec="'+esc(gid)+'|'+i+'">ほぞんする</button></div>' +
@@ -2737,9 +2802,10 @@ function viewRecords(){
       '</div>' +
       (isEditing(r.g.id, r.i)
         ? playEditHTML(r.g.id, r.i, r.pl)
-        : (r.pl.m
+        : ((r.pl.m
             ? '<p style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>'
-            : (isEmptyPlay(r.pl) ? '<p class="count" style="margin:8px 0 0">（なにも かいて いない きろく）</p>' : ''))) +
+            : (isEmptyPlay(r.pl) ? '<p class="count" style="margin:8px 0 0">（なにも かいて いない きろく）</p>' : ''))
+           + playPhotosHTML(r.pl, r.g.id, r.i))) +
     '</div>';
   });
 
@@ -2935,7 +3001,7 @@ function viewAdmin(){
 
     '<div class="note" style="margin:12px 0;border-color:var(--accent)">' +
       '<b>こうかい されない もの</b><br>' +
-      'あそんだ きろく（かんそう）と、かしだし先の なまえは サイトに あげません。<br>' +
+      'あそんだ きろく（かんそう・しゃしん）と、かしだし先の なまえは サイトに あげません。<br>' +
       'これらは この スマホの 中だけに のこります。</div>' +
 
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:16px">' +
@@ -3349,6 +3415,10 @@ function bind(r){
 
   app.querySelectorAll('[data-editrec]').forEach(b => b.onclick = () => {
     state.recEdit = b.dataset.editrec;
+    const parts = String(b.dataset.editrec).split('|');
+    const g0 = state.games.find(x => x.id === parts[0]);
+    const pl0 = g0 ? playsOf(g0)[Number(parts[1])] : null;
+    state.playPhotos = (pl0 && Array.isArray(pl0.p)) ? pl0.p.slice() : [];
     render();
     /* なおす 欄が ひらいた あと、かんそうの ところまで うつる */
     setTimeout(() => {
@@ -3358,6 +3428,7 @@ function bind(r){
   });
   app.querySelectorAll('[data-cancelrec]').forEach(b => b.onclick = () => {
     state.recEdit = '';
+    state.playPhotos = [];
     render();
   });
   app.querySelectorAll('[data-saverec]').forEach(b => b.onclick = () => {
@@ -3369,14 +3440,17 @@ function bind(r){
     const n = Number((document.getElementById('recN')||{value:''}).value) || 0;
     const w = (document.getElementById('recW')||{value:''}).value.trim();
     const m = (document.getElementById('recM')||{value:''}).value.trim();
+    const photos = (state.playPhotos || []).slice();
     ps[i] = {
       d: (document.getElementById('recD')||{value:''}).value || ps[i].d || todayStr(),
       n: n || undefined,
       w: w || undefined,
-      m: m || undefined
+      m: m || undefined,
+      p: photos.length ? photos : undefined
     };
     g.plays = ps;
     state.recEdit = '';
+    state.playPhotos = [];
     saveGames(); render(); toast('きろくを なおしました');
   });
 
@@ -3542,6 +3616,12 @@ function bind(r){
     if(i >= 0){ g.plays.splice(i,1); saveGames(); render(); toast('けしました'); }
   });
 
+  app.querySelectorAll('[data-playzoom]').forEach(im => im.onclick = () => {
+    const parts = String(im.dataset.playzoom).split('|');
+    const g = state.games.find(x => x.id === parts[0]);
+    const pl = g ? playsOf(g)[Number(parts[1])] : null;
+    if(pl && Array.isArray(pl.p)) openLightbox(pl.p, Number(parts[2]) || 0);
+  });
   app.querySelectorAll('[data-zoom]').forEach(im => im.onclick = () => {
     const g = state.games.find(x => x.id === currentRoute().param);
     openLightbox(g ? (g.images || []) : [], Number(im.dataset.zoom) || 0);
@@ -3791,6 +3871,7 @@ function bind(r){
   }
   const logBox = document.getElementById('logResults');
   if(logBox) bindLogPicks(logBox);
+  bindPlayPhotoInput();
   const newGAdd = document.getElementById('newGAdd');
   if(newGAdd) newGAdd.onclick = () => {
     const inp = document.getElementById('newGName');
@@ -3845,10 +3926,15 @@ function bind(r){
     state.logPicked.forEach(id => {
       const g = state.games.find(x => x.id === id);
       if(!g) return;
-      g.plays = playsOf(g).concat([{d, n: n || undefined, w: w || undefined, m: m || undefined}]);
+      const photos = (state.playPhotos || []).slice();
+      g.plays = playsOf(g).concat([{
+        d, n: n || undefined, w: w || undefined, m: m || undefined,
+        p: photos.length ? photos : undefined
+      }]);
       count++;
     });
     state.logPicked = [];
+    state.playPhotos = [];
     saveGames(); render();
     toast(count + 'ほんを きろく しました');
   };
