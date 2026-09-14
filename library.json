@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-14T09:29:16.501Z",
+  "version": "2026-09-14T17:41:18.166Z",
   "tags": [
     {
       "name": "初心者",
@@ -181,7 +181,9 @@
       "id": "gmtuvc2n3eabmx",
       "title": "TOSSIT",
       "reading": "とすいっと",
-      "videos": [],
+      "videos": [
+        "https://youtube.com/watch?v=Ig_M4aNGkjc&si=MbV6WtpL5xHlgdS3"
+      ],
       "wish": false,
       "images": [
         "https://m.media-amazon.com/images/I/71i093TqGWL._AC_UF1000,1000_QL80_.jpg"
@@ -385,22 +387,36 @@
     {
       "id": "g007",
       "title": "UNO FLIP!",
-      "images": [],
-      "summary": "裏返るとルールが変わるUNO。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "うのふりっぷ",
+      "videos": [
+        "https://youtube.com/watch?v=T6Hma9x9zUc&si=WnqK5xQb3Xh3PLqu",
+        "https://youtube.com/watch?v=pyla0rfY5Ck&si=lW7V6MQbBN1Dhtd-"
+      ],
+      "wish": false,
+      "images": [
+        "https://mattel.co.jp/wp-content/uploads/2022/07/GDR44-9867_%E6%97%A5%E6%9C%AC%E8%AA%9EPKG_%E6%AD%A3%E9%9D%A2.jpg",
+        "https://www.gentosha-edu.co.jp/files/files2/GDR44_W_19_020.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 10,
-      "playTime": 30,
+      "playTime": 15,
       "age": 7,
       "difficulty": 1,
+      "strategy": 3,
+      "excitement": 4,
+      "luck": 3,
       "tags": [
         "初心者",
         "家族向け",
-        "運要素"
+        "盛り上がる",
+        "対戦",
+        "軽量級",
+        "パーティー"
       ],
-      "reading": "うのふりっぷ"
+      "summary": "一見普通のUNOだけど、裏返したら激しい戦いに‼︎",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g008",
