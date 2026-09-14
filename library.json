@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-13T16:02:03.006Z",
+  "version": "2026-09-14T09:05:32.017Z",
   "tags": [
     {
       "name": "初心者",
@@ -1092,25 +1092,30 @@
     {
       "id": "g040",
       "title": "キュリオス",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2020/04/208977eeed4a90c8e5d817b76bed8b7e-575x575.jpg",
+        "https://jellyjellycafe.com/wp-content/uploads/2020/06/S__38739981.jpg"
+      ],
+      "summary": "財宝と栄光をその手に！ ワーカープレイスメント×推理ボードゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 15,
       "age": 8,
       "difficulty": 3,
       "tags": [
+        "ドラフト",
         "対戦",
         "頭脳戦",
         "中級者",
-        "ドラフト",
-        "データみきにゅう"
+        "ワーカープレイスメント"
       ],
-      "reading": "",
-      "videos": [],
+      "reading": "きゅりおす",
+      "videos": [
+        "https://youtu.be/7-xqO-bTG4M?si=AMKmquEGw_c0Ufx3"
+      ],
       "wish": false
     },
     {
