@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-14T09:15:17.351Z",
+  "version": "2026-09-14T09:29:16.501Z",
   "tags": [
     {
       "name": "初心者",
@@ -1180,24 +1180,31 @@
     {
       "id": "g044",
       "title": "九九ジャン",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://engagingtoys.jp/wp-content/uploads/2022/10/ret_2209210213-e1666580016554.jpg",
+        "https://engagingtoys.jp/wp-content/uploads/2022/10/ret_2209210123-e1666580394216.jpg"
+      ],
+      "summary": "掛け算と麻雀の要素を取り入れた知的ボードゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
       "difficulty": 1,
       "tags": [
         "初心者",
         "対戦",
+        "頭脳戦",
         "軽量級",
-        "データみきにゅう"
+        "記憶"
       ],
       "reading": "くくじゃん",
-      "videos": [],
+      "videos": [
+        "https://youtu.be/n4MM9kI8JF4?si=JFIjdgmYiJz0YgMX",
+        "https://youtube.com/watch?v=QnO2gsyT6G0&si=d9KUwKCG3oOvyjKl"
+      ],
       "wish": false
     },
     {
