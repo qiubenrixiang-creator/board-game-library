@@ -426,6 +426,14 @@ h2.sec::before{content:"■ ";font-size:12px}
 }
 .amida-label.head{cursor:pointer}
 .amida-label.goal{color:var(--accent-2);border-color:var(--accent-2)}
+/* みちすじが うえから したへ のびて いく */
+@keyframes amidaDraw{ to{ stroke-dashoffset:0 } }
+.amida-path{ animation:amidaDraw var(--amida-time,1.4s) linear forwards }
+.amida-head{ filter:drop-shadow(0 0 4px var(--accent)) }
+@media (prefers-reduced-motion:reduce){
+  .amida-path{animation:none;stroke-dashoffset:0}
+  .amida-head{display:none}
+}
 .amida-label.goal.hidden-goal{color:var(--muted);border-color:var(--muted);letter-spacing:0}
 .amida-label.head[disabled]{opacity:.85;cursor:default}
 .amida-label.head.opened{border-color:var(--accent);color:var(--accent)}
@@ -2978,12 +2986,21 @@ function amidaShuffleLines(a){
 /* 1人ぶんの みちすじを たどる。とおった ばしょも かえす */
 function amidaTrace(a, start){
   let x = start;
+  /* たての 線を おりて いき、よこ線が あれば
+     その たかさ（y+0.5）まで おりてから よこへ うつる。
+     こうすると あみだの 線の 上を ぴったり なぞる。 */
   const path = [{y:0, x:x}];
   for(let y = 0; y < AMIDA_ROWS; y++){
-    if(x > 0 && a.rows[y][x-1]){ x = x - 1; }
-    else if(x < a.names.length-1 && a.rows[y][x]){ x = x + 1; }
-    path.push({y:y+1, x:x});
+    let nx = x;
+    if(x > 0 && a.rows[y][x-1]) nx = x - 1;
+    else if(x < a.names.length-1 && a.rows[y][x]) nx = x + 1;
+    if(nx !== x){
+      path.push({y:y+0.5, x:x});    /* よこ線の たかさまで おりる */
+      path.push({y:y+0.5, x:nx});   /* よこ線を わたる */
+      x = nx;
+    }
   }
+  path.push({y:AMIDA_ROWS, x:x});   /* いちばん したまで おりる */
   return {end:x, path:path};
 }
 function amidaRunAll(a){
@@ -3002,7 +3019,12 @@ function amidaBoardHTML(a){
   const cx = i => padX + colW*i;
   const cy = y => padTop + rowH*y;
 
-  let svg = '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" shape-rendering="crispEdges" class="amida-svg">';
+  let svg = '<svg viewBox="0 0 '+w+' '+h+'" width="'+w+'" height="'+h+'" shape-rendering="crispEdges" class="amida-svg">' +
+    '<defs><linearGradient id="amidaGrad" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="var(--accent-2)"/>' +
+      '<stop offset="55%" stop-color="var(--accent-2)"/>' +
+      '<stop offset="100%" stop-color="var(--accent)"/>' +
+    '</linearGradient></defs>';
 
   /* たての 線 */
   for(let i = 0; i < n; i++){
@@ -3018,10 +3040,25 @@ function amidaBoardHTML(a){
       }
     }
   }
-  /* けっかの みちすじ（あとから いろを つける） */
+  /* けっかの みちすじ。
+     線の ながさを はかって おき、CSSで うえから したへ のばす
+     （点線の きれめを ずらす やりかた。かるくて なめらか）。 */
   if(a.result && a.result.path){
-    const pts = a.result.path.map(pt => cx(pt.x)+','+cy(pt.y)).join(' ');
-    svg += '<polyline points="'+pts+'" fill="none" stroke="var(--accent)" stroke-width="5"/>';
+    const pts = a.result.path.map(pt => cx(pt.x)+','+cy(pt.y));
+    let len = 0;
+    for(let i = 1; i < pts.length; i++){
+      const p0 = a.result.path[i-1], p1 = a.result.path[i];
+      len += Math.abs(cx(p1.x) - cx(p0.x)) + Math.abs(cy(p1.y) - cy(p0.y));
+    }
+    const dur = Math.max(1.0, Math.min(2.8, len/240)).toFixed(2);
+    const d = 'M ' + pts.map(p => p.join(' ')).join(' L ');
+    svg += '<polyline class="amida-path" points="'+pts.map(p => p.join(',')).join(' ')+'" ' +
+      'fill="none" stroke="url(#amidaGrad)" stroke-width="6" stroke-linecap="square" ' +
+      'stroke-dasharray="'+len+'" stroke-dashoffset="'+len+'" ' +
+      'style="--amida-time:'+dur+'s"/>';
+    /* 線の さきを はしる ひかり */
+    svg += '<circle class="amida-head" r="7" fill="var(--accent)">' +
+      '<animateMotion dur="'+dur+'s" fill="freeze" calcMode="linear" path="'+d+'"/></circle>';
   }
   svg += '</svg>';
 
@@ -3098,6 +3135,10 @@ function toolAmidaHTML(){
   }
 
   /* ここから はっぴょう */
+  html += (res && res.tracing ?
+    '<div class="win" style="margin-top:12px;text-align:center">' +
+      '<p class="encounter blink" style="margin:0">＊ たどって います…</p></div>' : '');
+
   html += (res && res.one ?
     '<div class="win" style="margin-top:12px;text-align:center">' +
       '<p class="count" style="margin:0 0 4px">'+esc(res.one.name)+' の けっかは…</p>' +
@@ -3790,10 +3831,25 @@ function bind(r){
     if(!a || a.phase !== 'reveal') return;
     const i = Number(b.dataset.amidapath);
     const t = amidaTrace(a, i);
-    if((a.opened || []).indexOf(i) < 0) a.opened.push(i);
-    a.result = {all:null, path: t.path, one:{name:a.names[i], goal:a.goals[t.end]}};
+
+    /* まず 線だけを はしらせる（けっかは まだ ふせた まま） */
+    a.result = {all:null, path:t.path, one:null, tracing:true};
     render();
-    playFanfare();
+    playClick();
+
+    /* 線の ながさに あわせて まってから、ゴールを ひらく */
+    const cols = a.names.length;
+    const steps = t.path.length;
+    const wait = Math.min(2900, 1100 + steps * 90);
+    clearTimeout(bind._amida);
+    bind._amida = setTimeout(() => {
+      const cur = state.amida;
+      if(!cur || cur.phase !== 'reveal') return;
+      if((cur.opened || []).indexOf(i) < 0) cur.opened.push(i);
+      cur.result = {all:null, path:t.path, one:{name:cur.names[i], goal:cur.goals[t.end]}, tracing:false};
+      render();
+      playFanfare();
+    }, wait);
   });
 
   /* --- サイコロ --- */
