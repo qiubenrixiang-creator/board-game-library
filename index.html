@@ -426,6 +426,9 @@ h2.sec::before{content:"■ ";font-size:12px}
 }
 .amida-label.head{cursor:pointer}
 .amida-label.goal{color:var(--accent-2);border-color:var(--accent-2)}
+.amida-label.goal.hidden-goal{color:var(--muted);border-color:var(--muted);letter-spacing:0}
+.amida-label.head[disabled]{opacity:.85;cursor:default}
+.amida-label.head.opened{border-color:var(--accent);color:var(--accent)}
 
 /* ---------- どうぐ ---------- */
 .tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -2945,8 +2948,15 @@ function amidaInit(names, goals){
     names: names,
     goals: goals,
     rows: Array.from({length: AMIDA_ROWS}, () => new Array(Math.max(0, n-1)).fill(false)),
-    result: null
+    result: null,
+    phase: 'edit',     /* edit＝線を ひく／reveal＝けっかを ひらく */
+    opened: []         /* すでに ひらいた 人（うえの ばんごう） */
   };
+}
+function amidaOpened(a, i){ return (a.opened || []).indexOf(i) >= 0; }
+/* した の ふだを みせて いいか（その ばしょへ ついた 人が ひらかれて いるか） */
+function amidaGoalShown(a, endIndex){
+  return (a.opened || []).some(i => amidaTrace(a, i).end === endIndex);
 }
 /* よこ線を ランダムに ちらす */
 function amidaShuffleLines(a){
@@ -3015,20 +3025,29 @@ function amidaBoardHTML(a){
   }
   svg += '</svg>';
 
-  /* タップできる ばしょ（SVGの 上に かさねる） */
+  /* タップできる ばしょ（SVGの 上に かさねる）。
+     けっかを ひらく だんかいでは 線を さわれない ように する。 */
   let dots = '';
-  for(let y = 0; y < AMIDA_ROWS; y++){
-    for(let x = 0; x < n-1; x++){
-      dots += '<button class="amida-dot'+(a.rows[y][x] ? ' on' : '')+'" data-amida="'+y+'|'+x+'" ' +
-        'style="left:'+(cx(x)+colW/2)+'px;top:'+cy(y+0.5)+'px" aria-label="'+(y+1)+'だんめ"></button>';
+  if(a.phase === 'edit'){
+    for(let y = 0; y < AMIDA_ROWS; y++){
+      for(let x = 0; x < n-1; x++){
+        dots += '<button class="amida-dot'+(a.rows[y][x] ? ' on' : '')+'" data-amida="'+y+'|'+x+'" ' +
+          'style="left:'+(cx(x)+colW/2)+'px;top:'+cy(y+0.5)+'px" aria-label="'+(y+1)+'だんめ"></button>';
+      }
     }
   }
 
   /* うえ（なまえ）と した（けっか）の ふだ */
   let heads = '', foots = '';
   for(let i = 0; i < n; i++){
-    heads += '<button class="amida-label head" data-amidapath="'+i+'" style="left:'+cx(i)+'px;top:6px">'+esc(a.names[i])+'</button>';
-    foots += '<span class="amida-label goal" style="left:'+cx(i)+'px;top:'+(cy(AMIDA_ROWS)+10)+'px">'+esc(a.goals[i]||'')+'</span>';
+    const open = amidaOpened(a, i);
+    heads += '<button class="amida-label head'+(open ? ' opened' : '')+'"' +
+      (a.phase === 'reveal' ? ' data-amidapath="'+i+'"' : ' disabled') +
+      ' style="left:'+cx(i)+'px;top:6px">'+esc(a.names[i])+'</button>';
+    /* した の ふだは、その ばしょに ついた 人が ひらかれる まで ？ の まま */
+    const shown = amidaGoalShown(a, i);
+    foots += '<span class="amida-label goal'+(shown ? '' : ' hidden-goal')+'" style="left:'+cx(i)+'px;top:'+(cy(AMIDA_ROWS)+10)+'px">' +
+      (shown ? esc(a.goals[i]||'') : '？') + '</span>';
   }
 
   return '<div class="amida-wrap"><div class="amida-board" style="width:'+w+'px;height:'+h+'px">' +
@@ -3053,29 +3072,54 @@ function toolAmidaHTML(){
   }
 
   const res = a.result;
-  return '<div class="row" style="align-items:center;margin-bottom:10px">' +
-      '<p class="count" style="flex:1;margin:0">' + a.names.length + '人／よこ線を タップで ひく・けす</p>' +
-      '<button class="mini" id="amidaRandom" style="flex:0 0 auto">ランダムに ひく</button>' +
+  const editing = (a.phase === 'edit');
+  const rest = a.names.map((_, i) => i).filter(i => !amidaOpened(a, i));
+
+  let html = '<div class="row" style="align-items:center;margin-bottom:10px">' +
+      '<p class="count" style="flex:1;margin:0">' + a.names.length + '人／' +
+        (editing ? 'よこ線を タップで ひく・けす' : 'なまえを タップして けっかを ひらく') + '</p>' +
+      (editing ? '<button class="mini" id="amidaRandom" style="flex:0 0 auto">ランダムに ひく</button>' : '') +
       '<button class="mini warn" id="amidaReset" style="flex:0 0 auto">やりなおす</button>' +
-    '</div>' +
+    '</div>';
 
-    amidaBoardHTML(a) +
+  if(editing){
+    html += '<div class="note" style="margin-bottom:10px">けっかは ふせて あります（した は ぜんぶ ？）。<br>' +
+      'みんなが 見て いる まえで 線を ひいて ください。</div>';
+  }
 
-    '<div class="btn-row" style="margin-top:12px">' +
-      '<button class="btn small" style="flex:1" id="amidaClearLines">よこ線を ぜんぶ けす</button>' +
-      '<button class="btn primary" style="flex:1" id="amidaRun">けっかを みる</button></div>' +
+  html += amidaBoardHTML(a);
 
-    (res && res.one ?
-      '<div class="win" style="margin-top:12px;text-align:center">' +
-        '<p class="encounter" style="margin:0">'+esc(res.one.name)+' → '+esc(res.one.goal)+'</p></div>' : '') +
+  if(editing){
+    html += '<div class="btn-row" style="margin-top:12px">' +
+        '<button class="btn small" style="flex:1" id="amidaClearLines">よこ線を ぜんぶ けす</button>' +
+        '<button class="btn primary" style="flex:1" id="amidaRun">はっぴょうを はじめる</button></div>' +
+      '<p class="count" style="margin:10px 0 0">「はっぴょうを はじめる」を おすと、線は さわれなく なります。</p>';
+    return html;
+  }
 
-    (res && res.all ?
-      '<div class="win" style="margin-top:12px">' +
-        res.all.map(r => '<p style="margin:0 0 6px">' +
+  /* ここから はっぴょう */
+  html += (res && res.one ?
+    '<div class="win" style="margin-top:12px;text-align:center">' +
+      '<p class="count" style="margin:0 0 4px">'+esc(res.one.name)+' の けっかは…</p>' +
+      '<p class="encounter" style="margin:0;font-size:22px">'+esc(res.one.goal)+'</p></div>' : '');
+
+  if(rest.length){
+    html += '<p class="count" style="margin:12px 0 6px">まだの 人（のこり '+rest.length+'人）</p>' +
+      '<div class="chips" style="margin-bottom:10px">' +
+        rest.map(i => '<button class="chip sm" data-amidapath="'+i+'">'+esc(a.names[i])+'</button>').join('') +
+      '</div>';
+  }else{
+    html += '<div class="win" style="margin-top:12px">' +
+        '<p class="count" style="margin:0 0 8px">ぜんいん ひらきました</p>' +
+        amidaRunAll(a).map(r => '<p style="margin:0 0 6px">' +
           esc(r.name) + ' → <span style="color:var(--accent)">' + esc(r.goal || (r.to+1)+'ばんめ') + '</span></p>').join('') +
-      '</div>' : '') +
+      '</div>';
+  }
 
-    '<p class="count" style="margin:10px 0 0">なまえを タップすると、その人の みちすじだけ たどれます。</p>';
+  html += '<div class="btn-row" style="margin-top:12px">' +
+      '<button class="btn small" style="flex:1" id="amidaBackEdit">線を ひきなおす</button>' +
+      '<button class="btn small" style="flex:1" id="amidaOpenAll">ぜんいん ひらく</button></div>';
+  return html;
 }
 
 function toolBodyHTML(id){
@@ -3715,7 +3759,27 @@ function bind(r){
   if(amidaRun) amidaRun.onclick = () => {
     const a = state.amida;
     if(!a) return;
-    a.result = {all: amidaRunAll(a), path: null};
+    a.phase = 'reveal';       /* ここから 線は さわれない */
+    a.opened = [];
+    a.result = null;
+    render();
+    toast('なまえを タップすると けっかが わかります');
+  };
+
+  const amidaBackEdit = document.getElementById('amidaBackEdit');
+  if(amidaBackEdit) amidaBackEdit.onclick = () => {
+    ask('線を ひきなおしますか？\nいままでの けっかは ふせ なおします。', () => {
+      const a = state.amida;
+      a.phase = 'edit'; a.opened = []; a.result = null;
+      render();
+    });
+  };
+
+  const amidaOpenAll = document.getElementById('amidaOpenAll');
+  if(amidaOpenAll) amidaOpenAll.onclick = () => {
+    const a = state.amida;
+    a.opened = a.names.map((_, i) => i);
+    a.result = {all: amidaRunAll(a), path: null, one: null};
     render();
     playFanfare();
   };
@@ -3723,12 +3787,13 @@ function bind(r){
   /* なまえを タップすると その人の みちすじ だけ */
   app.querySelectorAll('[data-amidapath]').forEach(b => b.onclick = () => {
     const a = state.amida;
-    if(!a) return;
+    if(!a || a.phase !== 'reveal') return;
     const i = Number(b.dataset.amidapath);
     const t = amidaTrace(a, i);
-    a.result = {all: a.result ? a.result.all : null, path: t.path, one:{name:a.names[i], goal:a.goals[t.end]}};
+    if((a.opened || []).indexOf(i) < 0) a.opened.push(i);
+    a.result = {all:null, path: t.path, one:{name:a.names[i], goal:a.goals[t.end]}};
     render();
-    playClick();
+    playFanfare();
   });
 
   /* --- サイコロ --- */
