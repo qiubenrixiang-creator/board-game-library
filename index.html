@@ -63,7 +63,7 @@ body{
   letter-spacing:.02em;
   -webkit-text-size-adjust:100%;
   -webkit-font-smoothing:none;
-  padding-top:calc(52px + 3px + env(safe-area-inset-top));   /* 固定した 上バーの ぶん */
+  padding-top:calc(56px + 3px + env(safe-area-inset-top));   /* 固定した 上バーの ぶん */
   padding-bottom:calc(84px + env(safe-area-inset-bottom));
   overflow-wrap:anywhere;
 }
@@ -118,27 +118,35 @@ img{image-rendering:auto}
 
 /* ---------- ヘッダー ---------- */
 .topbar{
-  /* sticky だと スクロール中に 上の すきまから 中身が すけて見えることが あるため
-     fixed で かんぜんに 固定する。上の すきま（時計や 電波の ぶぶん）も
-     おなじ 色で ぬりつぶす。 */
+  /* fixed で かんぜんに 固定する。
+     あたらしい iOS の Safari は 画面の 上べりで 中身を うすく かすませる ので、
+     かならず じぶんの そうで 立つ ように して、その えいきょうを へらす。 */
   position:fixed;top:0;left:0;right:0;z-index:50;
   background:var(--panel);
   border-bottom:3px solid var(--frame);
   padding-top:env(safe-area-inset-top);
+  transform:translateZ(0);
+  isolation:isolate;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
 }
 /* iPhone の 上べり（safe area）を ふさぐ ふた */
 .topbar::before{
   content:"";position:absolute;left:0;right:0;bottom:100%;
   height:100vh;                       /* 上むきに たっぷり ぬる */
   background:var(--panel);
+  transform:translateZ(0);
 }
-.topbar-in{display:flex;align-items:center;gap:10px;height:52px;max-width:600px;margin:0 auto;padding:0 14px}
+.topbar-in{
+  display:flex;align-items:center;gap:10px;
+  height:56px;max-width:600px;margin:0 auto;padding:4px 14px 0;
+}
 .brand{display:flex;align-items:center;gap:9px;text-decoration:none;font-size:14px;letter-spacing:.1em;color:var(--accent)}
 .brand .ico{width:22px;height:22px;display:block;color:var(--accent)}
 .spacer{flex:1}
 .icon-btn{
-  border:2px solid var(--frame);background:var(--panel);color:var(--text);
-  padding:5px 10px;font-size:12px;cursor:pointer;letter-spacing:.08em;
+  border:2px solid var(--frame);background:var(--bg-2);color:var(--text);
+  padding:7px 11px;font-size:12.5px;cursor:pointer;letter-spacing:.08em;
+  position:relative;z-index:1;
 }
 .icon-btn:active{transform:translate(1px,1px)}
 .icon-btn.snd{min-width:38px;padding:5px 8px;letter-spacing:0}
@@ -3763,23 +3771,6 @@ function bind(r){
     render();
   };
 
-  app.querySelectorAll('[data-amida]').forEach(b => b.onclick = () => {
-    const a = state.amida;
-    if(!a) return;
-    const parts = String(b.dataset.amida).split('|');
-    const y = Number(parts[0]), x = Number(parts[1]);
-    const cols = a.names.length - 1;
-    if(!a.rows[y][x]){
-      /* となりあう よこ線は ひけない（どちらに すすむか きまらなく なるため） */
-      if((x > 0 && a.rows[y][x-1]) || (x < cols-1 && a.rows[y][x+1])){
-        return toast('となりどうしの よこ線は ひけません');
-      }
-    }
-    a.rows[y][x] = !a.rows[y][x];
-    a.result = null;
-    render();
-  });
-
   const amidaRandom = document.getElementById('amidaRandom');
   if(amidaRandom) amidaRandom.onclick = () => { amidaShuffleLines(state.amida); render(); };
 
@@ -3825,32 +3816,8 @@ function bind(r){
     playFanfare();
   };
 
-  /* なまえを タップすると その人の みちすじ だけ */
-  app.querySelectorAll('[data-amidapath]').forEach(b => b.onclick = () => {
-    const a = state.amida;
-    if(!a || a.phase !== 'reveal') return;
-    const i = Number(b.dataset.amidapath);
-    const t = amidaTrace(a, i);
-
-    /* まず 線だけを はしらせる（けっかは まだ ふせた まま） */
-    a.result = {all:null, path:t.path, one:null, tracing:true};
-    render();
-    playClick();
-
-    /* 線の ながさに あわせて まってから、ゴールを ひらく */
-    const cols = a.names.length;
-    const steps = t.path.length;
-    const wait = Math.min(2900, 1100 + steps * 90);
-    clearTimeout(bind._amida);
-    bind._amida = setTimeout(() => {
-      const cur = state.amida;
-      if(!cur || cur.phase !== 'reveal') return;
-      if((cur.opened || []).indexOf(i) < 0) cur.opened.push(i);
-      cur.result = {all:null, path:t.path, one:{name:cur.names[i], goal:cur.goals[t.end]}, tracing:false};
-      render();
-      playFanfare();
-    }, wait);
-  });
+  /* なまえを タップした ときの しょりは、画面ぜんたいで うけとる
+     （下の amidaPathTap を つかう。ボタンを つくり直しても かならず きく） */
 
   /* --- サイコロ --- */
   app.querySelectorAll('[data-dicecount]').forEach(b => b.onclick = () => {
@@ -4702,6 +4669,58 @@ paintIcons(document);
 initAudio();
 initSoundButtons();
 document.addEventListener('pointerdown', unlockAudioOnce, {once:true});
+/* あみだくじ：なまえ／のこりの 人の ボタンを おした ときの しょり。
+   ボタンは 画面を かき直す たびに つくり直されるので、
+   1つ1つに つなぐのでは なく、ここで まとめて うけとる。 */
+function amidaPathTap(i){
+  const a = state.amida;
+  if(!a) return;
+  if(a.phase !== 'reveal'){
+    toast('「はっぴょうを はじめる」を おしてから えらべます');
+    return;
+  }
+  const t = amidaTrace(a, i);
+
+  /* まず 線だけを はしらせる（けっかは まだ ふせた まま） */
+  a.result = {all:null, path:t.path, one:null, tracing:true};
+  render();
+  playClick();
+
+  const wait = Math.min(2900, 1100 + t.path.length * 90);
+  clearTimeout(amidaPathTap._t);
+  amidaPathTap._t = setTimeout(() => {
+    const cur = state.amida;
+    if(!cur || cur.phase !== 'reveal') return;
+    if((cur.opened || []).indexOf(i) < 0) cur.opened.push(i);
+    cur.result = {all:null, path:t.path, one:{name:cur.names[i], goal:cur.goals[t.end]}, tracing:false};
+    render();
+    playFanfare();
+  }, wait);
+}
+document.addEventListener('click', e => {
+  if(!e.target.closest) return;
+  const p = e.target.closest('[data-amidapath]');
+  if(p){ amidaPathTap(Number(p.dataset.amidapath)); return; }
+
+  /* よこ線を ひく・けす */
+  const d = e.target.closest('[data-amida]');
+  if(d){
+    const a = state.amida;
+    if(!a || a.phase !== 'edit') return;
+    const parts = String(d.dataset.amida).split('|');
+    const y = Number(parts[0]), x = Number(parts[1]);
+    const cols = a.names.length - 1;
+    if(!a.rows[y][x]){
+      if((x > 0 && a.rows[y][x-1]) || (x < cols-1 && a.rows[y][x+1])){
+        return toast('となりどうしの よこ線は ひけません');
+      }
+    }
+    a.rows[y][x] = !a.rows[y][x];
+    a.result = null;
+    render();
+  }
+});
+
 document.addEventListener('click', e => {
   if(e.target.closest('.btn, .chip, .tab, .mini, .gcard, .icon-btn, .filebtn, .starpick button, ' +
     '.tool-card, .gtile, .score-cell, .lb-nav, #timerBadge, summary')) playClick();
