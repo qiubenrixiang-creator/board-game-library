@@ -3059,15 +3059,17 @@ function amidaBoardHTML(a){
      線の ながさを はかって おき、CSSで うえから したへ のばす
      （点線の きれめを ずらす やりかた。かるくて なめらか）。 */
   if(a.result && a.result.path){
-    const pts = a.result.path.map(pt => cx(pt.x)+','+cy(pt.y));
+    /* みちすじの てんを 「よこ,たて」の かたちで もつ */
+    const pts = a.result.path.map(pt => ({x: cx(pt.x), y: cy(pt.y)}));
     let len = 0;
     for(let i = 1; i < pts.length; i++){
-      const p0 = a.result.path[i-1], p1 = a.result.path[i];
-      len += Math.abs(cx(p1.x) - cx(p0.x)) + Math.abs(cy(p1.y) - cy(p0.y));
+      len += Math.abs(pts[i].x - pts[i-1].x) + Math.abs(pts[i].y - pts[i-1].y);
     }
     const dur = Math.max(1.0, Math.min(2.8, len/240)).toFixed(2);
-    const d = 'M ' + pts.map(p => p.join(' ')).join(' L ');
-    svg += '<polyline class="amida-path" points="'+pts.map(p => p.join(',')).join(' ')+'" ' +
+    const points = pts.map(p => p.x + ',' + p.y).join(' ');
+    const d = 'M ' + pts.map(p => p.x + ' ' + p.y).join(' L ');
+
+    svg += '<polyline class="amida-path" points="'+points+'" ' +
       'fill="none" stroke="url(#amidaGrad)" stroke-width="6" stroke-linecap="square" ' +
       'stroke-dasharray="'+len+'" stroke-dashoffset="'+len+'" ' +
       'style="--amida-time:'+dur+'s"/>';
@@ -3174,6 +3176,11 @@ function toolAmidaHTML(){
         amidaRunAll(a).map(r => '<p style="margin:0 0 6px">' +
           esc(r.name) + ' → <span style="color:var(--accent)">' + esc(r.goal || (r.to+1)+'ばんめ') + '</span></p>').join('') +
       '</div>';
+  }
+
+  if(rest.length){
+    html += '<button class="btn primary" id="amidaNext" style="margin-top:12px">' +
+      '▶ '+esc(a.names[rest[0]])+' の けっかを ひらく</button>';
   }
 
   html += '<div class="btn-row" style="margin-top:12px">' +
@@ -3816,6 +3823,14 @@ function bind(r){
       a.phase = 'edit'; a.opened = []; a.result = null;
       render();
     });
+  };
+
+  const amidaNext = document.getElementById('amidaNext');
+  if(amidaNext) amidaNext.onclick = () => {
+    const a = state.amida;
+    if(!a) return;
+    const rest = a.names.map((_, i) => i).filter(i => (a.opened || []).indexOf(i) < 0);
+    if(rest.length) amidaPathTap(rest[0]);
   };
 
   const amidaOpenAll = document.getElementById('amidaOpenAll');
@@ -4676,6 +4691,17 @@ if(timerBadgeEl){
   timerBadgeEl.addEventListener('pointercancel', endDrag);
 }
 
+/* つまずいた ところを 画面で わかる ように して おく。
+   （ふだんは でない。でた ときは その ままを おしえて もらえば なおせる） */
+window.addEventListener('error', ev => {
+  const msg = (ev && ev.message) ? ev.message : 'ふめいな エラー';
+  const where = (ev && ev.lineno) ? '（'+ev.lineno+'行め）' : '';
+  try{ toast('エラー：' + msg + where); }catch(e){}
+});
+window.addEventListener('unhandledrejection', ev => {
+  try{ toast('エラー：' + ((ev.reason && ev.reason.message) || ev.reason || '')); }catch(e){}
+});
+
 paintIcons(document);
 initAudio();
 initSoundButtons();
@@ -4683,6 +4709,17 @@ document.addEventListener('pointerdown', unlockAudioOnce, {once:true});
 /* あみだくじ：なまえ／のこりの 人の ボタンを おした ときの しょり。
    ボタンは 画面を かき直す たびに つくり直されるので、
    1つ1つに つなぐのでは なく、ここで まとめて うけとる。 */
+/* けっかを ひらく。えんしゅつの とちゅうで なにか あっても、
+   さいごは かならず けっかが でる ように して ある。 */
+function amidaOpenNow(i){
+  const a = state.amida;
+  if(!a) return;
+  const t = amidaTrace(a, i);
+  if((a.opened || []).indexOf(i) < 0) a.opened.push(i);
+  a.result = {all:null, path:t.path, one:{name:a.names[i], goal:a.goals[t.end]}, tracing:false};
+  try{ render(); }catch(e){}
+  try{ playFanfare(); }catch(e){}
+}
 function amidaPathTap(i){
   const a = state.amida;
   if(!a) return;
@@ -4690,22 +4727,31 @@ function amidaPathTap(i){
     toast('「はっぴょうを はじめる」を おしてから えらべます');
     return;
   }
-  const t = amidaTrace(a, i);
+  if((a.opened || []).indexOf(i) >= 0){
+    /* もう ひらいた 人は、みちすじを もう一度 みせる だけ */
+    amidaOpenNow(i);
+    return;
+  }
 
-  /* まず 線だけを はしらせる（けっかは まだ ふせた まま） */
-  a.result = {all:null, path:t.path, one:null, tracing:true, who:a.names[i]};
-  render();
-  playClick();
-
-  const wait = Math.min(2900, 1100 + t.path.length * 90);
   clearTimeout(amidaPathTap._t);
+
+  /* えんしゅつ（線が はしる）。うまく いかない ときは すぐ けっかへ。 */
+  let wait = 1400;
+  try{
+    const t = amidaTrace(a, i);
+    wait = Math.min(2900, 1100 + t.path.length * 90);
+    a.result = {all:null, path:t.path, one:null, tracing:true, who:a.names[i]};
+    render();
+    playClick();
+  }catch(e){
+    amidaOpenNow(i);
+    return;
+  }
+
   amidaPathTap._t = setTimeout(() => {
     const cur = state.amida;
     if(!cur || cur.phase !== 'reveal') return;
-    if((cur.opened || []).indexOf(i) < 0) cur.opened.push(i);
-    cur.result = {all:null, path:t.path, one:{name:cur.names[i], goal:cur.goals[t.end]}, tracing:false};
-    render();
-    playFanfare();
+    amidaOpenNow(i);
   }, wait);
 }
 document.addEventListener('click', e => {
