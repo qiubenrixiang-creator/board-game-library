@@ -1172,35 +1172,10 @@ function playMissSe(){
   if(playBuffer('miss', 0.7)) return;
   if(sound.missSe){ const n = sound.missSe.cloneNode(); n.volume = 0.7; n.play().catch(()=>{}); }
 }
-/* たからばこを あける ときの ような、だんだん 上がって いく おと。
-   おなじ 音を「はやさ」を すこしずつ 上げて ならすと 音てい も 上がる。
-   p は 0（はじめ）〜1（ゴール）。 */
-function playStepSe(p){
+function playStepSe(){
   if(!sound.seOn) return;
-  const t = Math.max(0, Math.min(1, p === undefined ? 0 : p));
-  const rate = 1 + t * 1.15;          /* はやさ（音てい）を だんだん 上げる */
-  const vol  = 0.22 + t * 0.5;        /* 大きさも すこしずつ 上げる */
-
-  /* Web Audio が つかえる ときは 音ていを かえられる */
-  if(audioCtx && buffers['step']){
-    try{
-      if(audioCtx.state === 'suspended') audioCtx.resume();
-      const src = audioCtx.createBufferSource();
-      const gain = audioCtx.createGain();
-      src.buffer = buffers['step'];
-      src.playbackRate.value = rate;
-      gain.gain.value = vol;
-      src.connect(gain).connect(audioCtx.destination);
-      src.start(0);
-      return;
-    }catch(e){}
-  }
-  if(sound.stepSe){
-    const n = sound.stepSe.cloneNode();
-    n.volume = vol;
-    try{ n.playbackRate = rate; }catch(e){}
-    n.play().catch(()=>{});
-  }
+  if(playBuffer('step', 0.3)) return;
+  if(sound.stepSe){ const n = sound.stepSe.cloneNode(); n.volume = 0.3; n.play().catch(()=>{}); }
 }
 function playFanfare(){
   if(!sound.seOn) return;
@@ -3924,7 +3899,7 @@ function bind(r){
     if(a.autoReveal){
       a.autoReveal = false;
       clearTimeout(amidaPathTap._t);
-      clearTimeout(amidaPathTap._step);
+      clearInterval(amidaPathTap._step);
       render();
       return;
     }
@@ -3940,22 +3915,19 @@ function bind(r){
     if(!a) return;
     a.autoReveal = false;
     clearTimeout(amidaPathTap._t);
-    clearTimeout(amidaPathTap._step);
+    clearInterval(amidaPathTap._step);
 
     a.allPaths = a.names.map((_, i) => amidaTrace(a, i).path);
     a.result = {all:null, path:null, one:null, tracing:true, who:'ぜんいん'};
     render();
     playClick();
 
-    clearTimeout(amidaPathTap._step);
-    const raceStart = Date.now();
-    const raceTick = () => {
-      const p = Math.min(1, (Date.now() - raceStart) / 2400);
-      playStepSe(p);
-      if(p >= 1) return;
-      amidaPathTap._step = setTimeout(raceTick, 200 - 145 * p);
-    };
-    raceTick();
+    let n = 0;
+    clearInterval(amidaPathTap._step);
+    amidaPathTap._step = setInterval(() => {
+      playStepSe();
+      if(++n >= 12) clearInterval(amidaPathTap._step);
+    }, 180);
 
     setTimeout(() => {
       const cur = state.amida;
@@ -4852,12 +4824,12 @@ function amidaOpenNow(i){
   a.result = {all:null, path:t.path, one:{name:a.names[i], goal:goal, hit:amidaIsHit(goal)}, tracing:false};
   try{ render(); }catch(e){}
   try{
-    /* ③ 画面ぜんたいが 一しゅん ひかる */
-    flashScreen(amidaIsHit(goal) ? 'hit' : 'normal');
-    /* ① ピークの おと。あたりの ときは とくべつな おと */
-    if(amidaIsHit(goal)) playHitSe();
-    else if(String(goal).indexOf('はずれ') >= 0) playMissSe();
-    else playFanfare();
+    /* 画面ぜんたいが 一しゅん ひかる */
+    flashScreen('hit');
+    /* あみだくじは だれの ばんでも おなじ「けっかの おと」を ならす。
+       （まえは「1ばんめ」を あたりと みなして いたので、
+         1ばん手の 人だけ ちがう おとに なって いた） */
+    playHitSe();
   }catch(e){}
 }
 
@@ -4894,27 +4866,21 @@ function amidaPathTap(i){
     render();
     playClick();
 
-    /* ④ 線が すすむ あいだ、だんだん 高く・はやく なる おとを ならす。
-       さいごに ちかづく ほど かんかくが つまり、音ていも 上がる。 */
-    clearTimeout(amidaPathTap._step);
-    const startAt = Date.now();
-    const tick = () => {
-      const p = Math.min(1, (Date.now() - startAt) / wait);   /* 0→1 */
-      /* さいごの 0.18びょうは わざと おとを とめて「ため」を つくる。
-         そのあとの ピークが きわだつ。 */
-      if((wait - (Date.now() - startAt)) <= 180) return;
-      playStepSe(p);
-      /* かんかく：さいしょ 190ms → さいご 55ms */
-      amidaPathTap._step = setTimeout(tick, 190 - 135 * p);
-    };
-    tick();
+    /* ④ 線が すすむ あいだ、ことこと おとを ならす */
+    clearInterval(amidaPathTap._step);
+    let n = 0;
+    const steps = Math.max(3, t.path.length);
+    amidaPathTap._step = setInterval(() => {
+      playStepSe();
+      if(++n >= steps) clearInterval(amidaPathTap._step);
+    }, Math.max(90, Math.round(wait / steps)));
   }catch(e){
     amidaOpenNow(i);
     return;
   }
 
   amidaPathTap._t = setTimeout(() => {
-    clearTimeout(amidaPathTap._step);
+    clearInterval(amidaPathTap._step);
     const cur = state.amida;
     if(!cur || cur.phase !== 'reveal') return;
     amidaOpenNow(i);
