@@ -445,6 +445,13 @@ h2.sec::before{content:"■ ";font-size:12px}
 .amida-label.goal.hidden-goal{color:var(--muted);border-color:var(--muted);letter-spacing:0}
 .amida-label.head[disabled]{opacity:.85;cursor:default}
 .amida-label.head.opened{border-color:var(--accent);color:var(--accent)}
+/* ひらいた しゅんかんに ふだが ひかる */
+@keyframes amidaFlash{
+  0%{transform:translateX(-50%) scale(1);background:var(--accent);color:var(--panel)}
+  60%{transform:translateX(-50%) scale(1.25);background:var(--accent);color:var(--panel)}
+  100%{transform:translateX(-50%) scale(1)}
+}
+.amida-label.goal.flash{animation:amidaFlash .7s steps(6) 1}
 
 /* ---------- どうぐ ---------- */
 .tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
@@ -3091,7 +3098,10 @@ function amidaBoardHTML(a){
       ' style="left:'+cx(i)+'px;top:6px">'+esc(a.names[i])+'</button>';
     /* した の ふだは、その ばしょに ついた 人が ひらかれる まで ？ の まま */
     const shown = amidaGoalShown(a, i);
-    foots += '<span class="amida-label goal'+(shown ? '' : ' hidden-goal')+'" style="left:'+cx(i)+'px;top:'+(cy(AMIDA_ROWS)+10)+'px">' +
+    const justOpened = shown && a.result && a.result.one &&
+      amidaTrace(a, a.names.indexOf(a.result.one.name)).end === i;
+    foots += '<span class="amida-label goal'+(shown ? '' : ' hidden-goal')+(justOpened ? ' flash' : '')+'" ' +
+      'style="left:'+cx(i)+'px;top:'+(cy(AMIDA_ROWS)+10)+'px">' +
       (shown ? esc(a.goals[i]||'') : '？') + '</span>';
   }
 
@@ -3145,6 +3155,7 @@ function toolAmidaHTML(){
   /* ここから はっぴょう */
   html += (res && res.tracing ?
     '<div class="win" style="margin-top:12px;text-align:center">' +
+      '<p class="count" style="margin:0 0 4px">'+esc(res.who || '')+'</p>' +
       '<p class="encounter blink" style="margin:0">＊ たどって います…</p></div>' : '');
 
   html += (res && res.one ?
@@ -4682,7 +4693,7 @@ function amidaPathTap(i){
   const t = amidaTrace(a, i);
 
   /* まず 線だけを はしらせる（けっかは まだ ふせた まま） */
-  a.result = {all:null, path:t.path, one:null, tracing:true};
+  a.result = {all:null, path:t.path, one:null, tracing:true, who:a.names[i]};
   render();
   playClick();
 
