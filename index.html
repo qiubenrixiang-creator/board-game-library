@@ -416,6 +416,27 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th, .print-table td{border:1px solid var(--line, #999);padding:5px 6px;font-size:12px;text-align:left}
 .print-table th{color:var(--accent)}
 
+/* ---------- カレンダー ---------- */
+.cal-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:3px;
+}
+.cal-w{
+  text-align:center;font-size:11px;color:var(--muted);padding:4px 0;
+}
+.cal-cell{
+  aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  background:var(--panel);border:2px solid var(--line-soft);color:var(--muted);
+  font-size:12px;padding:0;cursor:default;
+}
+.cal-cell.empty{background:transparent;border-color:transparent}
+.cal-cell.has{
+  border-color:var(--frame);color:var(--text);cursor:pointer;
+}
+.cal-cell.has:active{transform:translate(1px,1px)}
+.cal-cell.today{border-color:var(--accent-2)}
+.cal-d{font-size:13px}
+.cal-dot{font-size:7px;color:var(--accent);letter-spacing:-1px;line-height:1}
+
 /* ---------- あみだくじ ---------- */
 .amida-wrap{overflow-x:auto;padding:2px 0 6px}
 .amida-board{position:relative;margin:0 auto;color:var(--frame)}
@@ -1242,13 +1263,15 @@ function setSeOn(v){
 
 const state = {
   games: [], tags: [],
-  filters: { time:null, players:null, playersN:6, tags:[] },
+  filters: { time:null, players:null, playersN:6, tags:[], playersMode:'exact', playersTo:null },
   listQuery:'', listSort:'title', listView: store.read('bgl.listView', 'list'), listMode:'own',   /* own / wish / lent */
   today: null,                                      /* きょうの にんずう */
   bulkIndex: 0,                                     /* まとめて入力の いちばんめ */
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
   recQuery: '',                                     /* きろく画面の けんさく */
+  recView: 'list',                                  /* いちらん／カレンダー／思い出 */
+  calYm: null, calDay: null, memory: null,          /* カレンダーと 思い出の いま */
   recEdit: '',                                      /* いま なおして いる きろく（"ゲームid|ばんごう"） */
   playPhotos: [],                                   /* いま つけようと している きろくの しゃしん */
   amida: null,                                      /* あみだくじの ばん（autoReveal・allPaths も ここに 入る） */
@@ -1276,6 +1299,8 @@ function loadAll(){
   if(f && typeof f === 'object'){
     state.filters = { time:f.time||null, players:f.players||null,
       playersN: Math.min(30, Math.max(6, Number(f.playersN)||6)),
+      playersMode: (f.playersMode === 'range') ? 'range' : 'exact',
+      playersTo: f.playersTo || null,
       tags:Array.isArray(f.tags)?f.tags:[] };
   }
 }
@@ -1521,7 +1546,17 @@ function activeFilters(){
   }
   return f;
 }
+/* にんずうの しぼりこみ かた
+   exact … その にんずう ちょうどで あそべる（これまで どおり）
+   range … えらんだ にんずうの はばの どれかで あそべる
+           （れい：3〜5人 で しぼると、4人しか だめな ゲームも でて くる） */
 function playersOk(g, f){
+  if(f.playersMode === 'range' && f.playersTo){
+    const lo = Math.min(playersCount(f), Number(f.playersTo));
+    const hi = Math.max(playersCount(f), Number(f.playersTo));
+    /* ゲームの あそべる はばと、えらんだ はばが かさなれば OK */
+    return g.playersMin <= hi && lo <= g.playersMax;
+  }
   const n = playersCount(f);
   return g.playersMin <= n && n <= g.playersMax;
 }
@@ -1554,8 +1589,14 @@ function hasFilter(f){ return !!(f.time || f.players || f.tags.length); }
 function condText(f){
   const c = [];
   if(f.players){
-    c.push((f.players === '6' || f.players === 'today') ? playersCount(f)+'人'
-           : (PLAYER_OPTIONS.find(o=>o.id===f.players)||{}).label);
+    if(f.playersMode === 'range' && f.playersTo){
+      const lo = Math.min(playersCount(f), Number(f.playersTo));
+      const hi = Math.max(playersCount(f), Number(f.playersTo));
+      c.push(lo+'〜'+hi+'人');
+    }else{
+      c.push((f.players === '6' || f.players === 'today') ? playersCount(f)+'人'
+             : (PLAYER_OPTIONS.find(o=>o.id===f.players)||{}).label);
+    }
   }
   if(f.time) c.push((TIME_OPTIONS.find(o=>o.id===f.time)||{}).label);
   c.push(...f.tags);
@@ -1865,6 +1906,9 @@ function listComputed(){
       sk === 'difficulty' ? (a.difficulty-b.difficulty) :
       sk === 'recent' ? (lastPlayed(b) || '').localeCompare(lastPlayed(a) || '') :
       sk === 'sleeping' ? ((lastPlayed(a) || '') .localeCompare(lastPlayed(b) || '') || playCount(a)-playCount(b)) :
+      sk === 'replay' ? ((Number(b.replay)||0) - (Number(a.replay)||0)) :
+      sk === 'excitement' ? ((Number(b.excitement)||0) - (Number(a.excitement)||0)) :
+      sk === 'plays' ? (playCount(b) - playCount(a)) :
       a.title.localeCompare(b.title,'ja'));
   }
   return {f, filtered, res, list, q};
@@ -1921,7 +1965,9 @@ function viewList(){
       '<button class="mini" id="listViewBtn" style="flex:0 0 auto" aria-label="ならべかたを かえる">' +
         (state.listView === 'grid' ? '▤ リスト' : '▦ しゃしん') + '</button>' +
       '<select id="listSort">' +
-        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順','recent:さいきん あそんだ順','sleeping:あそんで ない順'].map(o => {
+        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順',
+         'replay:また あそびたい順','excitement:もりあがる順','plays:あそんだ かず順',
+         'recent:さいきん あそんだ順','sleeping:あそんで ない順'].map(o => {
           const parts = o.split(':');
           return '<option value="' + parts[0] + '"' + (state.listSort === parts[0] ? ' selected' : '') + '>' + parts[1] + '</option>';
         }).join('') +
@@ -1988,6 +2034,7 @@ function viewDetail(id){
       '</div>' +
       '<p class="count" style="margin:-6px 0 14px">しゃしんを タップすると 大きく みられます。</p>' : '';
   const optional = [];
+  if(g.replay) optional.push('<dt>また あそびたい</dt><dd>'+stars(g.replay)+'</dd>');
   if(g.strategy) optional.push('<dt>せんりゃく性</dt><dd>'+stars(g.strategy)+'</dd>');
   if(g.excitement) optional.push('<dt>もりあがり</dt><dd>'+stars(g.excitement)+'</dd>');
   if(g.luck) optional.push('<dt>うんの要素</dt><dd>'+stars(g.luck)+'</dd>');
@@ -2113,6 +2160,7 @@ function viewForm(id){
     '<div class="form-group"><label class="lbl">むずかしさ</label>'+starRow('difficulty', Number(v('difficulty',2)))+'</div>' +
 
     '<details style="margin:0 0 16px"><summary>その他の ひょうか（にんい）</summary>' +
+      '<div style="margin-top:12px"><label class="lbl">また あそびたい<span class="hint">リプレイ性</span></label>'+starRow('replay', Number(v('replay',0)))+'</div>' +
       '<div style="margin-top:12px"><label class="lbl">せんりゃく性</label>'+starRow('strategy', Number(v('strategy',0)))+'</div>' +
       '<div style="margin-top:12px"><label class="lbl">もりあがり</label>'+starRow('excitement', Number(v('excitement',0)))+'</div>' +
       '<div style="margin-top:12px"><label class="lbl">うんの要素</label>'+starRow('luck', Number(v('luck',0)))+'</div></details>' +
@@ -2847,6 +2895,91 @@ function playEditHTML(gid, i, pl){
 }
 function isEditing(gid, i){ return state.recEdit === gid + '|' + i; }
 
+/* ---------------- カレンダー ----------------
+   あそんだ 日を 月ごとに ならべて みせる。 */
+function ymOf(str){ return String(str||'').slice(0,7); }
+function shiftMonth(ym, d){
+  const p = ym.split('-');
+  let y = Number(p[0]), m = Number(p[1]) + d;
+  while(m < 1){ m += 12; y--; }
+  while(m > 12){ m -= 12; y++; }
+  return y + '-' + String(m).padStart(2,'0');
+}
+function calendarHTML(){
+  const ym = state.calYm || todayStr().slice(0,7);
+  const [y, m] = ym.split('-').map(Number);
+  const first = new Date(y, m-1, 1);
+  const days = new Date(y, m, 0).getDate();
+  const head = first.getDay();
+
+  /* その月に あそんだ ゲームを 日ごとに あつめる */
+  const byDay = {};
+  allPlays().forEach(r => {
+    if(ymOf(r.pl.d) !== ym) return;
+    const d = Number(String(r.pl.d).slice(8,10));
+    (byDay[d] = byDay[d] || []).push(r);
+  });
+  const total = Object.keys(byDay).reduce((a,k) => a + byDay[k].length, 0);
+
+  let cells = '';
+  for(let i = 0; i < head; i++) cells += '<div class="cal-cell empty"></div>';
+  for(let d = 1; d <= days; d++){
+    const list = byDay[d] || [];
+    const isToday = (ym + '-' + String(d).padStart(2,'0')) === todayStr();
+    cells += '<button class="cal-cell'+(list.length ? ' has' : '')+(isToday ? ' today' : '')+'"' +
+      (list.length ? ' data-calday="'+ym+'-'+String(d).padStart(2,'0')+'"' : ' disabled') + '>' +
+      '<span class="cal-d">'+d+'</span>' +
+      (list.length ? '<span class="cal-dot">'+(list.length > 3 ? '●'.repeat(3)+'+' : '●'.repeat(list.length))+'</span>' : '') +
+      '</button>';
+  }
+
+  const sel = state.calDay;
+  const selList = sel ? allPlays().filter(r => r.pl.d === sel) : [];
+
+  return '<div class="row" style="align-items:center;margin-bottom:8px">' +
+      '<button class="mini" data-calmove="-1" style="flex:0 0 auto">◀</button>' +
+      '<p class="count" style="flex:1;text-align:center;margin:0">'+y+'年 '+m+'月／'+total+'かい</p>' +
+      '<button class="mini" data-calmove="1" style="flex:0 0 auto">▶</button></div>' +
+    '<div class="cal-grid">' +
+      ['日','月','火','水','木','金','土'].map(w => '<div class="cal-w">'+w+'</div>').join('') +
+      cells +
+    '</div>' +
+    (sel && selList.length ?
+      '<div class="win" style="margin-top:10px">' +
+        '<p class="count" style="margin:0 0 8px">'+esc(dateFullLabel(sel))+'</p>' +
+        selList.map(r => '<p style="margin:0 0 6px">' +
+          '<button class="mini" data-open="'+esc(r.g.id)+'">'+esc(r.g.title)+' ▶</button>' +
+          (r.pl.n ? ' <span class="count">'+esc(r.pl.n)+'人</span>' : '') +
+          (r.pl.w ? ' <span class="count">かち：'+esc(r.pl.w)+'</span>' : '') +
+          (r.pl.m ? '<br><span style="font-size:13px;white-space:pre-wrap">'+esc(r.pl.m)+'</span>' : '') +
+        '</p>').join('') +
+      '</div>' : '') +
+    (total === 0 ? '<p class="count" style="margin:10px 0 0">この月の きろくは ありません。</p>' : '');
+}
+
+/* ---------------- 思い出を めくる ----------------
+   きろくを 1けんずつ ランダムに みせる。 */
+function memoryHTML(){
+  const list = allPlays().filter(r => r.pl.m || (r.pl.p && r.pl.p.length));
+  if(!list.length){
+    return '<p class="count" style="margin:0">かんそうか しゃしんの ある きろくが たまると、ここで ふりかえれます。</p>';
+  }
+  const r = state.memory && list.find(x => x.g.id === state.memory.gid && x.i === state.memory.i);
+  const pick = r || list[Math.floor(Math.random() * list.length)];
+  if(!r) state.memory = {gid: pick.g.id, i: pick.i};
+
+  return '<div class="win" style="text-align:center">' +
+      '<p class="count" style="margin:0 0 6px">'+esc(dateFullLabel(pick.pl.d))+'</p>' +
+      '<p class="encounter" style="margin:0 0 8px">'+esc(pick.g.title)+'</p>' +
+      (pick.pl.n ? '<p class="count" style="margin:0 0 6px">'+esc(pick.pl.n)+'人'+(pick.pl.w ? '／かち：'+esc(pick.pl.w) : '')+'</p>' : '') +
+      (pick.pl.m ? '<p style="margin:8px 0 0;white-space:pre-wrap;font-size:14px;text-align:left">'+esc(pick.pl.m)+'</p>' : '') +
+      playPhotosHTML(pick.pl, pick.g.id, pick.i) +
+    '</div>' +
+    '<div class="btn-row" style="margin-top:10px">' +
+      '<button class="btn small" style="flex:1" id="memoryNext">べつの 思い出</button>' +
+      '<button class="btn small" style="flex:1" data-open="'+esc(pick.g.id)+'">この ゲームを みる</button></div>';
+}
+
 function viewRecords(){
   const q = normalizeText(state.recQuery || '');
   let list = allPlays();
@@ -2855,13 +2988,28 @@ function viewRecords(){
     normalizeText((r.pl.m||'') + ' ' + (r.pl.w||'')).includes(q));
 
   const total = allPlays().length;
+  const mode = state.recView || 'list';
+
   let html = '<section class="page">' +
     '<button class="mini" data-go2="#/tools" style="margin-bottom:14px">◀ どうぐへ もどる</button>' +
     '<h1 class="lede">あそんだ きろく</h1>' +
-    '<p class="sub">これまでの きろくと かんそうを あたらしい順に ならべて います。<br>' +
-      'この きろくは サイトには でません（この スマホの 中だけ）。</p>' +
+    '<p class="sub">この きろくは サイトには でません（この スマホの 中だけ）。</p>' +
 
-    '<input type="search" id="recQ" placeholder="ゲームめい・かんそうで さがす" value="'+esc(state.recQuery||'')+'" ' +
+    '<div class="chips" style="margin-bottom:12px">' +
+      [['list','いちらん'],['cal','カレンダー'],['memory','思い出を めくる']].map(o =>
+        '<button class="chip sm" data-recview="'+o[0]+'" aria-pressed="'+(mode===o[0])+'">'+o[1]+'</button>').join('') +
+    '</div>';
+
+  if(mode === 'cal'){
+    html += calendarHTML();
+    return html + '</section>';
+  }
+  if(mode === 'memory'){
+    html += memoryHTML();
+    return html + '</section>';
+  }
+
+  html += '<input type="search" id="recQ" placeholder="ゲームめい・かんそうで さがす" value="'+esc(state.recQuery||'')+'" ' +
       'autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:10px">' +
     '<p class="count">ぜんぶで '+total+'かい'+(q ? '／ みつかった きろく '+list.length+'けん' : '')+'</p>';
 
@@ -3749,6 +3897,24 @@ function bind(r){
     recQ.addEventListener('compositionend', () => { composing = false; later(); });
     recQ.addEventListener('input', () => { if(!composing) later(); });
   }
+  app.querySelectorAll('[data-recview]').forEach(b => b.onclick = () => {
+    state.recView = b.dataset.recview;
+    if(state.recView === 'cal' && !state.calYm) state.calYm = todayStr().slice(0,7);
+    if(state.recView === 'memory') state.memory = null;
+    render();
+  });
+  app.querySelectorAll('[data-calmove]').forEach(b => b.onclick = () => {
+    state.calYm = shiftMonth(state.calYm || todayStr().slice(0,7), Number(b.dataset.calmove));
+    state.calDay = null;
+    render();
+  });
+  app.querySelectorAll('[data-calday]').forEach(b => b.onclick = () => {
+    state.calDay = (state.calDay === b.dataset.calday) ? null : b.dataset.calday;
+    render();
+  });
+  const memoryNext = document.getElementById('memoryNext');
+  if(memoryNext) memoryNext.onclick = () => { state.memory = null; render(); playClick(); };
+
   const delEmptyBtn = document.getElementById('delEmptyBtn');
   if(delEmptyBtn) delEmptyBtn.onclick = () => {
     const n = allPlays().filter(r => isEmptyPlay(r.pl)).length;
@@ -4556,7 +4722,7 @@ function saveFormGo(id, title){
     playersMin: pmin, playersMax: pmax,
     playTime: Math.max(1,num('f-time')), age: num('f-age'),
     difficulty: hidden('difficulty'), strategy: hidden('strategy'),
-    excitement: hidden('excitement'), luck: hidden('luck'),
+    excitement: hidden('excitement'), luck: hidden('luck'), replay: hidden('replay'),
     tags: state.formTags.slice(),
     summary: val('f-summary').trim(),
     quickRule: val('f-quick'), detailRule: val('f-detail'), recommendation: val('f-reco')
