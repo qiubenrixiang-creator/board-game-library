@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-14T17:41:18.166Z",
+  "version": "2026-09-18T17:16:14.748Z",
   "tags": [
     {
       "name": "初心者",
@@ -272,6 +272,8 @@
       "id": "g003",
       "title": "ito クラシック",
       "reading": "いと くらしっく",
+      "videos": [],
+      "wish": false,
       "images": [
         "https://arclightgames.jp/wp-content/uploads/2024/02/ito-classic_box_L_square-575x575.jpg",
         "https://arclightgames.jp/wp-content/uploads/2024/02/ito_compo3-575x575.jpg",
@@ -285,6 +287,7 @@
       "strategy": 3,
       "excitement": 4,
       "luck": 4,
+      "replay": 3,
       "tags": [
         "初心者",
         "協力",
