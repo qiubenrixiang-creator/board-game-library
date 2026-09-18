@@ -1837,6 +1837,22 @@ function viewHome(){
         '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">じっさいの にんずう</span>' +
         '<input type="number" id="playersN" min="6" max="30" inputmode="numeric" value="'+playersCount(f)+'" style="flex:0 0 88px">' +
         '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">人</span></div>' : '') +
+      /* しぼりこみ かたを 2とおりから えらぶ */
+      (f.players ?
+        '<div style="margin-top:10px">' +
+          '<div class="chips" style="margin-bottom:6px">' +
+            '<button class="chip sm" data-pmode="exact" aria-pressed="'+(f.playersMode !== 'range')+'">ちょうど この にんずう</button>' +
+            '<button class="chip sm" data-pmode="range" aria-pressed="'+(f.playersMode === 'range')+'">〜人までの あいだ</button>' +
+          '</div>' +
+          (f.playersMode === 'range' ?
+            '<div class="row" style="align-items:center">' +
+              '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">'+playersCount(f)+'人 〜</span>' +
+              '<input type="number" id="playersTo" min="1" max="30" inputmode="numeric" value="'+esc(f.playersTo || (playersCount(f)+1))+'" style="flex:0 0 88px">' +
+              '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">人</span></div>' +
+            '<p class="count" style="margin:6px 0 0">この はばの どれかの にんずうで あそべる ゲームを ぜんぶ だします。</p>'
+            : '<p class="count" style="margin:0">その にんずう ちょうどで あそべる ゲームだけを だします。</p>') +
+        '</div>' : '') +
+
       (f.players && !state.today ? '<p class="count" style="margin:8px 0 0">' +
         '<button class="mini" id="setToday">この にんずうを きょうの メンバーに する</button></p>' : '') +
       '</div>' +
@@ -3814,6 +3830,18 @@ function bind(r){
       saveFilters(); render();
     };
   });
+  app.querySelectorAll('[data-pmode]').forEach(b => b.onclick = () => {
+    state.filters.playersMode = b.dataset.pmode;
+    if(state.filters.playersMode === 'range' && !state.filters.playersTo){
+      state.filters.playersTo = playersCount(state.filters) + 1;
+    }
+    saveFilters(); render();
+  });
+  const playersTo = document.getElementById('playersTo');
+  if(playersTo) playersTo.onchange = e => {
+    state.filters.playersTo = Math.min(30, Math.max(1, Number(e.target.value) || 1));
+    saveFilters(); render();
+  };
   const playersN = document.getElementById('playersN');
   if(playersN) playersN.onchange = e => {
     state.filters.playersN = Math.min(30, Math.max(6, Number(e.target.value)||6));
