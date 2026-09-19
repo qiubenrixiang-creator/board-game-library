@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-18T17:16:14.748Z",
+  "version": "2026-09-19T10:47:28.175Z",
   "tags": [
     {
       "name": "初心者",
@@ -111,6 +111,35 @@
     }
   ],
   "games": [
+    {
+      "id": "gmu89j79qvtubl",
+      "title": "マジックキーズ 魔法の鍵",
+      "reading": "まじっくきーず まほうのかぎ",
+      "videos": [
+        "https://youtube.com/watch?v=O-az55tvtMg&si=GStHvN4I7NKvFGlk"
+      ],
+      "wish": false,
+      "images": [
+        "https://pbs.twimg.com/media/HSOYNrObUAAsS0C?format=webp&name=medium"
+      ],
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "初心者",
+        "家族向け"
+      ],
+      "summary": "どうか開いて宝箱！魔法のカギを探し当てて！必要なのは、魔力と知力と勇気！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
     {
       "id": "gmtx12v2nkb8og",
       "title": "くらやみかくれんぼ",
