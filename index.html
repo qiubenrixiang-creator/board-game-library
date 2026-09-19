@@ -207,6 +207,7 @@ img{image-rendering:auto}
 .chip[aria-pressed="true"]{background:var(--text);color:var(--panel);border-color:var(--text);font-weight:400}
 .chip[aria-pressed="true"]::before{content:"▶"}
 .chip.sm{font-size:12.5px;padding:5px 9px}
+.chip.sm.today{border-color:var(--accent-2);color:var(--accent-2)}
 
 .tagline{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
 .tag{font-size:11px;padding:2px 7px;border:1px solid var(--muted);color:var(--muted)}
@@ -1294,6 +1295,7 @@ const state = {
   dice: {count:2, values:[]},                       /* サイコロ */
   lastNames: '',                                    /* なまえの いれもの（くじ・チーム分け 共通） */
   players: [],                                      /* いつもの なかまの なまえ */
+  chosen: {},                                       /* どうぐ ごとに えらんだ メンバー */
   lotPurpose: 'さいしょの人',                        /* くじで なにを きめるか */
   lastRandomId: null,
   formImages: [], formTags: [], formVideos: []
@@ -2671,12 +2673,40 @@ function unknownPlayers(){
   }));
   return Object.keys(seen).map(n => ({name:n, count:seen[n]})).sort((a,b) => b.count - a.count);
 }
+/* とうろく した なまえから、きょうの メンバーを えらぶ ぶひん。
+   おした 人が 入力らんに くわわり、もう一度 おすと はずれる。 */
+function playerChooserHTML(targetId){
+  if(!state.players.length) return '';
+  const now = (state.chosen && state.chosen[targetId]) || [];
+  return '<div style="margin:8px 0 0">' +
+    '<p class="count" style="margin:0 0 6px">きょうの メンバーを えらぶ（' +
+      '<span data-choosecount="'+esc(targetId)+'">' + now.length + '人</span>）</p>' +
+    '<div class="chips" style="margin-bottom:6px">' +
+      state.players.map(p =>
+        '<button type="button" class="chip sm" data-choosename="'+esc(targetId)+'|'+esc(p.name)+'" ' +
+        'aria-pressed="'+(now.indexOf(p.name) >= 0)+'">'+esc(p.name)+'</button>').join('') +
+    '</div>' +
+    '<div class="chips">' +
+      '<button type="button" class="mini" data-fillnames="'+esc(targetId)+'">ぜんいん</button>' +
+      '<button type="button" class="mini warn" data-clearchoose="'+esc(targetId)+'">えらびなおす</button>' +
+    '</div></div>';
+}
+
 /* なまえを えらぶ ボタン（きろくの 入力らんの したに だす） */
 function playerPickHTML(targetId){
   if(!state.players.length) return '';
+  /* どこかの どうぐで えらんだ メンバーが いれば、その人たちを さきに ならべる */
+  const picked = [];
+  Object.keys(state.chosen || {}).forEach(k => {
+    (state.chosen[k] || []).forEach(n => { if(picked.indexOf(n) < 0) picked.push(n); });
+  });
+  const rest = state.players.map(p => p.name).filter(n => picked.indexOf(n) < 0);
+  const order = picked.concat(rest);
+
   return '<div class="chips" style="margin:-4px 0 8px">' +
-    state.players.map(p =>
-      '<button type="button" class="chip sm" data-pickname="'+esc(targetId)+'|'+esc(p.name)+'">'+esc(p.name)+'</button>').join('') +
+    order.map(n =>
+      '<button type="button" class="chip sm'+(picked.indexOf(n) >= 0 ? ' today' : '')+'" ' +
+      'data-pickname="'+esc(targetId)+'|'+esc(n)+'">'+esc(n)+'</button>').join('') +
   '</div>';
 }
 
@@ -2747,8 +2777,7 @@ function scoreHTML(){
       '<div class="row"><input type="text" id="scoreNames" placeholder="たろう はなこ じろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="scoreNames" style="flex:0 0 auto">けす</button>' +
       '<button class="mini" id="scoreStart" style="flex:0 0 auto">はじめる</button></div>' +
-      (state.players.length ? '<p class="count" style="margin:8px 0 0">' +
-        '<button class="mini" data-fillnames="scoreNames">なかま ぜんいんを いれる</button></p>' : '');
+      playerChooserHTML('scoreNames');
   }
   const totals = sc.names.map((_, i) => sc.rows.reduce((a, r) => a + (Number(r[i]) || 0), 0));
   const best = Math.max.apply(null, totals);
@@ -2795,8 +2824,7 @@ function counterHTML(){
       '<div class="row"><input type="text" id="counterNames" placeholder="たろう はなこ／または ライフ" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="counterNames" style="flex:0 0 auto">けす</button>' +
       '<button class="mini" id="counterStart" style="flex:0 0 auto">つくる</button></div>' +
-      (state.players.length ? '<p class="count" style="margin:8px 0 0">' +
-        '<button class="mini" data-fillnames="counterNames">なかま ぜんいんを いれる</button></p>' : '');
+      playerChooserHTML('counterNames');
   }
   return state.counters.map((c, i) =>
     '<div class="admin-row" style="align-items:center">' +
@@ -3253,8 +3281,7 @@ function toolLotHTML(){
     '<div class="row" style="margin-bottom:12px">' +
       '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="firstNames" style="flex:0 0 auto">けす</button></div>' +
-      (state.players.length ? '<p class="count" style="margin:0 0 8px">' +
-        '<button class="mini" data-fillnames="firstNames">なかま ぜんいんを いれる</button></p>' : '') +
+      playerChooserHTML('firstNames') +
     '<button class="btn primary" id="firstBtn" style="width:100%">▶ ちゅうせんを はじめる</button>' +
     '<div id="firstResult"></div>';
 }
@@ -3263,8 +3290,7 @@ function toolTeamHTML(){
     '<div class="row" style="margin-bottom:8px">' +
       '<input type="text" id="teamNames" placeholder="れい：たろう はなこ じろう しろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="teamNames" style="flex:0 0 auto">けす</button></div>' +
-      (state.players.length ? '<p class="count" style="margin:0 0 8px">' +
-        '<button class="mini" data-fillnames="teamNames">なかま ぜんいんを いれる</button></p>' : '') +
+      playerChooserHTML('teamNames') +
     '<div class="chips" style="margin-bottom:10px">' +
       [2,3,4].map(n => '<button class="chip sm" data-teamn="'+n+'">'+n+'チーム</button>').join('') +
     '</div>' +
@@ -3450,8 +3476,7 @@ function toolAmidaHTML(){
       '<div class="row" style="margin-bottom:10px">' +
         '<input type="text" id="amidaNames" placeholder="たろう はなこ じろう／または 4" value="'+esc(state.lastNames)+'" style="flex:2">' +
         '<button class="mini warn" data-clearnames="amidaNames" style="flex:0 0 auto">けす</button></div>' +
-      (state.players.length ? '<p class="count" style="margin:0 0 8px">' +
-        '<button class="mini" data-fillnames="amidaNames">なかま ぜんいんを いれる</button></p>' : '') +
+      playerChooserHTML('amidaNames') +
       '<p class="count" style="margin:0 0 8px">したに ならべる もの（あたり・じゅんばん など）</p>' +
       '<div class="chips" style="margin-bottom:10px">' +
         '<button class="chip sm" data-amidagoal="order" aria-pressed="true">じゅんばん（1ばん・2ばん…）</button>' +
@@ -4292,12 +4317,43 @@ function bind(r){
     const inp = document.getElementById(parts[0]);
     if(inp) inp.value = parts[1];
   });
-  app.querySelectorAll('[data-fillnames]').forEach(b => b.onclick = () => {
-    const inp = document.getElementById(b.dataset.fillnames);
+  /* 入力らんに えらんだ 人を かきこむ */
+  const applyChosen = (targetId) => {
+    const list = (state.chosen && state.chosen[targetId]) || [];
+    const inp = document.getElementById(targetId);
     if(inp){
-      inp.value = state.players.map(p => p.name).join(' ');
+      inp.value = list.join(' ');
       saveNames(inp.value);
     }
+    /* ボタンの ひょうじも あわせる */
+    app.querySelectorAll('[data-choosename]').forEach(x => {
+      const pp = String(x.dataset.choosename).split('|');
+      if(pp[0] === targetId) x.setAttribute('aria-pressed', String(list.indexOf(pp[1]) >= 0));
+    });
+    const label = app.querySelector('[data-choosecount="' + targetId + '"]');
+    if(label) label.textContent = list.length + '人';
+  };
+
+  app.querySelectorAll('[data-choosename]').forEach(b => b.onclick = () => {
+    const parts = String(b.dataset.choosename).split('|');
+    const tid = parts[0], name = parts[1];
+    state.chosen[tid] = state.chosen[tid] || [];
+    const i = state.chosen[tid].indexOf(name);
+    if(i >= 0) state.chosen[tid].splice(i, 1);
+    else state.chosen[tid].push(name);
+    applyChosen(tid);
+  });
+
+  app.querySelectorAll('[data-fillnames]').forEach(b => b.onclick = () => {
+    const tid = b.dataset.fillnames;
+    state.chosen[tid] = state.players.map(p => p.name);
+    applyChosen(tid);
+  });
+
+  app.querySelectorAll('[data-clearchoose]').forEach(b => b.onclick = () => {
+    const tid = b.dataset.clearchoose;
+    state.chosen[tid] = [];
+    applyChosen(tid);
   });
 
   /* --- なかまの なまえ --- */
