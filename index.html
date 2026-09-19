@@ -718,6 +718,7 @@ const KEY = {
   score:'bgl.scoreSheet',        /* てんすう表 */
   counters:'bgl.counters',       /* カウンター */
   names:'bgl.lastNames',         /* まえに いれた なまえ */
+  players:'bgl.playerNames',     /* いつもの なかまの なまえ */
   backupAt:'bgl.lastBackup',     /* さいごに ひかえを つくった日 */
   today:'bgl.todayPlayers'  /* きょうの メンバーの にんずう */
 };
@@ -976,6 +977,17 @@ const ICONS = {
     '#.#..#.#',
     '#####..#',
     '#.#..#.#'
+  ],
+  /* なかまの なまえ（3人） */
+  people2:[
+    '.##..##.',
+    '.##..##.',
+    '........',
+    '###.###.',
+    '#.#.#.#.',
+    '###.###.',
+    '#.#.#.#.',
+    '###.###.'
   ],
   /* 大きく つかう（ぜんがめん） */
   expand:[
@@ -1281,6 +1293,7 @@ const state = {
   counters: [],                                     /* カウンター */
   dice: {count:2, values:[]},                       /* サイコロ */
   lastNames: '',                                    /* なまえの いれもの（くじ・チーム分け 共通） */
+  players: [],                                      /* いつもの なかまの なまえ */
   lotPurpose: 'さいしょの人',                        /* くじで なにを きめるか */
   lastRandomId: null,
   formImages: [], formTags: [], formVideos: []
@@ -1295,6 +1308,8 @@ function loadAll(){
   const cn = store.read(KEY.counters, null);
   if(Array.isArray(cn)) state.counters = cn;
   state.lastNames = store.read(KEY.names, '') || '';
+  const pl = store.read(KEY.players, null);
+  if(Array.isArray(pl)) state.players = pl;
   const f = store.read(KEY.filters, null);
   if(f && typeof f === 'object'){
     state.filters = { time:f.time||null, players:f.players||null,
@@ -1421,6 +1436,33 @@ function ask(msg, onYes, opts){
   yes.onclick = () => { close(); if(onYes) onYes(); };
   no.onclick = () => { close(); if(opts && opts.onNo) opts.onNo(); };
   back.onclick = e => { if(e.target === back){ close(); if(opts && opts.onNo) opts.onNo(); } };
+}
+
+/* もじを いれて もらう ウィンドウ */
+function askText(label, now, onOk){
+  const back = document.getElementById('dialog');
+  const text = document.getElementById('dialogMsg');
+  const yes = document.getElementById('dialogYes');
+  const no  = document.getElementById('dialogNo');
+  if(!back) return;
+
+  text.innerHTML = esc(label) +
+    '<input type="text" id="dialogText" value="'+esc(now||'')+'" style="margin-top:10px">';
+  yes.textContent = 'これに する';
+  no.textContent = 'やめる';
+  back.hidden = false;
+  setTimeout(() => {
+    const f = document.getElementById('dialogText');
+    if(f){ f.focus(); f.select(); }
+  }, 60);
+
+  const close = () => { back.hidden = true; yes.onclick = null; no.onclick = null; back.onclick = null; text.textContent = ''; };
+  yes.onclick = () => {
+    const v = (document.getElementById('dialogText')||{value:''}).value.trim();
+    close(); if(v && onOk) onOk(v);
+  };
+  no.onclick = close;
+  back.onclick = e => { if(e.target === back) close(); };
 }
 
 /* すうじを いれて もらう ウィンドウ */
@@ -2464,6 +2506,7 @@ function viewPlayLog(){
         '<input type="date" id="logDate" value="'+todayStr()+'" style="flex:1.4">' +
         '<input type="number" id="logN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+(state.today||'')+'" style="flex:1"></div>' +
       '<input type="text" id="logWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
+      playerPickHTML('logWin') +
       '<textarea id="logMemo" placeholder="かんそう（えらんだ ぜんぶに つきます・にんい）" style="min-height:66px"></textarea>' +
       '<div style="margin-top:12px">' + playPhotoPickerHTML() + '</div>' +
     '</div>' +
@@ -2579,6 +2622,64 @@ function bindLendPicks(box){
   });
 }
 
+/* ---------------- なかまの なまえ ----------------
+   よく あそぶ 人を とうろく して おくと、
+   きろくや くじ引きで えらぶ だけで よく なる。 */
+function savePlayers(){ store.write(KEY.players, state.players); }
+
+function addPlayer(name){
+  const n = String(name || '').trim();
+  if(!n) return false;
+  if(state.players.some(p => p.name === n)) return false;
+  state.players.push({name:n});
+  savePlayers();
+  return true;
+}
+function removePlayer(name){
+  state.players = state.players.filter(p => p.name !== name);
+  savePlayers();
+}
+/* なまえを かえたら、これまでの きろくも まとめて なおす */
+function renamePlayer(oldName, newName){
+  const from = String(oldName||'').trim(), to = String(newName||'').trim();
+  if(!from || !to || from === to) return 0;
+  let count = 0;
+  state.games.forEach(g => {
+    playsOf(g).forEach(pl => {
+      if(pl.w === from){ pl.w = to; count++; }
+    });
+  });
+  const i = state.players.findIndex(p => p.name === from);
+  if(i >= 0) state.players[i].name = to;
+  savePlayers();
+  if(count) saveGames();
+  return count;
+}
+/* その人が かった かいすう */
+function winCount(name){
+  let n = 0;
+  state.games.forEach(g => playsOf(g).forEach(pl => { if(pl.w === name) n++; }));
+  return n;
+}
+/* きろくに でて くるが、まだ とうろく して いない なまえ */
+function unknownPlayers(){
+  const known = state.players.map(p => p.name);
+  const seen = {};
+  state.games.forEach(g => playsOf(g).forEach(pl => {
+    const w = (pl.w || '').trim();
+    if(w && known.indexOf(w) < 0) seen[w] = (seen[w] || 0) + 1;
+  }));
+  return Object.keys(seen).map(n => ({name:n, count:seen[n]})).sort((a,b) => b.count - a.count);
+}
+/* なまえを えらぶ ボタン（きろくの 入力らんの したに だす） */
+function playerPickHTML(targetId){
+  if(!state.players.length) return '';
+  return '<div class="chips" style="margin:-4px 0 8px">' +
+    state.players.map(p =>
+      '<button type="button" class="chip sm" data-pickname="'+esc(targetId)+'|'+esc(p.name)+'">'+esc(p.name)+'</button>').join('') +
+  '</div>';
+}
+
 /* ---------------- どうぐ ぜんぱんの しくみ ---------------- */
 function saveScore(){ store.write(KEY.score, state.score); }
 function saveCounters(){ store.write(KEY.counters, state.counters); }
@@ -2645,7 +2746,9 @@ function scoreHTML(){
     return '<p class="count" style="margin:0 0 8px">あそぶ 人の なまえを いれて はじめます。</p>' +
       '<div class="row"><input type="text" id="scoreNames" placeholder="たろう はなこ じろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="scoreNames" style="flex:0 0 auto">けす</button>' +
-      '<button class="mini" id="scoreStart" style="flex:0 0 auto">はじめる</button></div>';
+      '<button class="mini" id="scoreStart" style="flex:0 0 auto">はじめる</button></div>' +
+      (state.players.length ? '<p class="count" style="margin:8px 0 0">' +
+        '<button class="mini" data-fillnames="scoreNames">なかま ぜんいんを いれる</button></p>' : '');
   }
   const totals = sc.names.map((_, i) => sc.rows.reduce((a, r) => a + (Number(r[i]) || 0), 0));
   const best = Math.max.apply(null, totals);
@@ -2691,7 +2794,9 @@ function counterHTML(){
     return '<p class="count" style="margin:0 0 8px">ライフ・とくてん・のこりかず など、なんにでも つかえます。</p>' +
       '<div class="row"><input type="text" id="counterNames" placeholder="たろう はなこ／または ライフ" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="counterNames" style="flex:0 0 auto">けす</button>' +
-      '<button class="mini" id="counterStart" style="flex:0 0 auto">つくる</button></div>';
+      '<button class="mini" id="counterStart" style="flex:0 0 auto">つくる</button></div>' +
+      (state.players.length ? '<p class="count" style="margin:8px 0 0">' +
+        '<button class="mini" data-fillnames="counterNames">なかま ぜんいんを いれる</button></p>' : '');
   }
   return state.counters.map((c, i) =>
     '<div class="admin-row" style="align-items:center">' +
@@ -2902,6 +3007,7 @@ function playEditHTML(gid, i, pl){
       '<input type="date" id="recD" value="'+esc(pl.d||todayStr())+'" style="flex:1.4">' +
       '<input type="number" id="recN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+esc(pl.n||'')+'" style="flex:1"></div>' +
     '<input type="text" id="recW" placeholder="かった人（にんい）" value="'+esc(pl.w||'')+'" style="margin-bottom:8px">' +
+    playerPickHTML('recW') +
     '<textarea id="recM" placeholder="かんそう・おぼえがき" style="min-height:110px">'+esc(pl.m||'')+'</textarea>' +
     '<div style="margin-top:12px">' + playPhotoPickerHTML() + '</div>' +
     '<div class="btn-row" style="margin-top:10px">' +
@@ -3087,6 +3193,7 @@ const TOOLS = [
   {id:'lot',     name:'くじ引き',     icon:'target',    desc:'ひとりを えらぶ'},
   {id:'team',    name:'チーム分け',   icon:'people',    desc:'チームを つくる'},
   {id:'amida',   name:'あみだくじ',   icon:'ladder',    desc:'じゅんばん・あたり'},
+  {id:'names',   name:'なかまの なまえ', icon:'people2', desc:'とうろく・なおす'},
   {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'}
 ];
 
@@ -3146,6 +3253,8 @@ function toolLotHTML(){
     '<div class="row" style="margin-bottom:12px">' +
       '<input type="text" id="firstNames" placeholder="れい：たろう はなこ じろう／4" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="firstNames" style="flex:0 0 auto">けす</button></div>' +
+      (state.players.length ? '<p class="count" style="margin:0 0 8px">' +
+        '<button class="mini" data-fillnames="firstNames">なかま ぜんいんを いれる</button></p>' : '') +
     '<button class="btn primary" id="firstBtn" style="width:100%">▶ ちゅうせんを はじめる</button>' +
     '<div id="firstResult"></div>';
 }
@@ -3154,6 +3263,8 @@ function toolTeamHTML(){
     '<div class="row" style="margin-bottom:8px">' +
       '<input type="text" id="teamNames" placeholder="れい：たろう はなこ じろう しろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
       '<button class="mini warn" data-clearnames="teamNames" style="flex:0 0 auto">けす</button></div>' +
+      (state.players.length ? '<p class="count" style="margin:0 0 8px">' +
+        '<button class="mini" data-fillnames="teamNames">なかま ぜんいんを いれる</button></p>' : '') +
     '<div class="chips" style="margin-bottom:10px">' +
       [2,3,4].map(n => '<button class="chip sm" data-teamn="'+n+'">'+n+'チーム</button>').join('') +
     '</div>' +
@@ -3339,6 +3450,8 @@ function toolAmidaHTML(){
       '<div class="row" style="margin-bottom:10px">' +
         '<input type="text" id="amidaNames" placeholder="たろう はなこ じろう／または 4" value="'+esc(state.lastNames)+'" style="flex:2">' +
         '<button class="mini warn" data-clearnames="amidaNames" style="flex:0 0 auto">けす</button></div>' +
+      (state.players.length ? '<p class="count" style="margin:0 0 8px">' +
+        '<button class="mini" data-fillnames="amidaNames">なかま ぜんいんを いれる</button></p>' : '') +
       '<p class="count" style="margin:0 0 8px">したに ならべる もの（あたり・じゅんばん など）</p>' +
       '<div class="chips" style="margin-bottom:10px">' +
         '<button class="chip sm" data-amidagoal="order" aria-pressed="true">じゅんばん（1ばん・2ばん…）</button>' +
@@ -3412,6 +3525,41 @@ function toolAmidaHTML(){
   return html;
 }
 
+function toolNamesHTML(){
+  const list = state.players.slice().sort((a,b) => winCount(b.name) - winCount(a.name) || a.name.localeCompare(b.name,'ja'));
+  const unknown = unknownPlayers();
+
+  let html = '<p class="count" style="margin:0 0 10px">よく あそぶ 人を とうろく して おくと、きろくの「かった人」や くじ引きで えらぶ だけで よく なります。<br>' +
+    'なまえを なおすと、これまでの きろくも まとめて かわります。</p>' +
+
+    '<div class="row" style="margin-bottom:14px">' +
+      '<input type="text" id="newPlayer" placeholder="なまえを いれる" style="flex:2">' +
+      '<button class="mini" id="addPlayerBtn" style="flex:0 0 auto">ついか</button></div>';
+
+  if(list.length){
+    html += list.map(p =>
+      '<div class="admin-row">' +
+        '<div class="t"><b>'+esc(p.name)+'</b>' +
+          '<span>'+(winCount(p.name) ? winCount(p.name)+'かい かって いる' : 'かちの きろくは まだ')+'</span></div>' +
+        '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>' +
+        '<button class="mini warn" data-delplayer="'+esc(p.name)+'">けす</button>' +
+      '</div>').join('');
+  }else{
+    html += '<div class="note">まだ とうろく されて いません。</div>';
+  }
+
+  if(unknown.length){
+    html += '<div class="divider"></div>' +
+      '<h2 class="sec">きろくに ある なまえ</h2>' +
+      '<p class="count">きろくには あるけれど、まだ とうろくして いない なまえです。</p>' +
+      '<div class="chips" style="margin-top:8px">' +
+        unknown.map(u => '<button class="chip sm" data-addknown="'+esc(u.name)+'">＋ '+esc(u.name)+'（'+u.count+'）</button>').join('') +
+      '</div>';
+  }
+
+  return html;
+}
+
 function toolBodyHTML(id){
   if(id === 'timer')   return toolTimerHTML();
   if(id === 'dice')    return diceHTML();
@@ -3420,6 +3568,7 @@ function toolBodyHTML(id){
   if(id === 'lot')     return toolLotHTML();
   if(id === 'team')    return toolTeamHTML();
   if(id === 'amida')   return toolAmidaHTML();
+  if(id === 'names')   return toolNamesHTML();
   if(id === 'log')     return toolLogHTML();
   return '';
 }
@@ -4137,6 +4286,47 @@ function bind(r){
 
   /* なまえを タップした ときの しょりは、画面ぜんたいで うけとる
      （下の amidaPathTap を つかう。ボタンを つくり直しても かならず きく） */
+
+  app.querySelectorAll('[data-pickname]').forEach(b => b.onclick = () => {
+    const parts = String(b.dataset.pickname).split('|');
+    const inp = document.getElementById(parts[0]);
+    if(inp) inp.value = parts[1];
+  });
+  app.querySelectorAll('[data-fillnames]').forEach(b => b.onclick = () => {
+    const inp = document.getElementById(b.dataset.fillnames);
+    if(inp){
+      inp.value = state.players.map(p => p.name).join(' ');
+      saveNames(inp.value);
+    }
+  });
+
+  /* --- なかまの なまえ --- */
+  const addPlayerBtn = document.getElementById('addPlayerBtn');
+  if(addPlayerBtn) addPlayerBtn.onclick = () => {
+    const inp = document.getElementById('newPlayer');
+    const n = (inp ? inp.value : '').trim();
+    if(!n) return toast('なまえを いれて ください');
+    if(!addPlayer(n)) return toast('もう とうろく されて います');
+    if(inp) inp.value = '';
+    render(); toast(n + ' を とうろく しました');
+  };
+  app.querySelectorAll('[data-addknown]').forEach(b => b.onclick = () => {
+    if(addPlayer(b.dataset.addknown)){ render(); toast(b.dataset.addknown + ' を とうろく しました'); }
+  });
+  app.querySelectorAll('[data-delplayer]').forEach(b => b.onclick = () => {
+    const name = b.dataset.delplayer;
+    ask(name + ' を とうろくから けしますか？\nこれまでの きろくは のこります。', () => {
+      removePlayer(name); render(); toast('けしました');
+    });
+  });
+  app.querySelectorAll('[data-renameplayer]').forEach(b => b.onclick = () => {
+    const old = b.dataset.renameplayer;
+    askText('「'+old+'」を なんに かえますか？', old, v => {
+      const n = renamePlayer(old, v);
+      render();
+      toast(n ? 'きろく '+n+'けんも いっしょに なおしました' : 'なまえを なおしました');
+    });
+  });
 
   /* --- サイコロ --- */
   app.querySelectorAll('[data-dicecount]').forEach(b => b.onclick = () => {
