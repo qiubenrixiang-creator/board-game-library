@@ -418,6 +418,15 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th{color:var(--accent)}
 
 /* ---------- メモ・とうひょう ---------- */
+.memo-line{
+  display:flex;align-items:center;gap:8px;margin-bottom:8px;
+}
+.memo-input{
+  flex:1;min-width:0;padding:9px 10px;border:2px solid var(--frame);background:var(--bg-2);color:var(--text);
+}
+.memo-line.done .memo-input{
+  opacity:.55;text-decoration:line-through;
+}
 .memo-check{
   flex:0 0 auto;width:30px;height:30px;padding:0;
   border:3px solid var(--frame);background:var(--panel);color:var(--accent);
@@ -634,6 +643,23 @@ body.big-tool .lede{font-size:26px}
 @media (prefers-reduced-motion:reduce){ #flash{display:none} }
 
 /* うごいて いる タイマーを どの画面でも みえる ように する */
+/* メモは どの画面からでも ひらける */
+#memoBadge{
+  position:fixed;left:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:95;
+  background:var(--panel);border:3px solid var(--frame);color:var(--accent-2);
+  box-shadow:var(--shadow);padding:8px 10px;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+}
+#memoBadge .badge-ico{width:20px;height:20px;display:block;color:var(--accent-2)}
+#memoBadge[hidden]{display:none}
+#memoBadge.dragging{opacity:.9;box-shadow:0 0 0 3px var(--accent-2)}
+#memoBadge.has::after{
+  content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;
+  background:var(--accent);border:2px solid var(--panel);
+}
+body.big-tool #memoBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
+
 #timerBadge{
   position:fixed;right:12px;bottom:calc(92px + env(safe-area-inset-bottom));z-index:95;
   background:var(--panel);border:3px solid var(--accent);color:var(--accent);
@@ -684,6 +710,10 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
     <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり<span class="dot" id="dirtyDot" hidden></span></button>
   </div>
 </nav>
+
+<button id="memoBadge" aria-label="メモを ひらく">
+  <span class="badge-ico" data-icon="memo"></span>
+</button>
 
 <button id="timerBadge" hidden aria-label="タイマーを ひらく">
   <span class="badge-ico" data-icon="hourglass"></span><span id="timerBadgeText"></span>
@@ -1357,6 +1387,7 @@ const state = {
   chosen: {},                                       /* どうぐ ごとに えらんだ メンバー */
   memo: {mode:'check', text:'', items:[]},          /* メモ（チェックしき／じゆう） */
   vote: null,                                       /* とうひょう */
+  votePick: [], voteQuery: '', voteTitle: '', voteItems: '',   /* とうひょうの したじゅんび */
   turn: null,                                       /* てばん */
   lotPurpose: 'さいしょの人',                        /* くじで なにを きめるか */
   lastRandomId: null,
@@ -1782,6 +1813,7 @@ function render(){
   paintSoundBtns();
   paintDirtyDot();
   paintTimer();
+  paintMemoBadge();
 
   render._routeKey = routeKey;
   if(sameScreen){
@@ -1798,6 +1830,19 @@ function timerText(sec){
   const m = Math.floor(sec/60), s2 = sec % 60;
   return (m<10?'0':'')+m+':'+(s2<10?'0':'')+s2;
 }
+/* メモの ボタンの ひょうじを ととのえる */
+function paintMemoBadge(){
+  const el = document.getElementById('memoBadge');
+  if(!el) return;
+  const r = currentRoute();
+  el.hidden = (r.name === 'tool' && r.param === 'memo');
+  const m = state.memo || {};
+  const has = (m.mode === 'free')
+    ? !!(m.text && m.text.trim())
+    : (m.items || []).some(x => x.text && x.text.trim());
+  el.classList.toggle('has', has);
+}
+
 function paintTimer(){
   const el = document.getElementById('timerView');
   if(el) el.textContent = timerText(timerLeft);
@@ -3662,6 +3707,11 @@ function saveMemo(){ store.write(KEY.memo, state.memo); }
 
 function toolMemoHTML(){
   const m = state.memo;
+  /* さいしょから 5こ の らんを だして おく */
+  if(m.mode !== 'free' && (!m.items || !m.items.length)){
+    m.items = Array.from({length:5}, () => ({text:'', done:false}));
+  }
+
   let html = '<div class="chips" style="margin-bottom:10px">' +
       '<button class="chip sm" data-memomode="check" aria-pressed="'+(m.mode!=='free')+'">チェックしき</button>' +
       '<button class="chip sm" data-memomode="free" aria-pressed="'+(m.mode==='free')+'">じゆうに かく</button>' +
@@ -3675,27 +3725,22 @@ function toolMemoHTML(){
       '<button class="btn small" id="memoClear" style="width:100%;margin-top:10px">ぜんぶ けす</button>';
   }
 
-  const items = m.items || [];
-  const done = items.filter(x => x.done).length;
-  html += '<div class="row" style="margin-bottom:10px">' +
-      '<input type="text" id="memoNew" placeholder="かきとめる ことを いれる" style="flex:2">' +
-      '<button class="mini" id="memoAdd" style="flex:0 0 auto">ついか</button></div>';
+  const items = m.items;
+  const written = items.filter(x => x.text.trim()).length;
+  const done = items.filter(x => x.done && x.text.trim()).length;
 
-  if(items.length){
-    html += '<p class="count" style="margin:0 0 8px">'+done+' ／ '+items.length+' こ おわった</p>' +
-      items.map((x, i) =>
-        '<div class="admin-row" style="align-items:flex-start">' +
-          '<button class="memo-check'+(x.done?' on':'')+'" data-memotoggle="'+i+'" aria-label="チェック">'+(x.done?'✓':'')+'</button>' +
-          '<div class="t"><b style="font-weight:400;'+(x.done?'opacity:.5;text-decoration:line-through':'')+'">'+esc(x.text)+'</b></div>' +
-          '<button class="mini warn" data-memodel="'+i+'">けす</button>' +
-        '</div>').join('') +
-      '<div class="btn-row" style="margin-top:10px">' +
-        '<button class="btn small" style="flex:1" id="memoClearDone">おわった ものを けす</button>' +
-        '<button class="btn small" style="flex:1" id="memoClear">ぜんぶ けす</button></div>';
-  }else{
-    html += '<div class="note">まだ ありません。うえの らんから ついか できます。<br>' +
-      'なぞときの てがかりや、しらべた ばしょの きろくに つかえます。</div>';
-  }
+  html += (written ? '<p class="count" style="margin:0 0 8px">'+done+' ／ '+written+' こ おわった</p>' : '') +
+    items.map((x, i) =>
+      '<div class="memo-line'+(x.done ? ' done' : '')+'">' +
+        '<button class="memo-check'+(x.done?' on':'')+'" data-memotoggle="'+i+'" aria-label="チェック">'+(x.done?'✓':'')+'</button>' +
+        '<input type="text" class="memo-input" data-memotext="'+i+'" value="'+esc(x.text)+'" placeholder="ここに かく">' +
+      '</div>').join('') +
+
+    '<div class="btn-row" style="margin-top:12px">' +
+      '<button class="btn small" style="flex:1" id="memoMore">＋ らんを ふやす</button>' +
+      '<button class="btn small" style="flex:1" id="memoClearDone">チェックした ものを けす</button></div>' +
+    '<button class="btn small" id="memoClear" style="width:100%;margin-top:8px">ぜんぶ けす</button>';
+
   return html;
 }
 
@@ -3705,31 +3750,63 @@ function saveVote(){ store.write(KEY.vote, state.vote); }
 
 function toolVoteHTML(){
   const v = state.vote;
+
   if(!v){
+    const picked = state.votePick || [];
+    const q = normalizeText(state.voteQuery || '');
+    let list = ownedGames();
+    if(q) list = list.filter(g => searchIndex(g).includes(q));
+    list = list.slice(0, 40);
+
     return '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ルールの きめかたなどを みんなで きめられます。</p>' +
       '<div class="row" style="margin-bottom:10px">' +
-        '<input type="text" id="voteTitle" placeholder="なにを きめる？（れい：つぎの ゲーム）" style="flex:2"></div>' +
-      '<div class="row" style="margin-bottom:10px">' +
-        '<input type="text" id="voteItems" placeholder="こうほを スペースで くぎる" style="flex:2"></div>' +
-      '<p class="count" style="margin:0 0 10px">ずかんから えらぶ ことも できます。</p>' +
-      '<div class="btn-row">' +
-        '<button class="btn small" style="flex:1" id="voteFromGames">ずかんから えらぶ</button>' +
-        '<button class="btn primary" style="flex:1" id="voteStart">とうひょうを はじめる</button></div>';
+        '<input type="text" id="voteTitle" placeholder="なにを きめる？（れい：つぎの ゲーム）" value="'+esc(state.voteTitle||'')+'" style="flex:2"></div>' +
+
+      '<label class="lbl">こうほ<span class="hint">じぶんで かく</span></label>' +
+      '<input type="text" id="voteItems" placeholder="スペースで くぎる" value="'+esc(state.voteItems||'')+'" style="margin-bottom:14px">' +
+
+      '<label class="lbl">ずかんから えらぶ<span class="hint">タップで ついか</span></label>' +
+      '<input type="search" id="voteSearch" placeholder="ゲームめいで さがす" value="'+esc(state.voteQuery||'')+'" ' +
+        'autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px">' +
+      (picked.length ?
+        '<p class="count" style="margin:0 0 6px">えらんだ ゲーム（'+picked.length+'）：' +
+          esc(picked.join('、')) + '</p>' : '') +
+      '<div class="chips" style="max-height:200px;overflow:auto;margin-bottom:10px">' +
+        (list.length ? list.map(g =>
+          '<button class="chip sm" data-votepick="'+esc(g.title)+'" aria-pressed="'+(picked.indexOf(g.title) >= 0)+'">'+esc(g.title)+'</button>').join('')
+        : '<span class="count">みつかりません でした。</span>') +
+      '</div>' +
+
+      '<div class="btn-row" style="margin-bottom:10px">' +
+        '<button class="btn small" style="flex:1" id="voteRandom">ランダムに 4つ</button>' +
+        '<button class="btn small" style="flex:1" id="voteClearPick">えらびなおす</button></div>' +
+
+      '<button class="btn primary" id="voteStart" style="width:100%">とうひょうを はじめる</button>';
   }
 
+  /* とうひょう中は かずを いっさい ださない */
   const total = v.items.reduce((a, x) => a + x.n, 0);
   const max = Math.max.apply(null, v.items.map(x => x.n));
+
   return '<p class="count" style="margin:0 0 4px">'+esc(v.title || 'とうひょう')+'</p>' +
-    '<p class="count" style="margin:0 0 10px">ぜんぶで '+total+'ひょう／こうほを タップで 1ぴょう いれる</p>' +
+    '<p class="count" style="margin:0 0 10px">' +
+      (v.open ? 'ぜんぶで '+total+'ひょう' : 'こうほを タップで 1ぴょう いれる（だれが どこに いれたかは わかりません）') + '</p>' +
+
     v.items.map((x, i) =>
       '<button class="vote-row'+(v.open && x.n === max && max > 0 ? ' top' : '')+'" data-votefor="'+i+'">' +
         '<span class="vote-name">'+esc(x.name)+'</span>' +
-        '<span class="vote-bar"><span style="width:'+(total ? Math.round(x.n/total*100) : 0)+'%"></span></span>' +
-        '<span class="vote-n">'+(v.open ? x.n+'ひょう' : (x.n ? '●'.repeat(Math.min(x.n,5)) : '　'))+'</span>' +
+        (v.open ?
+          '<span class="vote-bar"><span style="width:'+(total ? Math.round(x.n/total*100) : 0)+'%"></span></span>' +
+          '<span class="vote-n">'+x.n+'ひょう</span>'
+          : '<span class="vote-n">▶ いれる</span>') +
       '</button>').join('') +
+
+    (!v.open ? '<p class="count" style="margin:10px 0 0">いま '+total+'人が いれました（だれが どこかは ひみつ）</p>' : '') +
+
     '<div class="btn-row" style="margin-top:12px">' +
-      '<button class="btn small" style="flex:1" id="voteToggle">'+(v.open ? 'かずを かくす' : 'けっかを みる')+'</button>' +
+      '<button class="btn primary" style="flex:1" id="voteToggle">'+(v.open ? 'とうひょうに もどる' : 'けっかを みる')+'</button>' +
       '<button class="btn small" style="flex:1" id="voteReset">やりなおす</button></div>' +
+
     (v.open && max > 0 ?
       '<div class="win" style="margin-top:12px;text-align:center">' +
         '<p class="encounter" style="margin:0">' +
@@ -3758,15 +3835,29 @@ function toolTurnHTML(){
       '<p class="tool-big" style="margin:6px 0 2px">'+esc(now)+'</p>' +
       '<p class="count" style="margin:0 0 14px">つぎは '+esc(next)+'</p>' +
     '</div>' +
-    '<div class="chips" style="justify-content:center;margin-bottom:12px">' +
+    (t.editing ?
+      /* じゅんばんを じぶんで きめる */
+      '<p class="count" style="margin:0 0 8px">▲▼で いれかえます。おわったら「かんりょう」。</p>' +
       t.names.map((n, i) =>
-        '<span class="chip sm'+((i === t.at % t.names.length) ? ' today' : '')+'">'+esc(n)+'</span>').join('') +
-    '</div>' +
-    '<button class="btn primary" id="turnNext" style="width:100%">▶ つぎの人へ</button>' +
-    '<div class="btn-row" style="margin-top:10px">' +
-      '<button class="btn small" style="flex:1" id="turnBack">1つ もどる</button>' +
-      '<button class="btn small" style="flex:1" id="turnShuffle">じゅんばんを かえる</button>' +
-      '<button class="btn small" style="flex:1" id="turnReset">やめる</button></div>';
+        '<div class="admin-row" style="align-items:center">' +
+          '<b style="flex:0 0 auto;color:var(--accent);min-width:2em">'+(i+1)+'.</b>' +
+          '<div class="t"><b style="font-weight:400">'+esc(n)+'</b></div>' +
+          '<button class="mini" data-turnup="'+i+'"'+(i === 0 ? ' disabled' : '')+'>▲</button>' +
+          '<button class="mini" data-turndown="'+i+'"'+(i === t.names.length-1 ? ' disabled' : '')+'>▼</button>' +
+        '</div>').join('') +
+      '<div class="btn-row" style="margin-top:10px">' +
+        '<button class="btn small" style="flex:1" id="turnShuffle">ランダムに する</button>' +
+        '<button class="btn primary" style="flex:1" id="turnEditDone">かんりょう</button></div>'
+      :
+      '<div class="chips" style="justify-content:center;margin-bottom:12px">' +
+        t.names.map((n, i) =>
+          '<span class="chip sm'+((i === t.at % t.names.length) ? ' today' : '')+'">'+esc(n)+'</span>').join('') +
+      '</div>' +
+      '<button class="btn primary" id="turnNext" style="width:100%">▶ つぎの人へ</button>' +
+      '<div class="btn-row" style="margin-top:10px">' +
+        '<button class="btn small" style="flex:1" id="turnBack">1つ もどる</button>' +
+        '<button class="btn small" style="flex:1" id="turnEdit">じゅんばんを かえる</button>' +
+        '<button class="btn small" style="flex:1" id="turnReset">やめる</button></div>');
 }
 
 function toolBodyHTML(id){
@@ -4560,61 +4651,133 @@ function bind(r){
     memoText.addEventListener('input', () => { if(!composing) later(); });
     memoText.addEventListener('blur', () => { state.memo.text = memoText.value; saveMemo(); });
   }
-  const memoAdd = document.getElementById('memoAdd');
-  if(memoAdd) memoAdd.onclick = () => {
-    const inp = document.getElementById('memoNew');
-    const t = (inp ? inp.value : '').trim();
-    if(!t) return toast('かく ことを いれて ください');
-    state.memo.items = (state.memo.items || []).concat([{text:t, done:false}]);
-    saveMemo();
-    if(inp) inp.value = '';
-    render();
-  };
+  /* かいた ものを おぼえる（画面は 作り直さない ので、字を うつのを じゃま しない） */
+  app.querySelectorAll('[data-memotext]').forEach(inp => {
+    let composing = false;
+    const later = () => {
+      clearTimeout(bind._memoTxt);
+      bind._memoTxt = setTimeout(() => {
+        const i = Number(inp.dataset.memotext);
+        if(state.memo.items[i]){ state.memo.items[i].text = inp.value; saveMemo(); }
+      }, 400);
+    };
+    inp.addEventListener('compositionstart', () => { composing = true; });
+    inp.addEventListener('compositionend', () => { composing = false; later(); });
+    inp.addEventListener('input', () => { if(!composing) later(); });
+    inp.addEventListener('blur', () => {
+      const i = Number(inp.dataset.memotext);
+      if(state.memo.items[i]){ state.memo.items[i].text = inp.value; saveMemo(); }
+    });
+  });
+
+  /* チェックは 画面ぜんたいを 作り直さず、その行だけ 見た目を かえる */
   app.querySelectorAll('[data-memotoggle]').forEach(b => b.onclick = () => {
     const i = Number(b.dataset.memotoggle);
     const it = state.memo.items[i];
     if(!it) return;
+    /* うっている とちゅうの もじも ひろって おく */
+    const inp = app.querySelector('[data-memotext="'+i+'"]');
+    if(inp) it.text = inp.value;
     it.done = !it.done;
-    saveMemo(); render(); playClick();
+    saveMemo();
+    b.textContent = it.done ? '✓' : '';
+    b.classList.toggle('on', it.done);
+    const line = b.closest('.memo-line');
+    if(line) line.classList.toggle('done', it.done);
+    playClick();
   });
-  app.querySelectorAll('[data-memodel]').forEach(b => b.onclick = () => {
-    state.memo.items.splice(Number(b.dataset.memodel), 1);
+
+  const memoMore = document.getElementById('memoMore');
+  if(memoMore) memoMore.onclick = () => {
+    /* いま うっている ないようを ひろってから ふやす */
+    app.querySelectorAll('[data-memotext]').forEach(inp => {
+      const i = Number(inp.dataset.memotext);
+      if(state.memo.items[i]) state.memo.items[i].text = inp.value;
+    });
+    for(let k = 0; k < 3; k++) state.memo.items.push({text:'', done:false});
     saveMemo(); render();
-  });
+  };
+
   const memoClearDone = document.getElementById('memoClearDone');
   if(memoClearDone) memoClearDone.onclick = () => {
+    app.querySelectorAll('[data-memotext]').forEach(inp => {
+      const i = Number(inp.dataset.memotext);
+      if(state.memo.items[i]) state.memo.items[i].text = inp.value;
+    });
     state.memo.items = state.memo.items.filter(x => !x.done);
-    saveMemo(); render(); toast('おわった ものを けしました');
+    while(state.memo.items.length < 5) state.memo.items.push({text:'', done:false});
+    saveMemo(); render(); toast('チェックした ものを けしました');
   };
   const memoClear = document.getElementById('memoClear');
   if(memoClear) memoClear.onclick = () => {
     ask('メモを ぜんぶ けしますか？', () => {
       if(state.memo.mode === 'free') state.memo.text = '';
-      else state.memo.items = [];
+      else state.memo.items = Array.from({length:5}, () => ({text:'', done:false}));
       saveMemo(); render(); toast('けしました');
     });
   };
 
   /* --- とうひょう --- */
-  const voteStart = document.getElementById('voteStart');
-  if(voteStart) voteStart.onclick = () => {
-    const title = (document.getElementById('voteTitle')||{value:''}).value.trim();
-    const items = parseNames((document.getElementById('voteItems')||{value:''}).value);
-    if(items.length < 2) return toast('こうほを 2つ いじょう いれて ください');
-    state.vote = {title: title || 'とうひょう', items: items.map(n => ({name:n, n:0})), open:false};
-    saveVote(); render();
+  /* えらんだ ものを おぼえて おく（画面を 作り直しても きえない） */
+  const keepVoteInputs = () => {
+    const t = document.getElementById('voteTitle');
+    const i = document.getElementById('voteItems');
+    if(t) state.voteTitle = t.value;
+    if(i) state.voteItems = i.value;
   };
-  const voteFromGames = document.getElementById('voteFromGames');
-  if(voteFromGames) voteFromGames.onclick = () => {
-    /* ずかんから ランダムに 4つ だして こうほに する */
+
+  const voteSearch = document.getElementById('voteSearch');
+  if(voteSearch){
+    let composing = false;
+    const later = () => {
+      clearTimeout(bind._vq);
+      bind._vq = setTimeout(() => { keepVoteInputs(); state.voteQuery = voteSearch.value; render(); }, 250);
+    };
+    voteSearch.addEventListener('compositionstart', () => { composing = true; });
+    voteSearch.addEventListener('compositionend', () => { composing = false; later(); });
+    voteSearch.addEventListener('input', () => { if(!composing) later(); });
+  }
+
+  app.querySelectorAll('[data-votepick]').forEach(b => b.onclick = () => {
+    keepVoteInputs();
+    const name = b.dataset.votepick;
+    state.votePick = state.votePick || [];
+    const i = state.votePick.indexOf(name);
+    if(i >= 0) state.votePick.splice(i, 1);
+    else state.votePick.push(name);
+    render();
+  });
+
+  const voteRandom = document.getElementById('voteRandom');
+  if(voteRandom) voteRandom.onclick = () => {
+    keepVoteInputs();
     const pool = ownedGames();
     if(pool.length < 2) return toast('ずかんに ゲームが たりません');
-    const pick = shuffled(pool).slice(0, Math.min(4, pool.length));
-    const inp = document.getElementById('voteItems');
-    if(inp) inp.value = pick.map(g => g.title).join(' ');
-    const t = document.getElementById('voteTitle');
-    if(t && !t.value) t.value = 'つぎの ゲーム';
-    toast('ずかんから えらびました。かえても OKです');
+    state.votePick = shuffled(pool).slice(0, Math.min(4, pool.length)).map(g => g.title);
+    if(!state.voteTitle) state.voteTitle = 'つぎの ゲーム';
+    render();
+    toast('ランダムに えらびました。けしたり たしたり できます');
+  };
+
+  const voteClearPick = document.getElementById('voteClearPick');
+  if(voteClearPick) voteClearPick.onclick = () => {
+    keepVoteInputs();
+    state.votePick = [];
+    render();
+  };
+
+  const voteStart = document.getElementById('voteStart');
+  if(voteStart) voteStart.onclick = () => {
+    keepVoteInputs();
+    const title = (state.voteTitle || '').trim();
+    const typed = parseNames(state.voteItems || '');
+    const picked = state.votePick || [];
+    /* かいた ものと、ずかんから えらんだ ものを あわせる */
+    const items = typed.concat(picked.filter(n => typed.indexOf(n) < 0));
+    if(items.length < 2) return toast('こうほを 2つ いじょう えらんで ください');
+    state.vote = {title: title || 'とうひょう', items: items.map(n => ({name:n, n:0})), open:false};
+    state.votePick = []; state.voteTitle = ''; state.voteItems = ''; state.voteQuery = '';
+    saveVote(); render();
   };
   app.querySelectorAll('[data-votefor]').forEach(b => b.onclick = () => {
     const i = Number(b.dataset.votefor);
@@ -4658,10 +4821,34 @@ function bind(r){
     t.at--;
     saveTurn(); render();
   };
+  const turnEdit = document.getElementById('turnEdit');
+  if(turnEdit) turnEdit.onclick = () => { state.turn.editing = true; render(); };
+
+  const turnEditDone = document.getElementById('turnEditDone');
+  if(turnEditDone) turnEditDone.onclick = () => {
+    state.turn.editing = false;
+    state.turn.at = 0; state.turn.round = 1;
+    saveTurn(); render(); playClick();
+  };
+
+  app.querySelectorAll('[data-turnup]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.turnup);
+    const ns = state.turn.names;
+    if(i <= 0) return;
+    const t = ns[i-1]; ns[i-1] = ns[i]; ns[i] = t;
+    saveTurn(); render(); playClick();
+  });
+  app.querySelectorAll('[data-turndown]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.turndown);
+    const ns = state.turn.names;
+    if(i >= ns.length-1) return;
+    const t = ns[i+1]; ns[i+1] = ns[i]; ns[i] = t;
+    saveTurn(); render(); playClick();
+  });
+
   const turnShuffle = document.getElementById('turnShuffle');
   if(turnShuffle) turnShuffle.onclick = () => {
     state.turn.names = shuffled(state.turn.names);
-    state.turn.at = 0; state.turn.round = 1;
     saveTurn(); render(); playClick();
   };
   const turnReset = document.getElementById('turnReset');
@@ -5484,6 +5671,59 @@ window.addEventListener('focus', tickTimer);
 
 /* タイマーの ひょうじは ゆびで すきな ばしょへ うごかせる。
    すこしでも うごかしたら「はこぶ」、うごかさなければ「タップ」として あつかう。 */
+/* メモの ボタン。ゆびで うごかせて、おすと メモが ひらく。 */
+const memoBadgeEl = document.getElementById('memoBadge');
+if(memoBadgeEl){
+  const KEY_MPOS = 'bgl.memoBadgePos';
+  let mdrag = null;
+  const clampM = (v, min, max) => Math.max(min, Math.min(max, v));
+  function placeMemoBadge(x, y){
+    const w = memoBadgeEl.offsetWidth || 46, h = memoBadgeEl.offsetHeight || 42;
+    const nx = clampM(x, 4, window.innerWidth - w - 4);
+    const ny = clampM(y, 4, window.innerHeight - h - 4);
+    memoBadgeEl.style.left = nx + 'px';
+    memoBadgeEl.style.top = ny + 'px';
+    memoBadgeEl.style.right = 'auto';
+    memoBadgeEl.style.bottom = 'auto';
+    return {x:nx, y:ny};
+  }
+  const savedM = store.read(KEY_MPOS, null);
+  if(savedM && typeof savedM.x === 'number'){
+    requestAnimationFrame(() => placeMemoBadge(savedM.x, savedM.y));
+  }
+  window.addEventListener('resize', () => {
+    if(memoBadgeEl.style.left){
+      const r = memoBadgeEl.getBoundingClientRect();
+      placeMemoBadge(r.left, r.top);
+    }
+  });
+  memoBadgeEl.addEventListener('pointerdown', e => {
+    const r = memoBadgeEl.getBoundingClientRect();
+    mdrag = {dx: e.clientX - r.left, dy: e.clientY - r.top, moved:false};
+    memoBadgeEl.setPointerCapture(e.pointerId);
+    memoBadgeEl.classList.add('dragging');
+  });
+  memoBadgeEl.addEventListener('pointermove', e => {
+    if(!mdrag) return;
+    if(Math.abs(e.movementX) + Math.abs(e.movementY) > 0) mdrag.moved = true;
+    placeMemoBadge(e.clientX - mdrag.dx, e.clientY - mdrag.dy);
+  });
+  const endMDrag = () => {
+    if(!mdrag) return;
+    memoBadgeEl.classList.remove('dragging');
+    if(mdrag.moved){
+      const r = memoBadgeEl.getBoundingClientRect();
+      store.write(KEY_MPOS, {x:r.left, y:r.top});
+    }else{
+      playClick();
+      go('#/tool/memo');
+    }
+    mdrag = null;
+  };
+  memoBadgeEl.addEventListener('pointerup', endMDrag);
+  memoBadgeEl.addEventListener('pointercancel', endMDrag);
+}
+
 const timerBadgeEl = document.getElementById('timerBadge');
 if(timerBadgeEl){
   const KEY_POS = 'bgl.timerBadgePos';
