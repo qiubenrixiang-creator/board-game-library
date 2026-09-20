@@ -417,6 +417,29 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th, .print-table td{border:1px solid var(--line, #999);padding:5px 6px;font-size:12px;text-align:left}
 .print-table th{color:var(--accent)}
 
+/* ---------- メモ・とうひょう ---------- */
+.memo-check{
+  flex:0 0 auto;width:30px;height:30px;padding:0;
+  border:3px solid var(--frame);background:var(--panel);color:var(--accent);
+  font-size:16px;line-height:1;cursor:pointer;
+}
+.memo-check.on{border-color:var(--accent)}
+.vote-row{
+  display:flex;align-items:center;gap:10px;width:100%;margin-bottom:8px;padding:10px 12px;
+  background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
+  color:var(--text);text-align:left;cursor:pointer;
+}
+.vote-row:active{transform:translate(2px,2px);box-shadow:none}
+.vote-row.top{border-color:var(--accent);color:var(--accent)}
+.vote-name{flex:1;font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vote-bar{
+  flex:0 0 72px;height:12px;border:2px solid var(--line-soft);background:var(--bg-2);display:block;
+}
+.vote-bar span{display:block;height:100%;background:var(--accent-2)}
+.vote-row.top .vote-bar span{background:var(--accent)}
+.vote-n{flex:0 0 auto;font-size:12px;color:var(--muted);min-width:4em;text-align:right}
+.vote-row.top .vote-n{color:var(--accent)}
+
 /* ---------- カレンダー ---------- */
 .cal-grid{
   display:grid;grid-template-columns:repeat(7,1fr);gap:3px;
@@ -720,6 +743,9 @@ const KEY = {
   counters:'bgl.counters',       /* カウンター */
   names:'bgl.lastNames',         /* まえに いれた なまえ */
   players:'bgl.playerNames',     /* いつもの なかまの なまえ */
+  memo:'bgl.memo',               /* メモ */
+  vote:'bgl.vote',               /* とうひょう */
+  turn:'bgl.turn',               /* てばん */
   backupAt:'bgl.lastBackup',     /* さいごに ひかえを つくった日 */
   today:'bgl.todayPlayers'  /* きょうの メンバーの にんずう */
 };
@@ -989,6 +1015,39 @@ const ICONS = {
     '###.###.',
     '#.#.#.#.',
     '###.###.'
+  ],
+  /* メモ（かきとめる ふだ） */
+  memo:[
+    '.######.',
+    '#......#',
+    '#.####.#',
+    '#......#',
+    '#.####.#',
+    '#......#',
+    '#.##...#',
+    '.######.'
+  ],
+  /* とうひょう（はこに いれる） */
+  vote:[
+    '..####..',
+    '.#....#.',
+    '#..##..#',
+    '#.#..#.#',
+    '#......#',
+    '########',
+    '#..##..#',
+    '########'
+  ],
+  /* てばん（やじるしで まわる） */
+  turn:[
+    '..####..',
+    '.#....#.',
+    '#...#..#',
+    '#..##..#',
+    '#.###..#',
+    '#..##..#',
+    '.#....#.',
+    '..####..'
   ],
   /* 大きく つかう（ぜんがめん） */
   expand:[
@@ -1296,6 +1355,9 @@ const state = {
   lastNames: '',                                    /* なまえの いれもの（くじ・チーム分け 共通） */
   players: [],                                      /* いつもの なかまの なまえ */
   chosen: {},                                       /* どうぐ ごとに えらんだ メンバー */
+  memo: {mode:'check', text:'', items:[]},          /* メモ（チェックしき／じゆう） */
+  vote: null,                                       /* とうひょう */
+  turn: null,                                       /* てばん */
   lotPurpose: 'さいしょの人',                        /* くじで なにを きめるか */
   lastRandomId: null,
   formImages: [], formTags: [], formVideos: []
@@ -1312,6 +1374,12 @@ function loadAll(){
   state.lastNames = store.read(KEY.names, '') || '';
   const pl = store.read(KEY.players, null);
   if(Array.isArray(pl)) state.players = pl;
+  const mo = store.read(KEY.memo, null);
+  if(mo && typeof mo === 'object') state.memo = {mode:mo.mode||'check', text:mo.text||'', items:Array.isArray(mo.items)?mo.items:[]};
+  const vo = store.read(KEY.vote, null);
+  if(vo && typeof vo === 'object') state.vote = vo;
+  const tu = store.read(KEY.turn, null);
+  if(tu && typeof tu === 'object') state.turn = tu;
   const f = store.read(KEY.filters, null);
   if(f && typeof f === 'object'){
     state.filters = { time:f.time||null, players:f.players||null,
@@ -3222,6 +3290,9 @@ const TOOLS = [
   {id:'team',    name:'チーム分け',   icon:'people',    desc:'チームを つくる'},
   {id:'amida',   name:'あみだくじ',   icon:'ladder',    desc:'じゅんばん・あたり'},
   {id:'names',   name:'なかまの なまえ', icon:'people2', desc:'とうろく・なおす'},
+  {id:'memo',    name:'メモ',         icon:'memo',      desc:'かきとめる'},
+  {id:'vote',    name:'とうひょう',   icon:'vote',      desc:'みんなで きめる'},
+  {id:'turn',    name:'てばん',       icon:'turn',      desc:'じゅんばんを まわす'},
   {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'}
 ];
 
@@ -3585,6 +3656,119 @@ function toolNamesHTML(){
   return html;
 }
 
+/* ---------------- メモ ----------------
+   チェックしき（1つずつ けしこむ）と じゆう（ながい ぶんしょう）を えらべる。 */
+function saveMemo(){ store.write(KEY.memo, state.memo); }
+
+function toolMemoHTML(){
+  const m = state.memo;
+  let html = '<div class="chips" style="margin-bottom:10px">' +
+      '<button class="chip sm" data-memomode="check" aria-pressed="'+(m.mode!=='free')+'">チェックしき</button>' +
+      '<button class="chip sm" data-memomode="free" aria-pressed="'+(m.mode==='free')+'">じゆうに かく</button>' +
+    '</div>';
+
+  if(m.mode === 'free'){
+    return html +
+      '<textarea id="memoText" placeholder="なんでも かいて おけます。&#10;なぞときの てがかり、こうしょうの やくそく、はつげんの きろく など。" ' +
+        'style="min-height:260px">'+esc(m.text||'')+'</textarea>' +
+      '<p class="count" style="margin:8px 0 0">かいた ものは じどうで のこります。</p>' +
+      '<button class="btn small" id="memoClear" style="width:100%;margin-top:10px">ぜんぶ けす</button>';
+  }
+
+  const items = m.items || [];
+  const done = items.filter(x => x.done).length;
+  html += '<div class="row" style="margin-bottom:10px">' +
+      '<input type="text" id="memoNew" placeholder="かきとめる ことを いれる" style="flex:2">' +
+      '<button class="mini" id="memoAdd" style="flex:0 0 auto">ついか</button></div>';
+
+  if(items.length){
+    html += '<p class="count" style="margin:0 0 8px">'+done+' ／ '+items.length+' こ おわった</p>' +
+      items.map((x, i) =>
+        '<div class="admin-row" style="align-items:flex-start">' +
+          '<button class="memo-check'+(x.done?' on':'')+'" data-memotoggle="'+i+'" aria-label="チェック">'+(x.done?'✓':'')+'</button>' +
+          '<div class="t"><b style="font-weight:400;'+(x.done?'opacity:.5;text-decoration:line-through':'')+'">'+esc(x.text)+'</b></div>' +
+          '<button class="mini warn" data-memodel="'+i+'">けす</button>' +
+        '</div>').join('') +
+      '<div class="btn-row" style="margin-top:10px">' +
+        '<button class="btn small" style="flex:1" id="memoClearDone">おわった ものを けす</button>' +
+        '<button class="btn small" style="flex:1" id="memoClear">ぜんぶ けす</button></div>';
+  }else{
+    html += '<div class="note">まだ ありません。うえの らんから ついか できます。<br>' +
+      'なぞときの てがかりや、しらべた ばしょの きろくに つかえます。</div>';
+  }
+  return html;
+}
+
+/* ---------------- とうひょう ----------------
+   こうほを ならべて、みんなで タップして きめる。 */
+function saveVote(){ store.write(KEY.vote, state.vote); }
+
+function toolVoteHTML(){
+  const v = state.vote;
+  if(!v){
+    return '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ルールの きめかたなどを みんなで きめられます。</p>' +
+      '<div class="row" style="margin-bottom:10px">' +
+        '<input type="text" id="voteTitle" placeholder="なにを きめる？（れい：つぎの ゲーム）" style="flex:2"></div>' +
+      '<div class="row" style="margin-bottom:10px">' +
+        '<input type="text" id="voteItems" placeholder="こうほを スペースで くぎる" style="flex:2"></div>' +
+      '<p class="count" style="margin:0 0 10px">ずかんから えらぶ ことも できます。</p>' +
+      '<div class="btn-row">' +
+        '<button class="btn small" style="flex:1" id="voteFromGames">ずかんから えらぶ</button>' +
+        '<button class="btn primary" style="flex:1" id="voteStart">とうひょうを はじめる</button></div>';
+  }
+
+  const total = v.items.reduce((a, x) => a + x.n, 0);
+  const max = Math.max.apply(null, v.items.map(x => x.n));
+  return '<p class="count" style="margin:0 0 4px">'+esc(v.title || 'とうひょう')+'</p>' +
+    '<p class="count" style="margin:0 0 10px">ぜんぶで '+total+'ひょう／こうほを タップで 1ぴょう いれる</p>' +
+    v.items.map((x, i) =>
+      '<button class="vote-row'+(v.open && x.n === max && max > 0 ? ' top' : '')+'" data-votefor="'+i+'">' +
+        '<span class="vote-name">'+esc(x.name)+'</span>' +
+        '<span class="vote-bar"><span style="width:'+(total ? Math.round(x.n/total*100) : 0)+'%"></span></span>' +
+        '<span class="vote-n">'+(v.open ? x.n+'ひょう' : (x.n ? '●'.repeat(Math.min(x.n,5)) : '　'))+'</span>' +
+      '</button>').join('') +
+    '<div class="btn-row" style="margin-top:12px">' +
+      '<button class="btn small" style="flex:1" id="voteToggle">'+(v.open ? 'かずを かくす' : 'けっかを みる')+'</button>' +
+      '<button class="btn small" style="flex:1" id="voteReset">やりなおす</button></div>' +
+    (v.open && max > 0 ?
+      '<div class="win" style="margin-top:12px;text-align:center">' +
+        '<p class="encounter" style="margin:0">' +
+          esc(v.items.filter(x => x.n === max).map(x => x.name).join('、')) + ' に きまり！</p></div>' : '');
+}
+
+/* ---------------- てばん ----------------
+   いま だれの ばんかを だす。「つぎへ」で まわる。 */
+function saveTurn(){ store.write(KEY.turn, state.turn); }
+
+function toolTurnHTML(){
+  const t = state.turn;
+  if(!t){
+    return '<p class="count" style="margin:0 0 10px">あそぶ 人を ならべて、いまの てばんを だします。<br>ちょうこう する 人が いても「だれの ばん？」が なくなります。</p>' +
+      '<div class="row" style="margin-bottom:8px">' +
+        '<input type="text" id="turnNames" placeholder="たろう はなこ じろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
+        '<button class="mini warn" data-clearnames="turnNames" style="flex:0 0 auto">けす</button></div>' +
+      playerChooserHTML('turnNames') +
+      '<button class="btn primary" id="turnStart" style="margin-top:10px;width:100%">じゅんばんを きめる</button>';
+  }
+
+  const now = t.names[t.at % t.names.length];
+  const next = t.names[(t.at + 1) % t.names.length];
+  return '<div style="text-align:center">' +
+      '<p class="count" style="margin:0">'+t.round+'しゅうめ</p>' +
+      '<p class="tool-big" style="margin:6px 0 2px">'+esc(now)+'</p>' +
+      '<p class="count" style="margin:0 0 14px">つぎは '+esc(next)+'</p>' +
+    '</div>' +
+    '<div class="chips" style="justify-content:center;margin-bottom:12px">' +
+      t.names.map((n, i) =>
+        '<span class="chip sm'+((i === t.at % t.names.length) ? ' today' : '')+'">'+esc(n)+'</span>').join('') +
+    '</div>' +
+    '<button class="btn primary" id="turnNext" style="width:100%">▶ つぎの人へ</button>' +
+    '<div class="btn-row" style="margin-top:10px">' +
+      '<button class="btn small" style="flex:1" id="turnBack">1つ もどる</button>' +
+      '<button class="btn small" style="flex:1" id="turnShuffle">じゅんばんを かえる</button>' +
+      '<button class="btn small" style="flex:1" id="turnReset">やめる</button></div>';
+}
+
 function toolBodyHTML(id){
   if(id === 'timer')   return toolTimerHTML();
   if(id === 'dice')    return diceHTML();
@@ -3593,6 +3777,9 @@ function toolBodyHTML(id){
   if(id === 'lot')     return toolLotHTML();
   if(id === 'team')    return toolTeamHTML();
   if(id === 'amida')   return toolAmidaHTML();
+  if(id === 'memo')    return toolMemoHTML();
+  if(id === 'vote')    return toolVoteHTML();
+  if(id === 'turn')    return toolTurnHTML();
   if(id === 'names')   return toolNamesHTML();
   if(id === 'log')     return toolLogHTML();
   return '';
@@ -4355,6 +4542,132 @@ function bind(r){
     state.chosen[tid] = [];
     applyChosen(tid);
   });
+
+  /* --- メモ --- */
+  app.querySelectorAll('[data-memomode]').forEach(b => b.onclick = () => {
+    state.memo.mode = b.dataset.memomode;
+    saveMemo(); render();
+  });
+  const memoText = document.getElementById('memoText');
+  if(memoText){
+    let composing = false;
+    const later = () => {
+      clearTimeout(bind._memo);
+      bind._memo = setTimeout(() => { state.memo.text = memoText.value; saveMemo(); }, 400);
+    };
+    memoText.addEventListener('compositionstart', () => { composing = true; });
+    memoText.addEventListener('compositionend', () => { composing = false; later(); });
+    memoText.addEventListener('input', () => { if(!composing) later(); });
+    memoText.addEventListener('blur', () => { state.memo.text = memoText.value; saveMemo(); });
+  }
+  const memoAdd = document.getElementById('memoAdd');
+  if(memoAdd) memoAdd.onclick = () => {
+    const inp = document.getElementById('memoNew');
+    const t = (inp ? inp.value : '').trim();
+    if(!t) return toast('かく ことを いれて ください');
+    state.memo.items = (state.memo.items || []).concat([{text:t, done:false}]);
+    saveMemo();
+    if(inp) inp.value = '';
+    render();
+  };
+  app.querySelectorAll('[data-memotoggle]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.memotoggle);
+    const it = state.memo.items[i];
+    if(!it) return;
+    it.done = !it.done;
+    saveMemo(); render(); playClick();
+  });
+  app.querySelectorAll('[data-memodel]').forEach(b => b.onclick = () => {
+    state.memo.items.splice(Number(b.dataset.memodel), 1);
+    saveMemo(); render();
+  });
+  const memoClearDone = document.getElementById('memoClearDone');
+  if(memoClearDone) memoClearDone.onclick = () => {
+    state.memo.items = state.memo.items.filter(x => !x.done);
+    saveMemo(); render(); toast('おわった ものを けしました');
+  };
+  const memoClear = document.getElementById('memoClear');
+  if(memoClear) memoClear.onclick = () => {
+    ask('メモを ぜんぶ けしますか？', () => {
+      if(state.memo.mode === 'free') state.memo.text = '';
+      else state.memo.items = [];
+      saveMemo(); render(); toast('けしました');
+    });
+  };
+
+  /* --- とうひょう --- */
+  const voteStart = document.getElementById('voteStart');
+  if(voteStart) voteStart.onclick = () => {
+    const title = (document.getElementById('voteTitle')||{value:''}).value.trim();
+    const items = parseNames((document.getElementById('voteItems')||{value:''}).value);
+    if(items.length < 2) return toast('こうほを 2つ いじょう いれて ください');
+    state.vote = {title: title || 'とうひょう', items: items.map(n => ({name:n, n:0})), open:false};
+    saveVote(); render();
+  };
+  const voteFromGames = document.getElementById('voteFromGames');
+  if(voteFromGames) voteFromGames.onclick = () => {
+    /* ずかんから ランダムに 4つ だして こうほに する */
+    const pool = ownedGames();
+    if(pool.length < 2) return toast('ずかんに ゲームが たりません');
+    const pick = shuffled(pool).slice(0, Math.min(4, pool.length));
+    const inp = document.getElementById('voteItems');
+    if(inp) inp.value = pick.map(g => g.title).join(' ');
+    const t = document.getElementById('voteTitle');
+    if(t && !t.value) t.value = 'つぎの ゲーム';
+    toast('ずかんから えらびました。かえても OKです');
+  };
+  app.querySelectorAll('[data-votefor]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.votefor);
+    if(!state.vote || !state.vote.items[i]) return;
+    state.vote.items[i].n++;
+    saveVote(); render(); playClick();
+  });
+  const voteToggle = document.getElementById('voteToggle');
+  if(voteToggle) voteToggle.onclick = () => {
+    state.vote.open = !state.vote.open;
+    saveVote(); render();
+    if(state.vote.open) playFanfare();
+  };
+  const voteReset = document.getElementById('voteReset');
+  if(voteReset) voteReset.onclick = () => {
+    ask('とうひょうを やりなおしますか？', () => { state.vote = null; saveVote(); render(); });
+  };
+
+  /* --- てばん --- */
+  const turnStart = document.getElementById('turnStart');
+  if(turnStart) turnStart.onclick = () => {
+    const raw = (document.getElementById('turnNames')||{value:''}).value;
+    const names = parseNames(raw);
+    if(names.length < 2) return toast('2人いじょう いれて ください');
+    saveNames(raw);
+    state.turn = {names: names, at: 0, round: 1};
+    saveTurn(); render();
+  };
+  const turnNext = document.getElementById('turnNext');
+  if(turnNext) turnNext.onclick = () => {
+    const t = state.turn;
+    t.at++;
+    if(t.at % t.names.length === 0) t.round++;
+    saveTurn(); render(); playClick();
+  };
+  const turnBack = document.getElementById('turnBack');
+  if(turnBack) turnBack.onclick = () => {
+    const t = state.turn;
+    if(t.at <= 0) return;
+    if(t.at % t.names.length === 0 && t.round > 1) t.round--;
+    t.at--;
+    saveTurn(); render();
+  };
+  const turnShuffle = document.getElementById('turnShuffle');
+  if(turnShuffle) turnShuffle.onclick = () => {
+    state.turn.names = shuffled(state.turn.names);
+    state.turn.at = 0; state.turn.round = 1;
+    saveTurn(); render(); playClick();
+  };
+  const turnReset = document.getElementById('turnReset');
+  if(turnReset) turnReset.onclick = () => {
+    ask('てばんを やめますか？', () => { state.turn = null; saveTurn(); render(); });
+  };
 
   /* --- なかまの なまえ --- */
   const addPlayerBtn = document.getElementById('addPlayerBtn');
