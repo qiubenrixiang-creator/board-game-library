@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-19T10:47:28.175Z",
+  "version": "2026-09-20T12:42:21.491Z",
   "tags": [
     {
       "name": "初心者",
@@ -111,6 +111,39 @@
     }
   ],
   "games": [
+    {
+      "id": "gmu9t357uwiqz4",
+      "title": "マスカレイドトリックパーティー",
+      "reading": "ますかれいどとりっくぱーてぃー",
+      "videos": [
+        "https://youtu.be/UblP3c_ewEk?si=jGljY1UwbQxmwwvZ",
+        "https://youtube.com/shorts/KtfK24SobUc?si=UGLF7k4FLRVX5ecw"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_8de4f80c-8457-486e-a031-834272b801f4.png"
+      ],
+      "playersMin": 3,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 10,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "トリックテイキング",
+        "リアルタイム",
+        "対戦",
+        "軽量級",
+        "未プレイ"
+      ],
+      "summary": "今宵は、仮面舞踏会。秘めた想い、君に届け。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
     {
       "id": "gmu89j79qvtubl",
       "title": "マジックキーズ 魔法の鍵",
