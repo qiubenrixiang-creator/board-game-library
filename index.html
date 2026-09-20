@@ -350,7 +350,13 @@ input,textarea,select{scroll-margin-top:90px;scroll-margin-bottom:110px}
 input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{
   outline:3px solid var(--accent);outline-offset:2px;
 }
-textarea{min-height:110px;resize:vertical;line-height:1.9}
+textarea{
+  min-height:110px;resize:vertical;line-height:1.9;
+  white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
+}
+/* 字が ふえたら たてに のびる らん */
+textarea.grow{min-height:0;resize:none;overflow:hidden}
+.memo-input{line-height:1.6;padding:9px 10px}
 .row{display:flex;gap:9px;align-items:center}
 .row > *{flex:1}
 .form-group{margin:0 0 16px}
@@ -433,6 +439,22 @@ h2.sec::before{content:"■ ";font-size:12px}
   font-size:16px;line-height:1;cursor:pointer;
 }
 .memo-check.on{border-color:var(--accent)}
+.vote-pick-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  max-height:280px;overflow:auto;margin-bottom:10px;padding:2px;
+}
+@media (max-width:360px){.vote-pick-grid{grid-template-columns:repeat(2,1fr)}}
+.vote-pick{
+  display:flex;flex-direction:column;gap:4px;padding:5px;
+  background:var(--panel);border:3px solid var(--frame);color:var(--text);cursor:pointer;text-align:center;
+}
+.vote-pick.on{border-color:var(--accent);color:var(--accent)}
+.vote-pick:active{transform:translate(1px,1px)}
+.vote-pick-name{
+  font-size:10.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.thumb.vote-thumb{width:42px;height:42px;min-height:0;flex:0 0 auto}
+.thumb.vote-thumb .glyph{font-size:17px}
 .vote-row{
   display:flex;align-items:center;gap:10px;width:100%;margin-bottom:8px;padding:10px 12px;
   background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
@@ -1814,6 +1836,7 @@ function render(){
   paintDirtyDot();
   paintTimer();
   paintMemoBadge();
+  setupGrow(app);
 
   render._routeKey = routeKey;
   if(sameScreen){
@@ -1831,6 +1854,22 @@ function timerText(sec){
   return (m<10?'0':'')+m+':'+(s2<10?'0':'')+s2;
 }
 /* メモの ボタンの ひょうじを ととのえる */
+/* 字が ふえたら らんを たてに のばす（1行に つまって 読みにくく ならない ように） */
+function autoGrow(el){
+  if(!el) return;
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight + 2) + 'px';
+}
+function setupGrow(root){
+  (root || document).querySelectorAll('textarea.grow').forEach(el => {
+    if(el.dataset.grown) return;
+    el.dataset.grown = '1';
+    autoGrow(el);
+    el.addEventListener('input', () => autoGrow(el));
+    el.addEventListener('focus', () => autoGrow(el));
+  });
+}
+
 function paintMemoBadge(){
   const el = document.getElementById('memoBadge');
   if(!el) return;
@@ -2353,7 +2392,7 @@ function viewForm(id){
       '<p class="count" style="margin:6px 0 0">ルール説明と プレイ動画を わけて いれる、といった つかいかたが できます。</p></div>' +
 
     '<div class="form-group"><label class="lbl" for="f-summary">ひとこと しょうかい</label>' +
-      '<input type="text" id="f-summary" value="'+esc(v('summary',''))+'" placeholder="れい：宝石を集めて発展する戦略ゲーム"></div>' +
+      '<textarea id="f-summary" class="grow" rows="2" placeholder="れい：宝石を集めて発展する戦略ゲーム">'+esc(v('summary',''))+'</textarea></div>' +
 
     '<div class="form-group"><label class="lbl" for="f-quick">30びょうルール<span class="hint">改行で箇条書き</span></label>' +
       '<textarea id="f-quick" placeholder="1. 宝石を取る&#10;2. カードを買う&#10;3. 15点で勝利">'+esc(v('quickRule',''))+'</textarea></div>' +
@@ -2499,7 +2538,8 @@ function viewBulk(){
       '</div>' +
 
       '<label class="lbl" for="bSummary">ひとこと しょうかい</label>' +
-      '<input type="text" id="bSummary" value="'+esc(g.summary||'')+'" placeholder="どんな ゲーム？ 一行で" style="margin-bottom:12px">' +
+      '<textarea id="bSummary" class="grow" rows="2" placeholder="どんな ゲーム？ みじかく">'+esc(g.summary||'')+'</textarea>' +
+      '<div style="height:12px"></div>' +
 
       '<label class="lbl" for="bReading">よみがな<span class="hint">にんい</span></label>' +
       '<input type="text" id="bReading" value="'+esc(g.reading||'')+'" placeholder="ひらがなで" style="margin-bottom:12px">' +
@@ -3733,7 +3773,7 @@ function toolMemoHTML(){
     items.map((x, i) =>
       '<div class="memo-line'+(x.done ? ' done' : '')+'">' +
         '<button class="memo-check'+(x.done?' on':'')+'" data-memotoggle="'+i+'" aria-label="チェック">'+(x.done?'✓':'')+'</button>' +
-        '<input type="text" class="memo-input" data-memotext="'+i+'" value="'+esc(x.text)+'" placeholder="ここに かく">' +
+        '<textarea class="memo-input grow" rows="1" data-memotext="'+i+'" placeholder="ここに かく">'+esc(x.text)+'</textarea>' +
       '</div>').join('') +
 
     '<div class="btn-row" style="margin-top:12px">' +
@@ -3748,15 +3788,31 @@ function toolMemoHTML(){
    こうほを ならべて、みんなで タップして きめる。 */
 function saveVote(){ store.write(KEY.vote, state.vote); }
 
+/* ずかんから えらぶ ところ（しゃしん つき）。
+   ここだけを 入れかえる ので、字を うって いる とちゅうでも キーボードが とじない。 */
+function votePickListHTML(){
+  const picked = state.votePick || [];
+  const q = normalizeText(state.voteQuery || '');
+  let list = ownedGames();
+  if(q) list = list.filter(g => searchIndex(g).includes(q));
+  list = list.slice(0, 40);
+
+  return (picked.length ?
+      '<p class="count" style="margin:0 0 6px">えらんだ ゲーム（'+picked.length+'）：' + esc(picked.join('、')) + '</p>' : '') +
+    '<div class="vote-pick-grid">' +
+      (list.length ? list.map(g =>
+        '<button class="vote-pick'+(picked.indexOf(g.title) >= 0 ? ' on' : '')+'" data-votepick="'+esc(g.title)+'">' +
+          thumbHTML(g, 'tile') +
+          '<span class="vote-pick-name">'+esc(g.title)+'</span>' +
+        '</button>').join('')
+      : '<span class="count">みつかりません でした。</span>') +
+    '</div>';
+}
+
 function toolVoteHTML(){
   const v = state.vote;
 
   if(!v){
-    const picked = state.votePick || [];
-    const q = normalizeText(state.voteQuery || '');
-    let list = ownedGames();
-    if(q) list = list.filter(g => searchIndex(g).includes(q));
-    list = list.slice(0, 40);
 
     return '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ルールの きめかたなどを みんなで きめられます。</p>' +
       '<div class="row" style="margin-bottom:10px">' +
@@ -3765,17 +3821,10 @@ function toolVoteHTML(){
       '<label class="lbl">こうほ<span class="hint">じぶんで かく</span></label>' +
       '<input type="text" id="voteItems" placeholder="スペースで くぎる" value="'+esc(state.voteItems||'')+'" style="margin-bottom:14px">' +
 
-      '<label class="lbl">ずかんから えらぶ<span class="hint">タップで ついか</span></label>' +
+      '<label class="lbl">ずかんから えらぶ<span class="hint">しゃしんを タップで ついか</span></label>' +
       '<input type="search" id="voteSearch" placeholder="ゲームめいで さがす" value="'+esc(state.voteQuery||'')+'" ' +
         'autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px">' +
-      (picked.length ?
-        '<p class="count" style="margin:0 0 6px">えらんだ ゲーム（'+picked.length+'）：' +
-          esc(picked.join('、')) + '</p>' : '') +
-      '<div class="chips" style="max-height:200px;overflow:auto;margin-bottom:10px">' +
-        (list.length ? list.map(g =>
-          '<button class="chip sm" data-votepick="'+esc(g.title)+'" aria-pressed="'+(picked.indexOf(g.title) >= 0)+'">'+esc(g.title)+'</button>').join('')
-        : '<span class="count">みつかりません でした。</span>') +
-      '</div>' +
+      '<div id="votePickList">' + votePickListHTML() + '</div>' +
 
       '<div class="btn-row" style="margin-bottom:10px">' +
         '<button class="btn small" style="flex:1" id="voteRandom">ランダムに 4つ</button>' +
@@ -3792,16 +3841,25 @@ function toolVoteHTML(){
     '<p class="count" style="margin:0 0 10px">' +
       (v.open ? 'ぜんぶで '+total+'ひょう' : 'こうほを タップで 1ぴょう いれる（だれが どこに いれたかは わかりません）') + '</p>' +
 
-    v.items.map((x, i) =>
-      '<button class="vote-row'+(v.open && x.n === max && max > 0 ? ' top' : '')+'" data-votefor="'+i+'">' +
+    v.items.map((x, i) => {
+      /* ずかんに おなじ なまえが あれば、その はこ画像を だす */
+      const g = state.games.find(gg => gg.title === x.name);
+      return '<button class="vote-row'+(v.open && x.n === max && max > 0 ? ' top' : '')+'" data-votefor="'+i+'">' +
+        (g ? thumbHTML(g, 'vote-thumb') : '') +
         '<span class="vote-name">'+esc(x.name)+'</span>' +
         (v.open ?
           '<span class="vote-bar"><span style="width:'+(total ? Math.round(x.n/total*100) : 0)+'%"></span></span>' +
           '<span class="vote-n">'+x.n+'ひょう</span>'
           : '<span class="vote-n">▶ いれる</span>') +
-      '</button>').join('') +
+      '</button>';
+    }).join('') +
 
-    (!v.open ? '<p class="count" style="margin:10px 0 0">いま '+total+'人が いれました（だれが どこかは ひみつ）</p>' : '') +
+    (!v.open ?
+      '<div class="win" style="margin-top:12px;text-align:center">' +
+        '<p class="count" style="margin:0 0 4px">いま とうひょう した 人</p>' +
+        '<p class="encounter" style="margin:0;font-size:26px">'+total+'人</p>' +
+        '<p class="count" style="margin:4px 0 0">だれが どこに いれたかは わかりません</p>' +
+      '</div>' : '') +
 
     '<div class="btn-row" style="margin-top:12px">' +
       '<button class="btn primary" style="flex:1" id="voteToggle">'+(v.open ? 'とうひょうに もどる' : 'けっかを みる')+'</button>' +
@@ -4726,44 +4784,56 @@ function bind(r){
     if(i) state.voteItems = i.value;
   };
 
+  /* こうほの 一覧だけを 入れかえる（キーボードは そのまま） */
+  const updateVotePicks = () => {
+    const box = document.getElementById('votePickList');
+    if(!box) return;
+    box.innerHTML = votePickListHTML();
+    paintIcons(box);
+    bindVotePicks(box);
+  };
+  const bindVotePicks = (box) => {
+    box.querySelectorAll('[data-votepick]').forEach(b => b.onclick = () => {
+      const name = b.dataset.votepick;
+      state.votePick = state.votePick || [];
+      const i = state.votePick.indexOf(name);
+      if(i >= 0) state.votePick.splice(i, 1);
+      else state.votePick.push(name);
+      updateVotePicks();
+      playClick();
+    });
+  };
+
   const voteSearch = document.getElementById('voteSearch');
   if(voteSearch){
     let composing = false;
     const later = () => {
       clearTimeout(bind._vq);
-      bind._vq = setTimeout(() => { keepVoteInputs(); state.voteQuery = voteSearch.value; render(); }, 250);
+      bind._vq = setTimeout(() => { state.voteQuery = voteSearch.value; updateVotePicks(); }, 220);
     };
     voteSearch.addEventListener('compositionstart', () => { composing = true; });
     voteSearch.addEventListener('compositionend', () => { composing = false; later(); });
     voteSearch.addEventListener('input', () => { if(!composing) later(); });
+    voteSearch.addEventListener('search', () => { state.voteQuery = voteSearch.value; updateVotePicks(); });
   }
-
-  app.querySelectorAll('[data-votepick]').forEach(b => b.onclick = () => {
-    keepVoteInputs();
-    const name = b.dataset.votepick;
-    state.votePick = state.votePick || [];
-    const i = state.votePick.indexOf(name);
-    if(i >= 0) state.votePick.splice(i, 1);
-    else state.votePick.push(name);
-    render();
-  });
+  const votePickBox = document.getElementById('votePickList');
+  if(votePickBox) bindVotePicks(votePickBox);
 
   const voteRandom = document.getElementById('voteRandom');
   if(voteRandom) voteRandom.onclick = () => {
-    keepVoteInputs();
     const pool = ownedGames();
     if(pool.length < 2) return toast('ずかんに ゲームが たりません');
     state.votePick = shuffled(pool).slice(0, Math.min(4, pool.length)).map(g => g.title);
-    if(!state.voteTitle) state.voteTitle = 'つぎの ゲーム';
-    render();
+    const t = document.getElementById('voteTitle');
+    if(t && !t.value) t.value = 'つぎの ゲーム';
+    updateVotePicks();
     toast('ランダムに えらびました。けしたり たしたり できます');
   };
 
   const voteClearPick = document.getElementById('voteClearPick');
   if(voteClearPick) voteClearPick.onclick = () => {
-    keepVoteInputs();
     state.votePick = [];
-    render();
+    updateVotePicks();
   };
 
   const voteStart = document.getElementById('voteStart');
@@ -4782,8 +4852,12 @@ function bind(r){
   app.querySelectorAll('[data-votefor]').forEach(b => b.onclick = () => {
     const i = Number(b.dataset.votefor);
     if(!state.vote || !state.vote.items[i]) return;
-    state.vote.items[i].n++;
-    saveVote(); render(); playClick();
+    const name = state.vote.items[i].name;
+    ask('「'+name+'」に とうひょう しますか？', () => {
+      state.vote.items[i].n++;
+      saveVote(); render(); playClick();
+      toast('1ぴょう いれました');
+    }, {yes:'はい', no:'やめる'});
   });
   const voteToggle = document.getElementById('voteToggle');
   if(voteToggle) voteToggle.onclick = () => {
