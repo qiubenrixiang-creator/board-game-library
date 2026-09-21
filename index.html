@@ -532,6 +532,42 @@ h2.sec::before{content:"■ ";font-size:12px}
 
 /* ---------- どうぐ ---------- */
 .tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+/* ---- ジュークボックス ---- */
+.jb-top{
+  text-align:center;padding:14px 12px 12px;margin-bottom:12px;
+  border:3px solid var(--accent);background:var(--bg-2);box-shadow:var(--shadow);
+}
+.jb-eq{display:flex;justify-content:center;align-items:flex-end;gap:4px;height:34px;margin-bottom:8px}
+.jb-eq span{width:8px;height:6px;background:var(--accent-2)}
+.jukebox.playing .jb-eq span{animation:jbEq .9s steps(4) infinite}
+.jukebox.playing .jb-eq span:nth-child(2){animation-delay:-.3s;background:var(--accent)}
+.jukebox.playing .jb-eq span:nth-child(3){animation-delay:-.6s}
+.jukebox.playing .jb-eq span:nth-child(4){animation-delay:-.15s;background:var(--accent)}
+.jukebox.playing .jb-eq span:nth-child(5){animation-delay:-.45s}
+.jukebox.playing .jb-eq span:nth-child(6){animation-delay:-.75s;background:var(--accent)}
+.jukebox.playing .jb-eq span:nth-child(7){animation-delay:-.2s}
+@keyframes jbEq{0%{height:6px}25%{height:30px}50%{height:14px}75%{height:24px}100%{height:6px}}
+.jb-state{margin:0 0 4px;font-size:12px;color:var(--accent-2)}
+.jukebox.playing .jb-state{color:var(--accent)}
+.jb-name{margin:0 0 2px;font-size:18px;color:var(--text);line-height:1.4}
+.jb-no{margin:0 0 10px;font-size:11px;color:var(--muted)}
+.jb-progress{height:8px;border:2px solid var(--frame);background:var(--panel);margin:0 0 6px}
+.jb-progress div{height:100%;width:0;background:var(--accent)}
+.jb-time{margin:0;font-size:12px;color:var(--muted)}
+.jb-ctrl .btn{flex:1}
+.jb-list{display:flex;flex-direction:column;gap:6px}
+.jb-track{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;cursor:pointer;
+  padding:9px 10px;background:var(--panel);border:2px solid var(--frame);color:var(--text);font:inherit;font-size:14px;
+}
+.jb-track .jb-tno{flex:0 0 auto;color:var(--muted);font-size:12px}
+.jb-track .jb-tname{flex:1;min-width:0}
+.jb-track .jb-tmark{flex:0 0 auto;visibility:hidden;color:var(--accent)}
+.jb-track.now{border-color:var(--accent)}
+.jb-track.now .jb-tname{color:var(--accent)}
+.jb-track.now .jb-tmark{visibility:visible}
+.jukebox.playing .jb-track.now .jb-tmark{animation:jbBlink 1s steps(2) infinite}
+@keyframes jbBlink{50%{opacity:0}}
 .tool-card{
   display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 10px;
   background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);
@@ -791,6 +827,8 @@ const KEY = {
   se:'bgl.seEnabled',
   dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
+  bgmMode:'bgl.bgmMode',    /* ジュークボックスの ながしかた */
+  bgmVol:'bgl.bgmVolume',   /* BGMの おおきさ */
   sharePriv:'bgl.sharePrivate',  /* かんそう・かしだしも こうかいするか */
   score:'bgl.scoreSheet',        /* てんすう表 */
   counters:'bgl.counters',       /* カウンター */
@@ -1104,6 +1142,16 @@ const ICONS = {
     '..####..'
   ],
   /* 大きく つかう（ぜんがめん） */
+  jukebox:[
+    '..####..',
+    '.#....#.',
+    '#.####.#',
+    '#.#..#.#',
+    '#.####.#',
+    '#......#',
+    '#.#.#.##',
+    '########'
+  ],
   expand:[
     '###..###',
     '#......#',
@@ -1155,7 +1203,17 @@ const BGM_TRACKS = [
   {id:'kissa',    name:'きっさ フルーティナイト',  file:'bgm_kissa.mp3'},
   {id:'usagi',    name:'うさぎアンテナ きわまれり', file:'bgm_usagi.mp3'},
   {id:'sarusaru', name:'サルサル ミュージック',    file:'bgm_sarusaru.mp3'},
-  {id:'macaron',  name:'あしたの ピンクマカロン',  file:'bgm_macaron.mp3'}
+  {id:'macaron',  name:'あしたの ピンクマカロン',  file:'bgm_macaron.mp3'},
+  {id:'antho',    name:'アントシアニンを ください', file:'bgm_anthocyanin.mp3'},
+  {id:'fishbone', name:'きっさ フィッシュボーン',  file:'bgm_fishbone.mp3'},
+  {id:'belt',     name:'ベルトコンベア りょじょう ふうけい', file:'bgm_belt_conveyor.mp3'},
+  {id:'tropical', name:'トロピカル スタンプ',     file:'bgm_tropical.mp3'}
+];
+/* ながしかた：one=1きょくを くりかえす／order=じゅんばんに／shuffle=シャッフル */
+const BGM_MODES = [
+  {id:'one',     label:'1きょく くりかえし'},
+  {id:'order',   label:'じゅんばんに'},
+  {id:'shuffle', label:'シャッフル'}
 ];
 const AUDIO = {
   click: 'data:audio/mpeg;base64,//uQQAAAAAAAS4AAAAgAAAlwAAABBeBvFtQHgAC8DeLagPAAAHUAAf//N7/4gUlT5pnXGT7PiJKf5b0LUgm5L240C4KiGr7MZ8EP////6gwUOCcAdQAB//83v/iBSVPmmdcZPs+Ikp/lvQtSCbkvbjQLgqIavsxnwQ/////qDBQ4J7QEsQAAFYkAANlUk0hUgxYAQSIkkwmEkkkghauRQXwsJyRCXjqGEb7gKXACRHEiRZScE9lEVqYh6JuOAY8mBNoWQlI3Fmh04AgDwMFoFw9gBAMAMGgfwNAizAMIQWSHAYIAFgaSx3gFG4ACBOH4B0hJkMAwIgoAUBEDeoY2G0RpotcqJpumXyGpSkYoJvUq6afl5G9aKlOtVaGmpAehChIdIixfD2gUAuAUET6yiCEGIUCSKUMTdlv8P1GiUjFlfLJ5X//9bmJP/+tE4QEc3/+oa/////hlf///+IvhsNvv2lNoQC/5fLX0io/ok0OpItWVQbaEORZYYtAJAULiiEIWQgYAgBhiQMLAYDgSgYLg2gY3CNgYLuqgYdQwAsMY//uQYIqABpGC1P4+wAQAAAlwwAAAE/2dR7zbABAAACXDgAAEDBUBkDAQBMA4AwXPDlmpaaZ71FVus91EcTjajdPzqfWXy2+ooG3mTdic6yNIs6yZLAz4XcI+HSK1AIAOAkZoNmxmRWpBki6bN0/t////////7+cSrJkY0DAIA0N6cIcIeHh83f6gSLxEnc4JRf/bCLP/9xM+rn/2B4Amc+MMnLIJwAUBJjYwAIDQPTBGZtMkkIswBgEkE6wjkOVFIbov+p/tUV/nvMjXrKLeZFbrRP9RDkPO/L/mI8NUZj+F5jsNycFBgaiWBNOLAT5mYFdfq//////////5zUslAQHia22tttsSm0II5oxwERaAs/HgweMCQnEt6GIpbdiicNx4MTohCt6dbcUH0IwsAEmA2MAgFgEAYIAMMA0C0tsYEAEBgJA6GMkkGZmYQRg6AUGAUAcPACF1G8hxn/yiWTdPeGXHGZDKFomyfOE+mYFwjRQY9iyBmCaFyEgXxcZwcwqE2SKJFyuTBFCZIObmZPpFIkDMn3QUkgyZmWEEFIGB//uQYJAABA5nVHleo2QAAAlwAAABGXGdSaZ6rZAAACXAAAAEATdRMF0QnDlhSJuQ8MmAwoggGlGKDNkz41T3o/f////////r+k1CRoAQzAsFALbbbbYQXawAyJJZQhKVkkmphJUjkFR2CMVdJl0wsM3zIVBXwRWaE0liT/o8qWzTtU/p0hQDikia/geGgb9OdxGz5kTmUiRUdh2drU2eRPFEc0tE0VjEirl01ULmJ8ZUiJDiKoEWIkWSKniaJ4yJ43JkunCeTLpsdLpqcLyy76TomrJMoyNlmrGQ+RlhpID5E4AZdcBoxAn8ljhmapf//////////9HKQx4GCEhY6AAV9BQCgX/v///xxxxy/GrDLorVb4viYSr0CI8zAj3wGLxM0MCoKJyY9f/LLLL9SSX////////9JFEvGIXyBMoA5QMcAtmJgPggZIE8tl0f/////////9FalqIaRQSkM6D///////////////////////////////////////////////////////////////////////////////////////uQYKeABW1nT2mao2QAAAlwAAABDBmdIUBmbYAAACXAAAAE//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////uQQN6ACdgAS4AAAAgAAAlwAAABAAABLgAAACAAACXAAAAE//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////uQQP+AC+gAS4AAAAgAAAlwAAABAAABLgAAACAAACXAAAAE//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//uQQP+AC+gAS4AAAAgAAAlwAAABAAABLgAAACAAACXAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
@@ -1173,6 +1231,8 @@ const sound = {
   bgmOn: store.read(KEY.bgm, true),   /* BGM の ON/OFF */
   seOn:  store.read(KEY.se,  true),   /* こうかおんの ON/OFF（べつべつに きりかえ） */
   trackId: store.read(KEY.bgmTrack, BGM_TRACKS[0].id),
+  mode: store.read(KEY.bgmMode, 'one'),
+  volume: Math.min(1, Math.max(0, Number(store.read(KEY.bgmVol, 0.45)))),
   bgmError: false
 };
 function currentTrack(){
@@ -1221,12 +1281,21 @@ function playBuffer(key, volume){
 
 function initAudio(){
   sound.bgm = new Audio();
-  sound.bgm.loop = true;
-  sound.bgm.volume = 0.45;
+  sound.bgm.loop = (sound.mode === 'one');
+  sound.bgm.volume = sound.volume;
   sound.bgm.preload = 'none';        /* さいしょに ぜんぶ よみこまない（つうしんの せつやく） */
   sound.bgm.src = currentTrack().file;
+  /* 1きょく おわったら つぎへ（くりかえし いがい） */
+  sound.bgm.addEventListener('ended', () => {
+    if(sound.mode === 'one') return;
+    jukeStep(1);
+  });
+  ['play','pause','loadedmetadata'].forEach(ev => sound.bgm.addEventListener(ev, paintJukebox));
+  sound.bgm.addEventListener('timeupdate', paintJukeTime);
   sound.bgm.addEventListener('error', () => {
     sound.bgmError = true;
+    const jn = document.getElementById('jbNote');
+    if(jn) jn.textContent = 'きょくの ファイルが みつかりません（' + currentTrack().file + '）。index.html と おなじ ばしょに アップロード して ください。';
     const el = document.getElementById('bgmNote');
     if(el) el.textContent = 'きょくの ファイルが みつかりません。index.html と おなじ ばしょに mp3 を アップロード して ください。';
   });
@@ -1362,6 +1431,7 @@ function paintSoundBtns(){
   document.querySelectorAll('[data-track]').forEach(b => {
     b.setAttribute('aria-pressed', String(b.dataset.track === sound.trackId));
   });
+  paintJukebox();
 }
 function setBgmTrack(id){
   const t = BGM_TRACKS.find(x => x.id === id);
@@ -1385,6 +1455,123 @@ function setBgmOn(v){
 function setSeOn(v){
   sound.seOn = v; store.write(KEY.se, v);
   paintSoundBtns();
+}
+
+/* ---------------- ジュークボックス ----------------
+   さかばの すみに ある ジュークボックス。
+   きょくを えらぶ・とめる・つぎへ・ながしかた・おおきさ を ここで きめる。 */
+function jukeIndex(){ return Math.max(0, BGM_TRACKS.findIndex(t => t.id === sound.trackId)); }
+function jukeStep(d){
+  let i;
+  if(sound.mode === 'shuffle' && BGM_TRACKS.length > 1){
+    do{ i = Math.floor(Math.random() * BGM_TRACKS.length); }while(i === jukeIndex());
+  }else{
+    i = (jukeIndex() + d + BGM_TRACKS.length) % BGM_TRACKS.length;
+  }
+  setBgmTrack(BGM_TRACKS[i].id);
+  if(!sound.bgmOn) setBgmOn(true);
+}
+function setBgmMode(m){
+  sound.mode = m; store.write(KEY.bgmMode, m);
+  if(sound.bgm) sound.bgm.loop = (m === 'one');
+  paintJukebox();
+}
+function setBgmVolume(v){
+  sound.volume = Math.min(1, Math.max(0, v));
+  store.write(KEY.bgmVol, sound.volume);
+  if(sound.bgm) sound.bgm.volume = sound.volume;
+}
+function isBgmPlaying(){ return !!(sound.bgm && !sound.bgm.paused && sound.bgmOn); }
+function mmss(sec){
+  if(!isFinite(sec) || sec < 0) return '--:--';
+  sec = Math.floor(sec);
+  return Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+}
+function paintJukeTime(){
+  const t = document.getElementById('jbTime');
+  if(!t || !sound.bgm) return;
+  const cur = sound.bgm.currentTime || 0, dur = sound.bgm.duration;
+  t.textContent = mmss(cur) + ' / ' + mmss(dur);
+  const bar = document.getElementById('jbBar');
+  if(bar) bar.style.width = (isFinite(dur) && dur > 0 ? Math.min(100, cur/dur*100) : 0) + '%';
+}
+function paintJukebox(){
+  const box = document.getElementById('jukebox');
+  if(!box) return;
+  const playing = isBgmPlaying();
+  box.classList.toggle('playing', playing);
+  const nm = document.getElementById('jbName');
+  if(nm) nm.textContent = currentTrack().name;
+  const no = document.getElementById('jbNo');
+  if(no) no.textContent = 'No.' + String(jukeIndex()+1).padStart(2,'0') + ' / ' + String(BGM_TRACKS.length).padStart(2,'0');
+  const st = document.getElementById('jbState');
+  if(st) st.textContent = playing ? '♪ NOW PLAYING' : (sound.bgmOn ? '… よみこみ中' : '■ とまって います');
+  const pb = document.getElementById('jbPlay');
+  if(pb) pb.textContent = playing ? '❚❚ とめる' : '▶ ならす';
+  document.querySelectorAll('[data-jbtrack]').forEach(b => {
+    const on = b.dataset.jbtrack === sound.trackId;
+    b.setAttribute('aria-current', String(on));
+    b.classList.toggle('now', on);
+  });
+  document.querySelectorAll('[data-jbmode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.jbmode === sound.mode)));
+  paintJukeTime();
+}
+function toolJukeboxHTML(){
+  return '<div id="jukebox" class="jukebox">' +
+    '<div class="jb-top">' +
+      '<div class="jb-eq" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>' +
+      '<p class="jb-state" id="jbState"></p>' +
+      '<p class="jb-name" id="jbName"></p>' +
+      '<p class="jb-no" id="jbNo"></p>' +
+      '<div class="jb-progress"><div id="jbBar"></div></div>' +
+      '<p class="jb-time" id="jbTime">--:-- / --:--</p>' +
+    '</div>' +
+    '<div class="btn-row jb-ctrl">' +
+      '<button class="btn small" id="jbPrev" aria-label="まえの きょく">◀◀</button>' +
+      '<button class="btn small primary" id="jbPlay">▶ ならす</button>' +
+      '<button class="btn small" id="jbNext" aria-label="つぎの きょく">▶▶</button>' +
+    '</div>' +
+    '<div class="catlabel" style="margin-top:14px">ながしかた</div>' +
+    '<div class="chips" style="margin-bottom:12px">' + BGM_MODES.map(m =>
+      '<button class="chip sm" data-jbmode="'+m.id+'" aria-pressed="'+(m.id===sound.mode)+'">'+m.label+'</button>').join('') + '</div>' +
+    '<div class="catlabel">おおきさ</div>' +
+    '<div class="row" style="align-items:center;margin-bottom:14px">' +
+      '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">小</span>' +
+      '<input type="range" id="jbVol" min="0" max="100" step="5" value="'+Math.round(sound.volume*100)+'" style="flex:1">' +
+      '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">大</span></div>' +
+    '<div class="catlabel">レコード（'+BGM_TRACKS.length+'きょく）</div>' +
+    '<div class="jb-list">' + BGM_TRACKS.map((t,i) =>
+      '<button class="jb-track" data-jbtrack="'+esc(t.id)+'">' +
+        '<span class="jb-tno">'+String(i+1).padStart(2,'0')+'</span>' +
+        '<span class="jb-tname">'+esc(t.name)+'</span>' +
+        '<span class="jb-tmark">♪</span></button>').join('') +
+    '</div>' +
+    '<p class="count" id="jbNote" style="margin:10px 0 0">がめん右上の ♪ でも いつでも とめられます。</p>' +
+  '</div>';
+}
+function bindJukebox(){
+  const box = document.getElementById('jukebox');
+  if(!box) return;
+  const p = document.getElementById('jbPlay');
+  if(p) p.onclick = () => {
+    if(isBgmPlaying()){ setBgmOn(false); }
+    else{ sound.bgmError = false; setBgmOn(true); }
+    paintJukebox();
+  };
+  const pv = document.getElementById('jbPrev');
+  if(pv) pv.onclick = () => jukeStep(-1);
+  const nx = document.getElementById('jbNext');
+  if(nx) nx.onclick = () => jukeStep(1);
+  box.querySelectorAll('[data-jbmode]').forEach(b => b.onclick = () => setBgmMode(b.dataset.jbmode));
+  box.querySelectorAll('[data-jbtrack]').forEach(b => b.onclick = () => {
+    if(b.dataset.jbtrack === sound.trackId && isBgmPlaying()) return;
+    setBgmTrack(b.dataset.jbtrack);
+    if(!sound.bgmOn) setBgmOn(true);
+    paintJukebox();
+  });
+  const v = document.getElementById('jbVol');
+  if(v) v.oninput = () => setBgmVolume(Number(v.value)/100);
+  paintJukebox();
 }
 
 const state = {
@@ -3569,7 +3756,8 @@ const TOOLS = [
   {id:'memo',    name:'メモ',         icon:'memo',      desc:'かきとめる'},
   {id:'vote',    name:'とうひょう',   icon:'vote',      desc:'みんなで きめる'},
   {id:'turn',    name:'てばん',       icon:'turn',      desc:'じゅんばんを まわす'},
-  {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'}
+  {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'},
+  {id:'jukebox', name:'ジュークボックス', icon:'jukebox', desc:'BGMを えらぶ・きく'}
 ];
 
 function viewTools(){
@@ -4122,6 +4310,7 @@ function toolBodyHTML(id){
   if(id === 'turn')    return toolTurnHTML();
   if(id === 'names')   return toolNamesHTML();
   if(id === 'log')     return toolLogHTML();
+  if(id === 'jukebox') return toolJukeboxHTML();
   return '';
 }
 
@@ -4288,7 +4477,8 @@ function viewAdmin(){
       '<div class="chips">' + BGM_TRACKS.map(t =>
         '<button class="chip sm" data-track="'+esc(t.id)+'" aria-pressed="'+(t.id===sound.trackId)+'">'+esc(t.name)+'</button>').join('') +
       '</div>' +
-      '<p class="count" id="bgmNote" style="margin:6px 0 0">えらぶと すぐに きりかわります。</p>' +
+      '<p class="count" id="bgmNote" style="margin:6px 0 0">えらぶと すぐに きりかわります。' +
+        '<button class="mini" data-go2="#/tool/jukebox" style="margin-left:6px">ジュークボックスへ</button></p>' +
     '</div>' +
 
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:16px">' +
@@ -5673,6 +5863,7 @@ function bind(r){
   if(bgmChk) bgmChk.onchange = e => setBgmOn(e.target.checked);
   const seChk = document.getElementById('seChk');
   if(seChk) seChk.onchange = e => setSeOn(e.target.checked);
+  bindJukebox();
   app.querySelectorAll('[data-track]').forEach(b => b.onclick = () => {
     setBgmTrack(b.dataset.track);
     if(!sound.bgmOn) setBgmOn(true);          /* きょくを えらんだら ならす */
@@ -6213,7 +6404,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('click', e => {
   if(e.target.closest('.btn, .chip, .tab, .mini, .gcard, .icon-btn, .filebtn, .starpick button, ' +
-    '.tool-card, .gtile, .score-cell, .lb-nav, #timerBadge, summary')) playClick();
+    '.tool-card, .gtile, .score-cell, .lb-nav, #timerBadge, summary, .jb-track')) playClick();
 });
 initTheme();
 loadAll();
