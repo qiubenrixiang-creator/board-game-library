@@ -1703,7 +1703,7 @@ function kaiBarHTML(){
     return '<div class="win" style="margin-bottom:14px;padding:10px 12px">' +
       '<span style="color:var(--accent)">▶ '+esc(kaiName())+' の たな（'+n+'さくひん）</span>' +
       ' <button class="mini" id="kaiOffBtn" style="margin-left:8px">やめる</button>' +
-      ' <button class="mini" data-go2="#/kai" style="margin-left:4px">なかみ</button>' +
+      ' <button class="mini" data-go2="#/kai" style="margin-left:4px">せってい</button>' +
       '<p class="count" style="margin:4px 0 0">もってきた ゲームの なかから さがします。</p></div>';
   }
   if(state.kai.ids.length && kaiGames().length){
@@ -2810,9 +2810,11 @@ function kaiSelectedHTML(){
   if(list.length){
     html += '<p class="count">あそべる にんずう：'+kaiPlayersText(list)+'</p>' +
       list.map(g =>
-        '<div class="admin-row">' + thumbHTML(g,'mini') +
-        '<div class="t"><b>'+esc(g.title)+(isLent(g)?' <span class="badge">かしだし中</span>':'')+'</b>' +
-          '<span>'+playersText(g)+'・'+(Number(g.playTime)||0)+'分</span></div>' +
+        '<div class="admin-row">' +
+        '<button data-open="'+esc(g.id)+'" style="all:unset;cursor:pointer;display:flex;align-items:center;gap:inherit;flex:1;min-width:0">' +
+          thumbHTML(g,'mini') +
+          '<div class="t"><b>'+esc(g.title)+(isLent(g)?' <span class="badge">かしだし中</span>':'')+'</b>' +
+          '<span>'+playersText(g)+'・'+(Number(g.playTime)||0)+'分・くわしく ▶</span></div></button>' +
         '<button class="mini warn" data-kaidrop="'+esc(g.id)+'">はずす</button></div>').join('');
   }else{
     html += '<div class="note" style="margin-bottom:14px">まだ えらんで いません。したの リストから えらんで ください。</div>';
@@ -2825,14 +2827,18 @@ function kaiPickHTML(){
   const q = normalizeText(state.kaiQuery || '');
   let list = ownedGames();
   if(q) list = list.filter(g => searchIndex(g).includes(q));
-  list = list.slice().sort((a,b) => (kaiHas(b.id) - kaiHas(a.id)) || a.title.localeCompare(b.title,'ja'));
-  return '<div class="chips" style="max-height:260px;overflow:auto">' +
+  list = list.slice().sort((a,b) => a.title.localeCompare(b.title,'ja'));
+  return '<div class="chips" id="kaiChipBox" style="max-height:300px;overflow:auto">' +
     (list.length ? list.map(g =>
       '<button class="chip sm" data-kaipick="'+esc(g.id)+'" aria-pressed="'+kaiHas(g.id)+'">'+esc(g.title)+'</button>').join('')
       : '<span class="count">みつかりません でした。</span>') +
   '</div>';
 }
 function updateKaiParts(){
+  const pk0 = document.getElementById('kaiPicks');
+  const box0 = document.getElementById('kaiChipBox');
+  const innerY = box0 ? box0.scrollTop : 0;
+  const topBefore = pk0 ? pk0.getBoundingClientRect().top : null;
   const sel = document.getElementById('kaiSel');
   if(sel){ sel.innerHTML = kaiSelectedHTML(); paintIcons(sel); bindKaiParts(sel); }
   const pk = document.getElementById('kaiPicks');
@@ -2840,6 +2846,13 @@ function updateKaiParts(){
   const st = document.getElementById('kaiStatus');
   if(st) st.innerHTML = kaiStatusHTML();
   bindKaiStatus();
+  const box1 = document.getElementById('kaiChipBox');
+  if(box1) box1.scrollTop = innerY;
+  const pk1 = document.getElementById('kaiPicks');
+  if(pk1 && topBefore !== null){
+    const d = pk1.getBoundingClientRect().top - topBefore;
+    if(d) window.scrollBy(0, d);
+  }
 }
 function toggleKaiPick(id){
   const i = state.kai.ids.indexOf(id);
@@ -2850,6 +2863,7 @@ function toggleKaiPick(id){
 function bindKaiParts(box){
   box.querySelectorAll('[data-kaipick]').forEach(b => b.onclick = () => toggleKaiPick(b.dataset.kaipick));
   box.querySelectorAll('[data-kaidrop]').forEach(b => b.onclick = () => toggleKaiPick(b.dataset.kaidrop));
+  box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('#/game/' + b.dataset.open));
 }
 function kaiStatusHTML(){
   const n = kaiGames().length;
@@ -2882,14 +2896,14 @@ function viewKai(){
 
     '<div class="win" id="kaiStatus" style="margin-bottom:16px">' + kaiStatusHTML() + '</div>' +
 
-    '<div id="kaiSel">' + kaiSelectedHTML() + '</div>' +
-
-    '<div class="divider"></div>' +
     '<h2 class="sec">ゲームを えらぶ</h2>' +
-    '<p class="count">タップで いれる／はずす。えらんだ ものが 上に きます。</p>' +
+    '<p class="count">タップで いれる／はずす（▶が ついて いるのが えらんだ ゲーム）。</p>' +
     '<input type="search" id="kaiQ" placeholder="なまえで さがす" value="'+esc(state.kaiQuery||'')+'" ' +
       'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:8px">' +
     '<div id="kaiPicks">' + kaiPickHTML() + '</div>' +
+
+    '<div class="divider"></div>' +
+    '<div id="kaiSel">' + kaiSelectedHTML() + '</div>' +
 
     '<div class="divider"></div>' +
     '<h2 class="sec">ともだちに しらせる</h2>' +
