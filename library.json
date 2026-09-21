@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-20T13:00:17.140Z",
+  "version": "2026-09-21T14:16:28.554Z",
   "tags": [
     {
       "name": "初心者",
@@ -1422,19 +1422,24 @@
     {
       "id": "g045",
       "title": "クジラオルカ",
-      "images": [],
+      "images": [
+        "https://oinkgames.com/images/flatview/whale-to-look_ja_front.png"
+      ],
       "summary": "",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
+      "playersMax": 5,
       "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
-      "tags": [
-        "データみきにゅう"
-      ]
+      "age": 9,
+      "difficulty": 3,
+      "tags": [],
+      "reading": "大海原で繰り広げられる「推理」と「賭け」のゲーム！",
+      "videos": [
+        "https://youtu.be/mqYxrYgMgvI?si=7Pyf2ZAbs8_x3Jm8"
+      ],
+      "wish": false
     },
     {
       "id": "g046",
