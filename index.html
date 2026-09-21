@@ -799,7 +799,8 @@ const KEY = {
   vote:'bgl.vote',               /* とうひょう */
   turn:'bgl.turn',               /* てばん */
   backupAt:'bgl.lastBackup',     /* さいごに ひかえを つくった日 */
-  today:'bgl.todayPlayers'  /* きょうの メンバーの にんずう */
+  today:'bgl.todayPlayers',  /* きょうの メンバーの にんずう */
+  kai:'bgl.kaiShelf'         /* ボードゲーム会に もっていく たな */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -1393,6 +1394,8 @@ const state = {
   bulkIndex: 0,                                     /* まとめて入力の いちばんめ */
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
+  kai: {name:'', ids:[], on:false},                 /* ボードゲーム会の たな */
+  kaiQuery: '',                                     /* たなの ゲームを さがす */
   recQuery: '',                                     /* きろく画面の けんさく */
   recView: 'list',                                  /* いちらん／カレンダー／思い出 */
   calYm: null, calDay: null, memory: null,          /* カレンダーと 思い出の いま */
@@ -1420,6 +1423,8 @@ function loadAll(){
   state.games = store.read(KEY.games, null) || SEED_GAMES.map(g=>({...g}));
   state.tags  = store.read(KEY.tags, null)  || DEFAULT_TAGS.map(t=>({...t}));
   state.today = store.read(KEY.today, null);
+  const ka = store.read(KEY.kai, null);
+  if(ka && Array.isArray(ka.ids)) state.kai = {name:String(ka.name||''), ids:ka.ids.map(String), on:!!ka.on};
   const sc = store.read(KEY.score, null);
   if(sc && Array.isArray(sc.names)) state.score = {names:sc.names, rows:Array.isArray(sc.rows)?sc.rows:[]};
   const cn = store.read(KEY.counters, null);
@@ -1641,6 +1646,71 @@ function thumbHTML(g, cls){
 /* ---------------- ゲームの じょうほう ---------------- */
 function isWish(g){ return !!g.wish; }
 function ownedGames(){ return state.games.filter(g => !g.wish); }
+
+/* ---------------- ボードゲーム会の たな ----------------
+   もっていく ゲームを えらんで おくと、かいの あいだは
+   「さがす」「ずかん」「おまかせ」「とうひょう」が その ゲームだけに なる。
+   ともだちには リンク（?kai=...）で おなじ たなを みせられる。 */
+function saveKai(){ store.write(KEY.kai, state.kai); }
+function kaiName(){ return (state.kai.name || '').trim() || 'ボードゲーム会'; }
+function kaiHas(id){ return state.kai.ids.includes(id); }
+function kaiGames(){
+  const set = new Set(state.kai.ids);
+  return ownedGames().filter(g => set.has(g.id)).sort((a,b) => a.title.localeCompare(b.title,'ja'));
+}
+function kaiMissing(){
+  const ids = new Set(state.games.map(g => g.id));
+  return state.kai.ids.filter(id => !ids.has(id)).length;
+}
+function kaiOn(){ return !!(state.kai.on && kaiGames().length); }
+/* さがす・おまかせ などで つかう ゲームの あつまり */
+function poolGames(){ return kaiOn() ? kaiGames() : ownedGames(); }
+function kaiPlayersText(list){
+  if(!list.length) return '';
+  const lo = Math.min(...list.map(g => Number(g.playersMin)||1));
+  const hi = Math.max(...list.map(g => Number(g.playersMax)||1));
+  return lo === hi ? lo+'人' : lo+'〜'+hi+'人';
+}
+function kaiShareUrl(){
+  const base = publicUrl();
+  if(!base) return '';
+  return base + '?kai=' + state.kai.ids.join('.') + '&kn=' + encodeURIComponent(state.kai.name || '');
+}
+function kaiShareText(){
+  const list = kaiGames();
+  const url = kaiShareUrl();
+  return '【' + kaiName() + '】もっていく ゲーム（' + list.length + '）\n' +
+    list.map(g => '・' + g.title + '（' + playersText(g) + '・' + (Number(g.playTime)||0) + '分）').join('\n') +
+    (url ? '\n\nにんずう・じかんで さがせる：\n' + url : '');
+}
+/* リンクで ひらかれたら、その たなを つかう */
+function adoptKaiFromUrl(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
+  const raw = q.get('kai');
+  if(!raw) return;
+  const ids = raw.split('.').map(x => x.trim()).filter(Boolean);
+  if(ids.length){
+    state.kai = {name: q.get('kn') || '', ids: ids, on: true};
+    saveKai();
+  }
+  try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
+}
+/* さがす・ずかん・おまかせ の 上に だす おしらせ */
+function kaiBarHTML(){
+  if(kaiOn()){
+    const n = kaiGames().length;
+    return '<div class="win" style="margin-bottom:14px;padding:10px 12px">' +
+      '<span style="color:var(--accent)">▶ '+esc(kaiName())+' の たな（'+n+'さくひん）</span>' +
+      ' <button class="mini" id="kaiOffBtn" style="margin-left:8px">やめる</button>' +
+      ' <button class="mini" data-go2="#/kai" style="margin-left:4px">なかみ</button>' +
+      '<p class="count" style="margin:4px 0 0">もってきた ゲームの なかから さがします。</p></div>';
+  }
+  if(state.kai.ids.length && kaiGames().length){
+    return '<p class="count" style="margin:-4px 0 12px"><button class="mini" id="kaiOnBtn">▷ '+esc(kaiName())+' の たなで さがす（'+kaiGames().length+'）</button></p>';
+  }
+  return '';
+}
 function playsOf(g){ return Array.isArray(g.plays) ? g.plays : []; }
 function playCount(g){ return playsOf(g).length; }
 function lastPlayed(g){
@@ -1743,7 +1813,7 @@ function scoreGame(g, f){
   return { game:g, rate: max === 0 ? 1 : got/max, perfect:hardOk };
 }
 function search(f){
-  const scored = ownedGames().map(g => scoreGame(g, f));
+  const scored = poolGames().map(g => scoreGame(g, f));
   const by = (a,b) => b.rate - a.rate || (a.game.difficulty||0) - (b.game.difficulty||0);
   return {
     perfect: scored.filter(s=>s.perfect).sort(by).map(s=>s.game),
@@ -1824,12 +1894,12 @@ function render(){
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
                   print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools,
-                  records:viewRecords, tool:viewTool };
+                  records:viewRecords, tool:viewTool, kai:viewKai };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
   const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', tool:'#/tools',
-                records:'#/tools', playlog:'#/tools', admin:'#/admin' };
+                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin' };
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   syncBgm();
   paintSoundBtns();
@@ -2014,7 +2084,7 @@ function viewHome(){
     chipGroup('tags', uncat.map(t=>({id:t.name,label:t.name})), f.tags, true) + '</div>' : '';
 
   const af = activeFilters();
-  const n = hasFilter(af) ? search(af).perfect.length : ownedGames().length;
+  const n = hasFilter(af) ? search(af).perfect.length : poolGames().length;
   const todayBar = state.today
     ? '<div class="win" style="margin-bottom:14px;padding:10px 12px">' +
         '<span style="color:var(--accent)">▶ きょうは '+state.today+'人</span>' +
@@ -2023,8 +2093,9 @@ function viewHome(){
     : '';
 
   return '<section class="page">' +
-    '<h1 class="lede">きょうは なにで あそぶ？</h1>' + todayBar +
-    '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>ずかんには '+ownedGames().length+'さくひんが とうろく されている。</p>' +
+    '<h1 class="lede">きょうは なにで あそぶ？</h1>' + kaiBarHTML() + todayBar +
+    '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>' +
+      (kaiOn() ? 'きょうの たなには '+poolGames().length+'さくひんが ある。' : 'ずかんには '+ownedGames().length+'さくひんが とうろく されている。') + '</p>' +
 
     '<div class="field"><h2>どのくらい あそべる？<em>ひとつ</em></h2>' + chipGroup('time', TIME_OPTIONS, f.time, false) + '</div>' +
     '<div class="field"><h2>なんにんで あそぶ？<em>ひとつ</em></h2>' + chipGroup('players', PLAYER_OPTIONS, f.players, false) +
@@ -2104,7 +2175,7 @@ function listComputed(){
   let list;
   if(mode === 'wish')      list = state.games.filter(isWish);
   else if(mode === 'lent') list = ownedGames().filter(isLent);
-  else                     list = filtered ? res.perfect.slice() : ownedGames();
+  else                     list = filtered ? res.perfect.slice() : poolGames();
   list = list.slice();
 
   const q = normalizeText(state.listQuery);
@@ -2165,6 +2236,7 @@ function viewList(){
   return '<section class="page">' +
     '<h1 class="lede">' + (filtered ? 'おすすめの ゲーム' : 'ボードゲーム ずかん') + '</h1>' +
     '<p class="sub">えらぶと あそびかたが よめる。</p>' +
+    (state.listMode === 'own' ? kaiBarHTML() : '') +
 
     '<div class="chips" style="margin:0 0 12px">' +
       [['own','もっている'],['wish','ほしい'],['lent','かしだし中']].map(m =>
@@ -2204,8 +2276,9 @@ function updateListResults(){
 function viewRandom(){
   const f = state.filters;
   return '<section class="page">' +
-    '<h1 class="lede">おまかせで きめる</h1>' +
-    '<p class="sub">'+(hasFilter(f) ? esc(condText(f))+' の なかから ひきます' : 'とうろく されている ぜんさくひんから ひきます')+'</p>' +
+    '<h1 class="lede">おまかせで きめる</h1>' + kaiBarHTML() +
+    '<p class="sub">'+(hasFilter(f) ? esc(condText(f))+' の なかから ひきます'
+      : (kaiOn() ? esc(kaiName())+' の たなの ぜんさくひんから ひきます' : 'とうろく されている ぜんさくひんから ひきます'))+'</p>' +
     '<div id="randomSlot">' +
       '<div class="roll-stage"><span class="die" data-icon="die"></span>' +
       '<p class="encounter">▼ ボタンを おして ゲームを よびだそう</p></div>' +
@@ -2728,6 +2801,109 @@ function lendListHTML(){
         '<button class="chip sm" data-lendpick="'+esc(g.id)+'" aria-pressed="'+(g.id===state.lendPick)+'">'+esc(g.title)+'</button>').join('')
       : '<span class="count">みつかりません でした。</span>') +
     '</div>';
+}
+
+function kaiSelectedHTML(){
+  const list = kaiGames();
+  const miss = kaiMissing();
+  let html = '<h2 class="sec">もっていく ゲーム（'+list.length+'）</h2>';
+  if(list.length){
+    html += '<p class="count">あそべる にんずう：'+kaiPlayersText(list)+'</p>' +
+      list.map(g =>
+        '<div class="admin-row">' + thumbHTML(g,'mini') +
+        '<div class="t"><b>'+esc(g.title)+(isLent(g)?' <span class="badge">かしだし中</span>':'')+'</b>' +
+          '<span>'+playersText(g)+'・'+(Number(g.playTime)||0)+'分</span></div>' +
+        '<button class="mini warn" data-kaidrop="'+esc(g.id)+'">はずす</button></div>').join('');
+  }else{
+    html += '<div class="note" style="margin-bottom:14px">まだ えらんで いません。したの リストから えらんで ください。</div>';
+  }
+  if(miss) html += '<div class="note" style="margin-top:10px">この たなには、この ずかんに まだ ない ゲームが '+miss+'つ あります。' +
+    '（サイトに こうかい する まえに えらんだ ゲームかも しれません）</div>';
+  return html;
+}
+function kaiPickHTML(){
+  const q = normalizeText(state.kaiQuery || '');
+  let list = ownedGames();
+  if(q) list = list.filter(g => searchIndex(g).includes(q));
+  list = list.slice().sort((a,b) => (kaiHas(b.id) - kaiHas(a.id)) || a.title.localeCompare(b.title,'ja'));
+  return '<div class="chips" style="max-height:260px;overflow:auto">' +
+    (list.length ? list.map(g =>
+      '<button class="chip sm" data-kaipick="'+esc(g.id)+'" aria-pressed="'+kaiHas(g.id)+'">'+esc(g.title)+'</button>').join('')
+      : '<span class="count">みつかりません でした。</span>') +
+  '</div>';
+}
+function updateKaiParts(){
+  const sel = document.getElementById('kaiSel');
+  if(sel){ sel.innerHTML = kaiSelectedHTML(); paintIcons(sel); bindKaiParts(sel); }
+  const pk = document.getElementById('kaiPicks');
+  if(pk){ pk.innerHTML = kaiPickHTML(); bindKaiParts(pk); }
+  const st = document.getElementById('kaiStatus');
+  if(st) st.innerHTML = kaiStatusHTML();
+  bindKaiStatus();
+}
+function toggleKaiPick(id){
+  const i = state.kai.ids.indexOf(id);
+  if(i >= 0) state.kai.ids.splice(i,1); else state.kai.ids.push(id);
+  saveKai();
+  updateKaiParts();
+}
+function bindKaiParts(box){
+  box.querySelectorAll('[data-kaipick]').forEach(b => b.onclick = () => toggleKaiPick(b.dataset.kaipick));
+  box.querySelectorAll('[data-kaidrop]').forEach(b => b.onclick = () => toggleKaiPick(b.dataset.kaidrop));
+}
+function kaiStatusHTML(){
+  const n = kaiGames().length;
+  if(!n) return '<p class="count" style="margin:0">ゲームを えらぶと、かいモードを はじめられます。</p>';
+  return kaiOn()
+    ? '<p class="count" style="margin:0 0 8px;color:var(--accent)">▶ いま つかって います。「さがす」「ずかん」「おまかせ」が この '+n+'さくひんだけに なります。</p>' +
+      '<button class="btn" id="kaiToggle">かいモードを おわる</button>'
+    : '<p class="count" style="margin:0 0 8px">かいの ばしょで はじめると、この '+n+'さくひんだけで さがせます。</p>' +
+      '<button class="btn primary" id="kaiToggle">▶ かいモードを はじめる</button>';
+}
+function bindKaiStatus(){
+  const t = document.getElementById('kaiToggle');
+  if(t) t.onclick = () => {
+    state.kai.on = !kaiOn();
+    saveKai();
+    if(state.kai.on){ toast(kaiName() + ' の たなで さがします'); go('#/'); }
+    else { toast('かいモードを おわりました'); updateKaiParts(); }
+  };
+}
+function viewKai(){
+  const canShare = !!publicUrl();
+  return '<section class="page">' +
+    '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
+    '<h1 class="lede">ボードゲーム会の たな</h1>' +
+    '<p class="sub">かいに もっていく ゲームを えらんで おくと、かいの あいだは その ゲームだけで さがせます。<br>' +
+      'リンクを おくれば、ともだちも じぶんの スマホで おなじ たなを みられます。</p>' +
+
+    '<label class="lbl" for="kaiNameIn">かいの なまえ</label>' +
+    '<input type="text" id="kaiNameIn" placeholder="れい：9月の ボドゲ会" value="'+esc(state.kai.name)+'" style="margin-bottom:14px">' +
+
+    '<div class="win" id="kaiStatus" style="margin-bottom:16px">' + kaiStatusHTML() + '</div>' +
+
+    '<div id="kaiSel">' + kaiSelectedHTML() + '</div>' +
+
+    '<div class="divider"></div>' +
+    '<h2 class="sec">ゲームを えらぶ</h2>' +
+    '<p class="count">タップで いれる／はずす。えらんだ ものが 上に きます。</p>' +
+    '<input type="search" id="kaiQ" placeholder="なまえで さがす" value="'+esc(state.kaiQuery||'')+'" ' +
+      'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:8px">' +
+    '<div id="kaiPicks">' + kaiPickHTML() + '</div>' +
+
+    '<div class="divider"></div>' +
+    '<h2 class="sec">ともだちに しらせる</h2>' +
+    (canShare
+      ? '<p class="count">リンクを ひらいた 人の がめんでも、この たなの ゲームだけで さがせます。</p>' +
+        '<div class="btn-row" style="margin-bottom:10px">' +
+          '<button class="btn small" style="flex:1" id="kaiCopyUrl">リンクを コピー</button>' +
+          '<button class="btn small" style="flex:1" id="kaiQrBtn">QRコード</button></div>'
+      : '<div class="note" style="margin-bottom:10px">リンクと QRコードは、こうかいした サイト（https://〜）で ひらいた ときに つくれます。</div>') +
+    '<button class="btn small" style="width:100%;margin-bottom:10px" id="kaiCopyText">ゲームの 一覧を コピー（LINE用）</button>' +
+    '<div id="qrBox"></div>' +
+
+    (state.kai.ids.length ? '<div class="divider"></div><button class="btn small" style="width:100%" id="kaiClear">えらんだ ゲームを ぜんぶ はずす</button>' : '') +
+  '</section>';
 }
 
 function viewLend(){
@@ -3793,7 +3969,7 @@ function saveVote(){ store.write(KEY.vote, state.vote); }
 function votePickListHTML(){
   const picked = state.votePick || [];
   const q = normalizeText(state.voteQuery || '');
-  let list = ownedGames();
+  let list = poolGames();
   if(q) list = list.filter(g => searchIndex(g).includes(q));
   list = list.slice(0, 40);
 
@@ -3983,6 +4159,8 @@ function viewAdmin(){
       '<button class="btn small" style="flex:1" data-go2="#/bulk">まとめて にゅうりょく' +
         (ownedGames().filter(needsData).length ? '（'+ownedGames().filter(needsData).length+'）' : '') + '</button>' +
       '<button class="btn small" style="flex:1" data-go2="#/print">いんさつ用 一覧</button></div>' +
+    '<button class="btn small" style="width:100%;margin-bottom:10px" data-go2="#/kai">ボードゲーム会の たな' +
+      (state.kai.ids.length ? '（'+kaiGames().length+'）' : '') + (kaiOn() ? ' ▶つかって いる' : '') + '</button>' +
     '<button class="btn small" style="width:100%;margin-bottom:18px" data-go2="#/lend">かしだし' +
       (state.games.filter(isLent).length ? '（'+state.games.filter(isLent).length+'）' : '') + '</button>' +
 
@@ -4821,7 +4999,7 @@ function bind(r){
 
   const voteRandom = document.getElementById('voteRandom');
   if(voteRandom) voteRandom.onclick = () => {
-    const pool = ownedGames();
+    const pool = poolGames();
     if(pool.length < 2) return toast('ずかんに ゲームが たりません');
     state.votePick = shuffled(pool).slice(0, Math.min(4, pool.length)).map(g => g.title);
     const t = document.getElementById('voteTitle');
@@ -5126,6 +5304,41 @@ function bind(r){
       'title="どうが" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" ' +
       'referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>';
   });
+
+  /* ボードゲーム会の たな */
+  const kaiOffBtn = document.getElementById('kaiOffBtn');
+  if(kaiOffBtn) kaiOffBtn.onclick = () => { state.kai.on = false; saveKai(); render(); toast('ぜんぶの ゲームから さがします'); };
+  const kaiOnBtn = document.getElementById('kaiOnBtn');
+  if(kaiOnBtn) kaiOnBtn.onclick = () => { state.kai.on = true; saveKai(); render(); toast(kaiName() + ' の たなで さがします'); };
+  if(r.name === 'kai'){
+    const nameIn = document.getElementById('kaiNameIn');
+    if(nameIn) nameIn.addEventListener('change', () => { state.kai.name = nameIn.value.trim(); saveKai(); });
+    const kaiQ = document.getElementById('kaiQ');
+    if(kaiQ){
+      let composing = false;
+      const later = () => {
+        clearTimeout(bind._kq);
+        bind._kq = setTimeout(() => { state.kaiQuery = kaiQ.value; updateKaiParts(); }, 200);
+      };
+      kaiQ.addEventListener('compositionstart', () => { composing = true; });
+      kaiQ.addEventListener('compositionend', () => { composing = false; later(); });
+      kaiQ.addEventListener('input', () => { if(!composing) later(); });
+      kaiQ.addEventListener('search', () => { state.kaiQuery = kaiQ.value; updateKaiParts(); });
+    }
+    ['kaiSel','kaiPicks'].forEach(id => { const b = document.getElementById(id); if(b) bindKaiParts(b); });
+    bindKaiStatus();
+    const needGames = () => { if(!kaiGames().length){ toast('さきに ゲームを えらんで ください'); return false; } return true; };
+    const cu = document.getElementById('kaiCopyUrl');
+    if(cu) cu.onclick = () => { if(needGames()) copyText(kaiShareUrl()); };
+    const qb = document.getElementById('kaiQrBtn');
+    if(qb) qb.onclick = () => { if(needGames()) showQR(kaiShareUrl()); };
+    const ct = document.getElementById('kaiCopyText');
+    if(ct) ct.onclick = () => { if(needGames()) copyText(kaiShareText()); };
+    const cl = document.getElementById('kaiClear');
+    if(cl) cl.onclick = () => ask('えらんだ ゲームを ぜんぶ はずしますか？', () => {
+      state.kai.ids = []; state.kai.on = false; saveKai(); render();
+    });
+  }
 
   /* かしだし */
   const lendQ = document.getElementById('lendQ');
@@ -5501,7 +5714,7 @@ function bind(r){
 function roll(){
   const f = state.filters;
   const res = search(f);
-  let pool = hasFilter(f) ? res.perfect : state.games;
+  let pool = hasFilter(f) ? res.perfect : poolGames();
   let fallback = false;
   if(!pool.length && res.near.length){ pool = res.near; fallback = true; }
 
@@ -5989,6 +6202,7 @@ document.addEventListener('click', e => {
 });
 initTheme();
 loadAll();
+adoptKaiFromUrl();
 render();
 syncPublished();
 
