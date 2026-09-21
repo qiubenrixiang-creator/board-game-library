@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-21T14:16:28.554Z",
+  "version": "2026-09-21T14:19:34.637Z",
   "tags": [
     {
       "name": "初心者",
@@ -1444,19 +1444,28 @@
     {
       "id": "g046",
       "title": "クラスター",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://item-shopping.c.yimg.jp/i/n/kenbill_3770003625605"
+      ],
+      "summary": "説明時間１分!? 誰もが楽しめるマグネット配置ゲーム",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 14,
+      "difficulty": 1,
       "tags": [
-        "データみきにゅう"
-      ]
+        "初心者",
+        "盛り上がる",
+        "アクション"
+      ],
+      "reading": "くらすたー",
+      "videos": [
+        "https://youtu.be/qHPyYYQJc5E?si=Ye9vJkznFhi_mpMj"
+      ],
+      "wish": false
     },
     {
       "id": "g047",
