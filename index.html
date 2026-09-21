@@ -257,7 +257,7 @@ img{image-rendering:auto}
   width:88px;height:88px;border:2px solid var(--frame);background:var(--bg-2);
   display:grid;place-items:center;overflow:hidden;position:relative;
 }
-.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb img{width:100%;height:100%;object-fit:contain;display:block}
 .thumb .glyph{font-size:30px;color:var(--accent);line-height:1}
 .thumb.mini{width:38px;height:38px;flex:0 0 auto}
 .thumb.mini .glyph{font-size:15px}
@@ -279,7 +279,8 @@ img{image-rendering:auto}
 @keyframes shake{0%{transform:translate(-3px,2px) rotate(-4deg)}100%{transform:translate(3px,-2px) rotate(4deg)}}
 .encounter{font-size:15px;color:var(--accent);margin:0}
 .result-title{font-size:20px;color:var(--accent);margin:0 0 4px}
-.hero-img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block;border:3px solid var(--frame)}
+/* はこ全体が かならず うつる ように、たて長でも よこ長でも ちぢめて おさめる */
+.hero-img{width:100%;height:auto;max-height:min(50vh,420px);object-fit:contain;display:block;border:3px solid var(--frame);background:var(--bg-2)}
 .hero-fallback{
   width:100%;aspect-ratio:4/3;border:3px solid var(--frame);background:var(--bg-2);
   display:grid;place-items:center;gap:10px;
