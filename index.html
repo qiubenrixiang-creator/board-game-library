@@ -532,6 +532,35 @@ h2.sec::before{content:"■ ";font-size:12px}
 
 /* ---------- どうぐ ---------- */
 .tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+/* ---- ぼうけんしゃカード ---- */
+.adv{border:3px solid var(--frame);background:var(--panel);box-shadow:var(--shadow);padding:14px}
+.adv-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--frame);padding-bottom:6px;margin-bottom:10px;gap:8px}
+.adv-name{color:var(--accent);font-size:20px}
+.adv-lv{font-size:15px;white-space:nowrap}
+.adv-title{border:2px solid var(--accent);padding:6px 9px;margin-bottom:12px}
+.adv-title small{display:block;font-size:11px;color:var(--muted)}
+.adv-title span{color:var(--accent);font-size:16px}
+.adv-exp{height:6px;border:1px solid var(--frame);margin:4px 0 0}
+.adv-exp div{height:100%;background:var(--accent)}
+.adv-info{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px;margin-bottom:12px}
+.adv-info b{font-weight:400;text-align:right;color:var(--text)}
+.adv-info span{color:var(--muted)}
+.adv-stats{display:grid;grid-template-columns:auto 1fr 26px;gap:6px 8px;align-items:center;font-size:13px;margin-bottom:6px}
+.adv-bar{height:9px;border:1px solid var(--frame);background:var(--bg-2)}
+.adv-bar div{height:100%;background:var(--accent-2)}
+.adv-bar.top div{background:var(--accent)}
+.adv-stats .v{text-align:right;font-size:12px}
+.adv-badges{display:flex;flex-wrap:wrap;gap:6px}
+.adv-badge{border:2px solid var(--accent);color:var(--accent);padding:2px 7px;font-size:12px}
+.adv-badge.locked{border-color:var(--muted);color:var(--muted)}
+/* ---- ちょうぼ・うわさばなし ---- */
+.cb-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border:2px solid var(--frame);background:var(--panel);margin-bottom:6px;font-size:13px}
+.cb-row .t{flex:1;min-width:0}
+.cb-res{font-size:15px;margin:0 0 6px}
+.talk-card{border:3px solid var(--accent);background:var(--bg-2);box-shadow:var(--shadow);padding:22px 16px;text-align:center;margin-bottom:12px;min-height:150px;display:flex;flex-direction:column;justify-content:center}
+.talk-card .cat{font-size:11px;color:var(--muted);margin:0 0 8px}
+.talk-card .q{font-size:19px;line-height:1.6;margin:0;color:var(--text)}
+.talk-card .who{font-size:13px;color:var(--accent);margin:12px 0 0}
 /* ---- ジュークボックス ---- */
 .jb-top{
   text-align:center;padding:14px 12px 12px;margin-bottom:12px;
@@ -839,7 +868,9 @@ const KEY = {
   turn:'bgl.turn',               /* てばん */
   backupAt:'bgl.lastBackup',     /* さいごに ひかえを つくった日 */
   today:'bgl.todayPlayers',  /* きょうの メンバーの にんずう */
-  kai:'bgl.kaiShelf'         /* ボードゲーム会に もっていく たな */
+  kai:'bgl.kaiShelf',        /* ボードゲーム会に もっていく たな */
+  choubo:'bgl.choubo',        /* しゅくやの ちょうぼ（わりかん） */
+  talk:'bgl.talkTopics'       /* じぶんで ついかした トークおだい */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -1142,6 +1173,36 @@ const ICONS = {
     '..####..'
   ],
   /* 大きく つかう（ぜんがめん） */
+  coin:[
+    '..####..',
+    '.#....#.',
+    '#..##..#',
+    '#.#....#',
+    '#..##..#',
+    '#....#.#',
+    '.#.##.#.',
+    '..####..'
+  ],
+  talk:[
+    '########',
+    '#......#',
+    '#.####.#',
+    '#......#',
+    '#.##...#',
+    '########',
+    '.##.....',
+    '.#......'
+  ],
+  door:[
+    '.######.',
+    '.#....#.',
+    '.#....#.',
+    '.#....#.',
+    '.#...##.',
+    '.#....#.',
+    '.#....#.',
+    '########'
+  ],
   jukebox:[
     '..####..',
     '.#....#.',
@@ -1584,6 +1645,9 @@ const state = {
   lendPick: '', lendQuery: '',                      /* かしだし画面の えらび */
   kai: {name:'', ids:[], on:false},                 /* ボードゲーム会の たな */
   kaiQuery: '',                                     /* たなの ゲームを さがす */
+  withSel: [],                                      /* きろくの「いっしょに あそんだ 人」 */
+  choubo: {members:[], items:[]},                   /* ちょうぼ */
+  talk: {cat:'all', idx:-1, order:[], who:'', custom:[]},  /* うわさばなし */
   recQuery: '',                                     /* きろく画面の けんさく */
   recView: 'list',                                  /* いちらん／カレンダー／思い出 */
   calYm: null, calDay: null, memory: null,          /* カレンダーと 思い出の いま */
@@ -1611,6 +1675,10 @@ function loadAll(){
   state.games = store.read(KEY.games, null) || SEED_GAMES.map(g=>({...g}));
   state.tags  = store.read(KEY.tags, null)  || DEFAULT_TAGS.map(t=>({...t}));
   state.today = store.read(KEY.today, null);
+  const cb = store.read(KEY.choubo, null);
+  if(cb && typeof cb === 'object') state.choubo = {members:Array.isArray(cb.members)?cb.members:[], items:Array.isArray(cb.items)?cb.items:[]};
+  const tc = store.read(KEY.talk, null);
+  if(Array.isArray(tc)) state.talk.custom = tc;
   const ka = store.read(KEY.kai, null);
   if(ka && Array.isArray(ka.ids)) state.kai = {name:String(ka.name||''), ids:ka.ids.map(String), on:!!ka.on};
   const sc = store.read(KEY.score, null);
@@ -2082,12 +2150,12 @@ function render(){
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
                   print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools,
-                  records:viewRecords, tool:viewTool, kai:viewKai };
+                  records:viewRecords, tool:viewTool, kai:viewKai, card:viewCard };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
   const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', tool:'#/tools',
-                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin' };
+                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin', card:'#/tools' };
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   syncBgm();
   paintSoundBtns();
@@ -2544,7 +2612,8 @@ function viewDetail(id){
             '<div style="border-left:3px solid var(--frame);padding:0 0 0 10px;margin-bottom:12px">' +
               '<div class="row" style="align-items:flex-start;gap:8px">' +
                 '<p class="count" style="margin:0;flex:1">'+esc(dateLabel(r.pl.d))+
-                  (r.pl.n ? '／'+esc(r.pl.n)+'人' : '')+(r.pl.w ? '／かち：'+esc(r.pl.w) : '')+'</p>' +
+                  (r.pl.n ? '／'+esc(r.pl.n)+'人' : '')+(r.pl.w ? '／かち：'+esc(r.pl.w) : '')+
+                  (Array.isArray(r.pl.u) && r.pl.u.length ? '<br>メンバー：'+esc(r.pl.u.join('・')) : '')+'</p>' +
                 (isEditing(g.id, r.i) ? '' :
                   '<button class="mini" data-editrec="'+esc(g.id)+'|'+r.i+'" style="flex:0 0 auto">なおす</button>' +
                   '<button class="mini warn" data-delrec="'+esc(g.id)+'|'+r.i+'" style="flex:0 0 auto">けす</button>') +
@@ -2910,7 +2979,7 @@ function viewPlayLog(){
   const picked = state.logPicked || [];
   /* この画面に 入って きた ときだけ 画像の 作業リストを からに する
      （画面の 中の 書きかえでは のこす） */
-  if(render._routeKey !== 'playlog/'){ state.formImages = []; state.playPhotos = []; }
+  if(render._routeKey !== 'playlog/'){ state.formImages = []; state.playPhotos = []; state.withSel = chosenToday(); }
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
     '<h1 class="lede">きょう あそんだ ゲーム</h1>' +
@@ -2921,6 +2990,7 @@ function viewPlayLog(){
       '<div class="row" style="margin-bottom:8px">' +
         '<input type="date" id="logDate" value="'+todayStr()+'" style="flex:1.4">' +
         '<input type="number" id="logN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+(state.today||'')+'" style="flex:1"></div>' +
+      withPickerHTML() +
       '<input type="text" id="logWin" placeholder="かった人（にんい）" style="margin-bottom:8px">' +
       playerPickHTML('logWin') +
       '<textarea id="logMemo" placeholder="かんそう（えらんだ ぜんぶに つきます・にんい）" style="min-height:66px"></textarea>' +
@@ -3108,6 +3178,421 @@ function viewKai(){
   '</section>';
 }
 
+/* =========================================================
+   ぼうけんしゃカード
+   あそんだ きろく（いっしょに あそんだ 人・かった人）から
+   その場で けいさん する。データは ふえないので おもく ならない。
+   ========================================================= */
+const ADV_STATS = [
+  {id:'atk',   name:'こうげき',  note:'たいせんでの かちやすさ',   title:'むてきの けんし'},
+  {id:'int',   name:'かしこさ',  note:'頭脳戦・おもい ゲーム',      title:'さかばの けんじゃ'},
+  {id:'bond',  name:'きずな',    note:'協力ゲーム',                 title:'きょうりょくの ゆうしゃ'},
+  {id:'trick', name:'だまし',    note:'正体隠匿・うそを つく ゲーム', title:'うそつきの たつじん'},
+  {id:'luck',  name:'うん',      note:'運要素の ある ゲーム',       title:'うんめいの ギャンブラー'},
+  {id:'party', name:'もりあげ',  note:'盛り上がる・パーティー',     title:'さかばの おどりこ'},
+  {id:'spd',   name:'すばやさ',  note:'みじかい・かるい ゲーム',    title:'しっぷうの とうぞく'},
+  {id:'hp',    name:'たいりょく', note:'あそんだ じかんの ごうけい', title:'ふくつの せんし'},
+  {id:'know',  name:'ちしき',    note:'あそんだ ゲームの しゅるい', title:'さすらいの ぎんゆうしじん'},
+  {id:'charm', name:'じんぼう',  note:'いっしょに あそんだ なかま',  title:'さかばの かおやく'}
+];
+/* その人が でて くる きろく */
+function advPlays(name){
+  const out = [];
+  state.games.forEach(g => playsOf(g).forEach(pl => {
+    if(playMembers(pl).indexOf(name) >= 0) out.push({g:g, pl:pl});
+  }));
+  return out.sort((a,b) => String(a.pl.d||'').localeCompare(String(b.pl.d||'')));
+}
+function advLevel(n){ return Math.min(99, 1 + Math.floor(Math.sqrt(n * 6))); }
+function advNextLevelAt(lv){ for(let n = 0; n < 100000; n++){ if(advLevel(n) > lv) return n; } return 0; }
+const hasTag = (g, t) => (g.tags || []).indexOf(t) >= 0;
+/* 0〜99 に おさめる（おおいほど ゆっくり のびる） */
+const advScale = (x, k) => Math.round(99 * (1 - Math.exp(-x / k)));
+
+function adventurer(name){
+  const ps = advPlays(name);
+  const wins = ps.filter(r => r.pl.w === name);
+  const vs = ps.filter(r => !hasTag(r.g,'協力'));
+  const vsWins = vs.filter(r => r.pl.w === name).length;
+  const games = {}, mates = {}, winsBy = {}, days = {};
+  let minutes = 0;
+  ps.forEach(r => {
+    games[r.g.id] = (games[r.g.id] || 0) + 1;
+    if(r.pl.w === name) winsBy[r.g.id] = (winsBy[r.g.id] || 0) + 1;
+    playMembers(r.pl).forEach(m => { if(m !== name) mates[m] = (mates[m] || 0) + 1; });
+    minutes += Number(r.g.playTime) || 0;
+    if(r.pl.d) days[r.pl.d] = (days[r.pl.d] || 0) + 1;
+  });
+  const cnt = f => ps.filter(r => f(r.g)).length;
+  const raw = {
+    /* かちは 勝率に 回数の おもみを かける（1かい 1しょう で 99 に ならない） */
+    atk:   vs.length ? (vsWins / vs.length) * Math.min(1, vs.length / 8) * 3 + vsWins * 0.15 : 0,
+    int:   cnt(g => hasTag(g,'頭脳戦') || hasTag(g,'重量級') || (Number(g.difficulty)||0) >= 4) + wins.filter(r => hasTag(r.g,'頭脳戦')).length,
+    bond:  cnt(g => hasTag(g,'協力')),
+    trick: cnt(g => hasTag(g,'正体隠匿')) + wins.filter(r => hasTag(r.g,'正体隠匿')).length,
+    luck:  cnt(g => hasTag(g,'運要素')) + wins.filter(r => hasTag(r.g,'運要素')).length * 0.5,
+    party: cnt(g => hasTag(g,'盛り上がる') || hasTag(g,'パーティー')),
+    spd:   cnt(g => hasTag(g,'軽量級') || ((Number(g.playTime)||99) <= 15)),
+    hp:    minutes,
+    know:  Object.keys(games).length,
+    charm: Object.keys(mates).length
+  };
+  const K = {atk:1.6, int:10, bond:8, trick:8, luck:10, party:10, spd:10, hp:900, know:15, charm:8};
+  const stats = {};
+  ADV_STATS.forEach(st => { stats[st.id] = advScale(raw[st.id], K[st.id]); });
+
+  const topGame = (obj) => {
+    const id = Object.keys(obj).sort((a,b) => obj[b] - obj[a])[0];
+    return id ? state.games.find(g => g.id === id) : null;
+  };
+  const mate = Object.keys(mates).sort((a,b) => mates[b] - mates[a])[0] || '';
+
+  /* れんしょう（おなじ ひの じゅんばんは きろく じゅん） */
+  let streak = 0, best = 0;
+  ps.forEach(r => { if(r.pl.w === name){ streak++; best = Math.max(best, streak); } else if(r.pl.w){ streak = 0; } });
+  const genres = {};
+  ps.forEach(r => (r.g.tags || []).forEach(t => {
+    if(state.tags.some(x => x.name === t && x.category === 'ジャンル')) genres[t] = 1;
+  }));
+  const maxDay = Math.max(0, ...Object.values(days));
+
+  const badges = [
+    {name:'はじめての ぼうけん', ok: ps.length >= 1,   hint:'1かい あそぶ'},
+    {name:'はじめての しょうり', ok: wins.length >= 1, hint:'1かい かつ'},
+    {name:'10かいの ぼうけん',   ok: ps.length >= 10,  hint:'10かい あそぶ'},
+    {name:'でんせつの ぼうけんしゃ', ok: ps.length >= 50, hint:'50かい あそぶ'},
+    {name:'3れんしょう',         ok: best >= 3,        hint:'3かい つづけて かつ'},
+    {name:'10しゅるい せいは',   ok: Object.keys(games).length >= 10, hint:'10しゅるいの ゲームで あそぶ'},
+    {name:'ジャンル マスター',   ok: Object.keys(genres).length >= 5, hint:'5つの ジャンルで あそぶ'},
+    {name:'ゆうじょうの あかし', ok: raw.bond >= 10,   hint:'協力ゲームを 10かい'},
+    {name:'さかばの なかまたち', ok: raw.charm >= 5,   hint:'5人と いっしょに あそぶ'},
+    {name:'よふかしの ぼうけん', ok: maxDay >= 5,      hint:'1日に 5ゲーム あそぶ'},
+    {name:'じゅうりょうきゅうの ちょうせん', ok: Object.keys(games).some(id => { const g = state.games.find(x => x.id === id); return g && hasTag(g,'重量級'); }), hint:'重量級で あそぶ'}
+  ];
+
+  return {
+    name, plays: ps.length, wins: wins.length,
+    rate: vs.length ? Math.round(vsWins / vs.length * 100) : null,
+    minutes, stats, badges, best,
+    kinds: Object.keys(games).length,
+    fav: topGame(games), strong: topGame(winsBy), mate,
+    last: ps.length ? ps[ps.length-1].pl.d : ''
+  };
+}
+function advTitle(a){
+  if(!a.plays) return 'たびだちまえの わかもの';
+  const top = ADV_STATS.slice().sort((x,y) => a.stats[y.id] - a.stats[x.id])[0];
+  const lv = advLevel(a.plays);
+  const rank = lv < 6 ? 'みならいの ' : (lv >= 30 ? 'でんせつの ' : '');
+  return rank + top.title;
+}
+function viewCard(param){
+  const name = String(param || '').trim();
+  const back = '<button class="mini" data-go2="#/tool/names" style="margin-bottom:14px">◀ なかまの なまえへ</button>';
+  if(!name) return '<section class="page">' + back + '<div class="empty">なまえが ありません</div></section>';
+  const a = adventurer(name);
+  const lv = advLevel(a.plays);
+  const next = advNextLevelAt(lv), prev = advNextLevelAt(lv - 1);
+  const expPct = lv >= 99 ? 100 : Math.round((a.plays - prev) / Math.max(1, next - prev) * 100);
+  const top = Math.max(...ADV_STATS.map(s => a.stats[s.id]));
+  const got = a.badges.filter(b => b.ok).length;
+  const hours = a.minutes >= 60 ? Math.floor(a.minutes/60)+'じかん'+(a.minutes%60 ? (a.minutes%60)+'ふん' : '') : a.minutes+'ふん';
+
+  return '<section class="page">' + back +
+    '<h1 class="lede">ぼうけんしゃカード</h1>' +
+    '<div class="adv">' +
+      '<div class="adv-head"><span class="adv-name">▶ '+esc(name)+'</span><span class="adv-lv">Lv.'+lv+'</span></div>' +
+      '<div class="adv-title"><small>しょうごう</small><span>'+esc(advTitle(a))+'</span>' +
+        '<div class="adv-exp" title="つぎの レベルまで"><div style="width:'+expPct+'%"></div></div>' +
+        (lv < 99 ? '<small style="margin-top:3px">つぎの レベルまで あと '+Math.max(0, next - a.plays)+'かい</small>' : '') +
+      '</div>' +
+      '<div class="adv-info">' +
+        '<span>あそんだ かず</span><b>'+a.plays+'かい</b>' +
+        '<span>かった かず</span><b>'+a.wins+'かい</b>' +
+        '<span>たいせん しょうりつ</span><b>'+(a.rate === null ? '―' : a.rate+'%')+'</b>' +
+        '<span>ぼうけんの じかん</span><b>'+hours+'</b>' +
+        '<span>よく あそぶ ゲーム</span><b>'+(a.fav ? esc(a.fav.title) : '―')+'</b>' +
+        '<span>とくいな ゲーム</span><b>'+(a.strong ? esc(a.strong.title) : '―')+'</b>' +
+        '<span>あいぼう</span><b>'+(a.mate ? esc(a.mate) : '―')+'</b>' +
+        '<span>さいごの ぼうけん</span><b>'+(a.last ? esc(dateLabel(a.last)) : '―')+'</b>' +
+      '</div>' +
+      '<div class="catlabel">ステータス</div>' +
+      '<div class="adv-stats">' + ADV_STATS.map(st =>
+        '<span>'+st.name+'</span>' +
+        '<div class="adv-bar'+(a.stats[st.id] === top && top > 0 ? ' top' : '')+'"><div style="width:'+a.stats[st.id]+'%"></div></div>' +
+        '<span class="v">'+a.stats[st.id]+'</span>').join('') +
+      '</div>' +
+      '<details style="margin:0 0 12px"><summary style="font-size:12px;color:var(--muted)">ステータスの きまりかた</summary>' +
+        '<p class="count" style="margin:6px 0 0">' + ADV_STATS.map(st => st.name+'：'+st.note).join('<br>') + '<br>いちばん たかい ステータスで しょうごうが きまります。</p></details>' +
+      '<div class="catlabel">じっせき（'+got+' / '+a.badges.length+'）</div>' +
+      '<div class="adv-badges">' + a.badges.map(b =>
+        b.ok ? '<span class="adv-badge">'+esc(b.name)+'</span>'
+             : '<span class="adv-badge locked" title="'+esc(b.hint)+'">？？？</span>').join('') +
+      '</div>' +
+      (a.badges.some(b => !b.ok) ? '<p class="count" style="margin:8px 0 0">つぎの じっせき：'+esc(a.badges.find(b => !b.ok).hint)+'</p>' : '') +
+    '</div>' +
+    (!a.plays ? '<div class="note" style="margin-top:12px">まだ きろくが ありません。「きょう あそんだ」で いっしょに あそんだ 人に えらぶと、カードが そだちます。</div>' : '') +
+    '<div class="btn-row" style="margin-top:14px">' +
+      '<button class="btn small" style="flex:1" data-go2="#/playlog">きろくを つける</button>' +
+      '<button class="btn small" style="flex:1" id="advCopy">カードを コピー</button></div>' +
+  '</section>';
+}
+function advShareText(name){
+  const a = adventurer(name);
+  return '【ぼうけんしゃカード】' + name + '  Lv.' + advLevel(a.plays) + '\n' +
+    'しょうごう：' + advTitle(a) + '\n' +
+    'あそんだ ' + a.plays + 'かい／かった ' + a.wins + 'かい\n' +
+    ADV_STATS.map(st => st.name + ' ' + a.stats[st.id]).join('／');
+}
+
+/* =========================================================
+   しゅくやの ちょうぼ（わりかん）
+   ========================================================= */
+function saveChoubo(){ store.write(KEY.choubo, state.choubo); }
+const yen = n => '¥' + Math.round(n).toLocaleString('ja-JP');
+function chouboCalc(){
+  const c = state.choubo;
+  const members = c.members.slice();
+  c.items.forEach(it => { if(it.payer && members.indexOf(it.payer) < 0) members.push(it.payer); });
+  const total = c.items.reduce((s,it) => s + (Number(it.amount)||0), 0);
+  if(!members.length) return {members, total, share:0, transfers:[], bal:{}};
+  const base = Math.floor(total / members.length);
+  let rest = total - base * members.length;          /* はすう（1円たんい） */
+  const owe = {}, paid = {};
+  members.forEach(m => { owe[m] = base; paid[m] = 0; });
+  c.items.forEach(it => { if(it.payer) paid[it.payer] = (paid[it.payer]||0) + (Number(it.amount)||0); });
+  /* はすうは たてかえた 人から じゅんに もつ（やりとりが ふえない ように） */
+  members.slice().sort((a,b) => paid[b] - paid[a]).forEach(m => { if(rest > 0){ owe[m]++; rest--; } });
+  const bal = {};
+  members.forEach(m => { bal[m] = paid[m] - owe[m]; });
+  const cred = members.filter(m => bal[m] > 0).map(m => ({m, v:bal[m]})).sort((a,b) => b.v - a.v);
+  const debt = members.filter(m => bal[m] < 0).map(m => ({m, v:-bal[m]})).sort((a,b) => b.v - a.v);
+  const transfers = [];
+  let i = 0, j = 0;
+  while(i < debt.length && j < cred.length){
+    const x = Math.min(debt[i].v, cred[j].v);
+    if(x > 0) transfers.push({from:debt[i].m, to:cred[j].m, v:x});
+    debt[i].v -= x; cred[j].v -= x;
+    if(debt[i].v <= 0) i++;
+    if(cred[j].v <= 0) j++;
+  }
+  return {members, total, share: total / members.length, transfers, bal, paid, owe};
+}
+function toolChouboHTML(){
+  const c = state.choubo;
+  const regs = state.players.map(p => p.name);
+  const r = chouboCalc();
+  const payerOpts = r.members.length ? r.members : regs;
+  return '<p class="count" style="margin:0 0 10px">かいじょう代や おやつ代を いれると、だれが だれに いくら はらえば いいかを けいさん します。</p>' +
+    '<div class="catlabel">さんかした 人（'+c.members.length+'人）</div>' +
+    (regs.length ? '<div class="chips" style="margin-bottom:6px">' + regs.map(n =>
+      '<button class="chip sm" data-cbmem="'+esc(n)+'" aria-pressed="'+(c.members.indexOf(n)>=0)+'">'+esc(n)+'</button>').join('') + '</div>' : '') +
+    (c.members.filter(n => regs.indexOf(n) < 0).length ? '<div class="chips" style="margin-bottom:6px">' +
+      c.members.filter(n => regs.indexOf(n) < 0).map(n =>
+        '<button class="chip sm" data-cbmem="'+esc(n)+'" aria-pressed="true">'+esc(n)+' ✕</button>').join('') + '</div>' : '') +
+    '<div class="row" style="margin-bottom:14px">' +
+      '<input type="text" id="cbNewMem" placeholder="ほかの 人の なまえ" style="flex:2">' +
+      '<button class="mini" id="cbAddMem" style="flex:0 0 auto">ついか</button>' +
+      (chosenToday().length ? '<button class="mini" id="cbToday" style="flex:0 0 auto">きょうの メンバー</button>' : '') + '</div>' +
+
+    '<div class="catlabel">つかった おかね</div>' +
+    (c.items.length ? c.items.map((it, i) =>
+      '<div class="cb-row"><div class="t">'+esc(it.what || 'なにか')+'<br><span style="color:var(--muted);font-size:11px">'+esc(it.payer || '―')+' さんが たてかえ</span></div>' +
+      '<b style="font-weight:400">'+yen(it.amount)+'</b>' +
+      '<button class="mini warn" data-cbdel="'+i+'">けす</button></div>').join('')
+      : '<div class="note" style="margin-bottom:8px">まだ ありません。</div>') +
+    '<div class="win" style="margin:8px 0 14px">' +
+      '<input type="text" id="cbWhat" placeholder="なにに？（れい：かいじょう代）" style="margin-bottom:8px">' +
+      '<div class="row" style="margin-bottom:8px">' +
+        '<input type="number" id="cbAmt" min="0" inputmode="numeric" placeholder="きんがく（円）" style="flex:1">' +
+        '<select id="cbPayer" style="flex:1"><option value="">だれが はらった？</option>' +
+          payerOpts.map(n => '<option>'+esc(n)+'</option>').join('') + '</select></div>' +
+      '<button class="btn small primary" id="cbAddItem" style="width:100%">ちょうぼに かく</button>' +
+    '</div>' +
+
+    '<div class="catlabel">せいさん</div>' +
+    (r.total && r.members.length ?
+      '<div class="win" style="margin-bottom:10px">' +
+        '<p class="cb-res">ごうけい <span style="color:var(--accent)">'+yen(r.total)+'</span>　ひとり <span style="color:var(--accent)">'+
+          (r.total % r.members.length ? yen(Math.floor(r.share))+'〜'+yen(Math.ceil(r.share)) : yen(r.share))+'</span></p>' +
+        (r.transfers.length ? r.transfers.map(t =>
+          '<p style="margin:0 0 4px">▶ '+esc(t.from)+' → '+esc(t.to)+'　<span style="color:var(--accent)">'+yen(t.v)+'</span></p>').join('')
+          : '<p style="margin:0">もう ぴったり です。やりとりは いりません。</p>') +
+        (r.total % r.members.length ? '<p class="count" style="margin:6px 0 0">わりきれない '+(r.total % r.members.length)+'円は、たてかえた 人が 1円ずつ おおく もちます。</p>' : '') +
+      '</div>' +
+      '<button class="btn small" id="cbCopy" style="width:100%;margin-bottom:10px">けっかを コピー（LINE用）</button>'
+      : '<div class="note" style="margin-bottom:10px">さんかした 人と つかった おかねを いれると、ここに でます。</div>') +
+    ((c.items.length || c.members.length) ? '<button class="btn small" id="cbClear" style="width:100%">ちょうぼを あたらしく する</button>' : '');
+}
+function chouboText(){
+  const r = chouboCalc();
+  return '【しゅくやの ちょうぼ】\n' +
+    state.choubo.items.map(it => '・' + (it.what || 'なにか') + ' ' + yen(it.amount) + '（' + (it.payer || '―') + '）').join('\n') +
+    '\nごうけい ' + yen(r.total) + '／' + r.members.length + '人 → ひとり やく ' + yen(r.share) + '\n\n' +
+    (r.transfers.length ? r.transfers.map(t => t.from + ' → ' + t.to + ' ' + yen(t.v)).join('\n') : 'やりとりは いりません');
+}
+function repaintChoubo(){
+  const box = document.getElementById('chouboBox');
+  if(!box) return;
+  const what = (document.getElementById('cbWhat')||{}).value || '';
+  const amt = (document.getElementById('cbAmt')||{}).value || '';
+  box.innerHTML = toolChouboHTML();
+  const w = document.getElementById('cbWhat'); if(w) w.value = what;
+  const a = document.getElementById('cbAmt'); if(a) a.value = amt;
+  bindChoubo();
+}
+function bindChoubo(){
+  const box = document.getElementById('chouboBox');
+  if(!box) return;
+  const c = state.choubo;
+  box.querySelectorAll('[data-cbmem]').forEach(b => b.onclick = () => {
+    const n = b.dataset.cbmem, i = c.members.indexOf(n);
+    if(i >= 0) c.members.splice(i,1); else c.members.push(n);
+    saveChoubo(); repaintChoubo();
+  });
+  const am = document.getElementById('cbAddMem');
+  if(am) am.onclick = () => {
+    const inp = document.getElementById('cbNewMem');
+    splitNames(inp ? inp.value : '').forEach(n => { if(c.members.indexOf(n) < 0) c.members.push(n); });
+    saveChoubo(); repaintChoubo();
+  };
+  const td = document.getElementById('cbToday');
+  if(td) td.onclick = () => {
+    chosenToday().forEach(n => { if(c.members.indexOf(n) < 0) c.members.push(n); });
+    saveChoubo(); repaintChoubo();
+  };
+  const ai = document.getElementById('cbAddItem');
+  if(ai) ai.onclick = () => {
+    const amt = Math.round(Number((document.getElementById('cbAmt')||{}).value) || 0);
+    if(amt <= 0) return toast('きんがくを いれて ください');
+    const payer = (document.getElementById('cbPayer')||{}).value || '';
+    if(!payer) return toast('はらった 人を えらんで ください');
+    const what = ((document.getElementById('cbWhat')||{}).value || '').trim();
+    c.items.push({what, amount:amt, payer});
+    if(c.members.indexOf(payer) < 0) c.members.push(payer);
+    saveChoubo();
+    const w = document.getElementById('cbWhat'); if(w) w.value = '';
+    const a = document.getElementById('cbAmt'); if(a) a.value = '';
+    repaintChoubo(); toast('ちょうぼに かきました');
+  };
+  box.querySelectorAll('[data-cbdel]').forEach(b => b.onclick = () => {
+    c.items.splice(Number(b.dataset.cbdel), 1); saveChoubo(); repaintChoubo();
+  });
+  const cp = document.getElementById('cbCopy');
+  if(cp) cp.onclick = () => copyText(chouboText());
+  const cl = document.getElementById('cbClear');
+  if(cl) cl.onclick = () => ask('ちょうぼを ぜんぶ けして あたらしく しますか？', () => {
+    state.choubo = {members:[], items:[]}; saveChoubo(); repaintChoubo();
+  });
+}
+
+/* =========================================================
+   さかばの うわさばなし（トークの おだい）
+   ========================================================= */
+const TALK_CATS = [
+  {id:'hello', name:'はじめまして'},
+  {id:'bg',    name:'ボードゲーム'},
+  {id:'if',    name:'もしも'},
+  {id:'memory',name:'おもいで'},
+  {id:'deep',  name:'すこし ふかい'}
+];
+const TALK_TOPICS = {
+  hello:['さいきん ハマって いる ことは？','すきな たべものと、にがてな たべものは？','やすみの日は なにを して いる？',
+    'じぶんを どうぶつに たとえると？','いま いちばん いきたい ばしょは？','こどもの ころの ゆめは？','さいきん わらった ことは？',
+    'すきな きせつと その りゆうは？','さいきん かった もので よかった ものは？','じまんできる ちょっとした とくぎは？',
+    'コンビニで かならず みる コーナーは？','あさ型？ よる型？'],
+  bg:['はじめて ハマった ボードゲームは？','ルールを おぼえるのが いちばん たいへんだった ゲームは？','むじんとうに 1つだけ もって いくなら どの ゲーム？',
+    'いちばん もりあがった しゅんかんは？','じぶんで ゲームを つくるなら どんな ゲーム？','かちたい ときの ひっさつ さくせんは？',
+    'すきな ゲームの ジャンルは？ 協力？ 対戦？','「これは ずるい！」と おもった ゲームの しゅんかんは？','ともだちに いちばん すすめたい ゲームは？',
+    'ゲームで いちばん くやしかった まけは？','はこが いちばん すきな ゲームは？','つぎに かいたい ゲームは？'],
+  if:['もしも 1日だけ ほかの 人に なれるなら だれ？','もしも 宝くじで 1おく円 あたったら？','もしも ゲームの せかいに はいれるなら どの ゲーム？',
+    'もしも まほうが 1つ つかえるなら？','もしも 1しゅうかん やすみが あったら？','もしも じぶんが RPGの しょくぎょう なら？',
+    'もしも タイムマシンが あったら いつに いく？','もしも どうぶつと はなせたら なにを きく？','もしも さかばの マスターに なったら どんな 店に する？',
+    'もしも 1つだけ ルールを かえられるなら？'],
+  memory:['がっこうの きゅうしょくで すきだった メニューは？','いちばん おもいでに のこって いる りょこうは？','こどもの ころ ハマった あそびは？',
+    'さいきん 「がんばった」と おもう ことは？','いちばん わらった しっぱいだんは？','はじめて じぶんの おかねで かった ものは？',
+    'わすれられない プレゼントは？','こどもの ころ こわかった ものは？'],
+  deep:['じんせいで いちばん なやんだ せんたくは？','10ねんご どう なって いたい？','「この人 すごい」と おもった 人は？',
+    'いま だれかに ありがとうと いいたい ことは？','じぶんの いい ところを 1つ おしえて','さいきん かんがえかたが かわった ことは？',
+    'いちばん たいせつに して いる ものは？','もう一度 やりなおせるなら いつに もどる？']
+};
+function saveTalk(){ store.write(KEY.talk, state.talk.custom); }
+function talkPool(){
+  const cat = state.talk.cat;
+  const out = [];
+  TALK_CATS.forEach(c => { if(cat === 'all' || cat === c.id) TALK_TOPICS[c.id].forEach(q => out.push({cat:c.name, q})); });
+  if(cat === 'all' || cat === 'mine') state.talk.custom.forEach(q => out.push({cat:'じぶんで ついか', q}));
+  return out;
+}
+function talkNext(){
+  const pool = talkPool();
+  if(!pool.length){ state.talk.cur = null; return; }
+  if(!state.talk.order.length || state.talk.orderCat !== state.talk.cat){
+    state.talk.order = shuffled(pool.map((_,i) => i));
+    state.talk.orderCat = state.talk.cat;
+  }
+  const i = state.talk.order.shift();
+  state.talk.cur = pool[i] || pool[0];
+  const mem = chosenToday().length ? chosenToday() : state.players.map(p => p.name);
+  state.talk.who = mem.length ? mem[Math.floor(Math.random() * mem.length)] : '';
+}
+function toolTalkHTML(){
+  const t = state.talk;
+  const cur = t.cur;
+  return '<p class="count" style="margin:0 0 10px">さかばで ささやかれる うわさばなし。ひいた おだいで トークしよう。<br>まちじかんや、はじめての 人が いる ときに。</p>' +
+    '<div class="chips" style="margin-bottom:12px">' +
+      [{id:'all',name:'ぜんぶ'}].concat(TALK_CATS).concat(t.custom.length ? [{id:'mine',name:'じぶんで ついか'}] : []).map(c =>
+        '<button class="chip sm" data-talkcat="'+c.id+'" aria-pressed="'+(t.cat===c.id)+'">'+c.name+'</button>').join('') +
+    '</div>' +
+    '<div class="talk-card">' +
+      (cur ? '<p class="cat">＊ '+esc(cur.cat)+' の うわさ</p><p class="q">'+esc(cur.q)+'</p>' +
+             (t.who ? '<p class="who">▶ こたえる人：'+esc(t.who)+'</p>' : '')
+           : '<p class="q" style="color:var(--muted)">▼ ボタンを おして<br>うわさを きこう</p>') +
+    '</div>' +
+    '<div class="btn-row" style="margin-bottom:14px">' +
+      '<button class="btn primary" id="talkNext" style="flex:2">'+(cur ? '▶ つぎの うわさ' : '▶ うわさを きく')+'</button>' +
+      (cur && t.who ? '<button class="btn small" id="talkWho" style="flex:1">ほかの 人</button>' : '') +
+    '</div>' +
+    '<details><summary style="font-size:13px">おだいを じぶんで ついか する（'+t.custom.length+'）</summary>' +
+      '<div class="row" style="margin:10px 0 8px">' +
+        '<input type="text" id="talkNew" placeholder="れい：さいきん みた ゆめは？" style="flex:2">' +
+        '<button class="mini" id="talkAdd" style="flex:0 0 auto">ついか</button></div>' +
+      t.custom.map((q,i) => '<div class="cb-row"><div class="t">'+esc(q)+'</div><button class="mini warn" data-talkdel="'+i+'">けす</button></div>').join('') +
+    '</details>';
+}
+function repaintTalk(){
+  const box = document.getElementById('talkBox');
+  if(!box) return;
+  box.innerHTML = toolTalkHTML();
+  bindTalk();
+}
+function bindTalk(){
+  const box = document.getElementById('talkBox');
+  if(!box) return;
+  box.querySelectorAll('[data-talkcat]').forEach(b => b.onclick = () => {
+    state.talk.cat = b.dataset.talkcat; state.talk.order = []; talkNext(); repaintTalk();
+  });
+  const nx = document.getElementById('talkNext');
+  if(nx) nx.onclick = () => { talkNext(); repaintTalk(); };
+  const wh = document.getElementById('talkWho');
+  if(wh) wh.onclick = () => {
+    const mem = (chosenToday().length ? chosenToday() : state.players.map(p => p.name)).filter(n => n !== state.talk.who);
+    if(mem.length) state.talk.who = mem[Math.floor(Math.random() * mem.length)];
+    repaintTalk();
+  };
+  const ad = document.getElementById('talkAdd');
+  if(ad) ad.onclick = () => {
+    const inp = document.getElementById('talkNew');
+    const q = (inp ? inp.value : '').trim();
+    if(!q) return toast('おだいを いれて ください');
+    state.talk.custom.push(q); saveTalk(); state.talk.order = [];
+    repaintTalk(); toast('うわさを ついか しました');
+  };
+  box.querySelectorAll('[data-talkdel]').forEach(b => b.onclick = () => {
+    state.talk.custom.splice(Number(b.dataset.talkdel), 1); saveTalk(); state.talk.order = []; repaintTalk();
+  });
+}
+
 function viewLend(){
   const lent = state.games.filter(isLent).sort((a,b) => (a.lentDate||'').localeCompare(b.lentDate||''));
 
@@ -3179,7 +3664,13 @@ function renamePlayer(oldName, newName){
   let count = 0;
   state.games.forEach(g => {
     playsOf(g).forEach(pl => {
-      if(pl.w === from){ pl.w = to; count++; }
+      let hit = false;
+      if(pl.w === from){ pl.w = to; hit = true; }
+      if(Array.isArray(pl.u) && pl.u.indexOf(from) >= 0){
+        pl.u = pl.u.map(n => n === from ? to : n).filter((n,i,a) => a.indexOf(n) === i);
+        hit = true;
+      }
+      if(hit) count++;
     });
   });
   const i = state.players.findIndex(p => p.name === from);
@@ -3194,13 +3685,84 @@ function winCount(name){
   state.games.forEach(g => playsOf(g).forEach(pl => { if(pl.w === name) n++; }));
   return n;
 }
+/* その きろくに でて くる 人（いっしょに あそんだ 人＋かった人） */
+function playMembers(pl){
+  const list = Array.isArray(pl.u) ? pl.u.slice() : [];
+  const w = (pl.w || '').trim();
+  if(w && list.indexOf(w) < 0) list.push(w);
+  return list;
+}
+function splitNames(text){
+  return String(text || '').split(/[\s、,，・]+/).map(x => x.trim()).filter(Boolean);
+}
+/* きろくの「いっしょに あそんだ 人」を えらぶ ぶひん */
+function withPickerHTML(){
+  const sel = state.withSel || [];
+  const regs = state.players.map(p => p.name);
+  const others = sel.filter(n => regs.indexOf(n) < 0);
+  return '<div style="margin:0 0 10px">' +
+    '<p class="count" style="margin:0 0 6px">いっしょに あそんだ 人（<span id="withCount">'+sel.length+'人</span>）' +
+      '<span class="hint">ぼうけんしゃカードに はんえい</span></p>' +
+    (regs.length ?
+      '<div class="chips" style="margin-bottom:6px">' + regs.map(n =>
+        '<button type="button" class="chip sm" data-withname="'+esc(n)+'" aria-pressed="'+(sel.indexOf(n)>=0)+'">'+esc(n)+'</button>').join('') +
+      '</div>' +
+      '<div class="chips" style="margin-bottom:6px">' +
+        '<button type="button" class="mini" id="withAll">ぜんいん</button>' +
+        '<button type="button" class="mini warn" id="withNone">えらびなおす</button></div>'
+      : '<p class="count" style="margin:0 0 6px">「どうぐ → なかまの なまえ」で とうろく すると、タップで えらべます。</p>') +
+    '<input type="text" id="withOther" placeholder="ほかの 人（スペースで くぎる・にんい）" value="'+esc(others.join(' '))+'">' +
+  '</div>';
+}
+function paintWithPicker(){
+  const sel = state.withSel || [];
+  document.querySelectorAll('[data-withname]').forEach(b => b.setAttribute('aria-pressed', String(sel.indexOf(b.dataset.withname) >= 0)));
+  const c = document.getElementById('withCount');
+  if(c) c.textContent = sel.length + '人';
+}
+function bindWithPicker(){
+  document.querySelectorAll('[data-withname]').forEach(b => b.onclick = () => {
+    const n = b.dataset.withname, i = state.withSel.indexOf(n);
+    if(i >= 0) state.withSel.splice(i,1); else state.withSel.push(n);
+    paintWithPicker();
+  });
+  const all = document.getElementById('withAll');
+  if(all) all.onclick = () => {
+    state.players.forEach(p => { if(state.withSel.indexOf(p.name) < 0) state.withSel.push(p.name); });
+    paintWithPicker();
+  };
+  const none = document.getElementById('withNone');
+  if(none) none.onclick = () => {
+    const regs = state.players.map(p => p.name);
+    state.withSel = state.withSel.filter(n => regs.indexOf(n) < 0);
+    paintWithPicker();
+  };
+}
+/* ほぞん する ときの メンバー（えらんだ 人＋ほかの 人＋かった人） */
+function collectMembers(winner){
+  const regs = state.players.map(p => p.name);
+  const list = (state.withSel || []).filter(n => regs.indexOf(n) >= 0);
+  const oth = document.getElementById('withOther');
+  splitNames(oth ? oth.value : '').forEach(n => { if(list.indexOf(n) < 0) list.push(n); });
+  const w = String(winner || '').trim();
+  if(w && list.indexOf(w) < 0) list.push(w);
+  return list;
+}
+/* どこかの どうぐで えらんだ きょうの メンバー */
+function chosenToday(){
+  const out = [];
+  Object.keys(state.chosen || {}).forEach(k => (state.chosen[k] || []).forEach(n => { if(out.indexOf(n) < 0) out.push(n); }));
+  return out;
+}
+
 /* きろくに でて くるが、まだ とうろく して いない なまえ */
 function unknownPlayers(){
   const known = state.players.map(p => p.name);
   const seen = {};
   state.games.forEach(g => playsOf(g).forEach(pl => {
-    const w = (pl.w || '').trim();
-    if(w && known.indexOf(w) < 0) seen[w] = (seen[w] || 0) + 1;
+    playMembers(pl).forEach(w => {
+      if(w && known.indexOf(w) < 0) seen[w] = (seen[w] || 0) + 1;
+    });
   }));
   return Object.keys(seen).map(n => ({name:n, count:seen[n]})).sort((a,b) => b.count - a.count);
 }
@@ -3496,7 +4058,7 @@ function allPlays(){
 }
 /* なにも かいて いない きろくか どうか */
 function isEmptyPlay(pl){
-  return !pl.n && !pl.w && !(pl.m && String(pl.m).trim());
+  return !pl.n && !pl.w && !(pl.m && String(pl.m).trim()) && !(Array.isArray(pl.u) && pl.u.length);
 }
 function dateFullLabel(str){
   if(!str) return '日づけ なし';
@@ -3565,6 +4127,7 @@ function playEditHTML(gid, i, pl){
     '<div class="row" style="margin-bottom:8px">' +
       '<input type="date" id="recD" value="'+esc(pl.d||todayStr())+'" style="flex:1.4">' +
       '<input type="number" id="recN" min="1" max="30" inputmode="numeric" placeholder="にんずう" value="'+esc(pl.n||'')+'" style="flex:1"></div>' +
+    withPickerHTML() +
     '<input type="text" id="recW" placeholder="かった人（にんい）" value="'+esc(pl.w||'')+'" style="margin-bottom:8px">' +
     playerPickHTML('recW') +
     '<textarea id="recM" placeholder="かんそう・おぼえがき" style="min-height:110px">'+esc(pl.m||'')+'</textarea>' +
@@ -3725,6 +4288,7 @@ function viewRecords(){
             (r.pl.n ? '<span><b>'+esc(r.pl.n)+'人</b></span>' : '') +
             (r.pl.w ? '<span>かち：<b>'+esc(r.pl.w)+'</b></span>' : '') +
           '</div>' +
+          (Array.isArray(r.pl.u) && r.pl.u.length ? '<p class="count" style="margin:4px 0 0">メンバー：'+esc(r.pl.u.join('・'))+'</p>' : '') +
         '</div>' +
         (isEditing(r.g.id, r.i) ? '' :
           '<button class="mini" data-editrec="'+esc(r.g.id)+'|'+r.i+'" style="flex:0 0 auto">なおす</button>' +
@@ -3757,7 +4321,10 @@ const TOOLS = [
   {id:'vote',    name:'とうひょう',   icon:'vote',      desc:'みんなで きめる'},
   {id:'turn',    name:'てばん',       icon:'turn',      desc:'じゅんばんを まわす'},
   {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'},
-  {id:'jukebox', name:'ジュークボックス', icon:'jukebox', desc:'BGMを えらぶ・きく'}
+  {id:'jukebox', name:'ジュークボックス', icon:'jukebox', desc:'BGMを えらぶ・きく'},
+  {id:'choubo',  name:'しゅくやの ちょうぼ', icon:'coin', desc:'わりかんを する'},
+  {id:'talk',    name:'さかばの うわさばなし', icon:'talk', desc:'トークの おだい'},
+  {id:'takuwake', name:'卓分けの館', icon:'door', desc:'せきを きめる（べつの サイト）', url:'https://takuwake.vercel.app/'}
 ];
 
 function viewTools(){
@@ -3766,8 +4333,13 @@ function viewTools(){
     '<p class="sub">あそんで いる あいだに つかう どうぐです。<br>えらぶと その どうぐだけの 画面に なります。</p>' +
 
     '<div class="tool-grid">' +
-      TOOLS.map(t =>
-        '<button class="tool-card" data-go2="#/tool/'+esc(t.id)+'">' +
+      TOOLS.map(t => t.url
+        ? '<a class="tool-card" href="'+esc(t.url)+'" target="_blank" rel="noopener" style="text-decoration:none">' +
+            '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
+            '<span class="tool-name">'+esc(t.name)+' ↗</span>' +
+            '<span class="tool-desc">'+esc(t.desc)+'</span>' +
+          '</a>'
+        : '<button class="tool-card" data-go2="#/tool/'+esc(t.id)+'">' +
           '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
           '<span class="tool-name">'+esc(t.name)+'</span>' +
           '<span class="tool-desc">'+esc(t.desc)+'</span>' +
@@ -4090,7 +4662,8 @@ function toolNamesHTML(){
   const unknown = unknownPlayers();
 
   let html = '<p class="count" style="margin:0 0 10px">よく あそぶ 人を とうろく して おくと、きろくの「かった人」や くじ引きで えらぶ だけで よく なります。<br>' +
-    'なまえを なおすと、これまでの きろくも まとめて かわります。</p>' +
+    'なまえを なおすと、これまでの きろくも まとめて かわります。<br>' +
+    '<span style="color:var(--accent)">なまえを タップすると ぼうけんしゃカードが みられます。</span></p>' +
 
     '<div class="row" style="margin-bottom:14px">' +
       '<input type="text" id="newPlayer" placeholder="なまえを いれる" style="flex:2">' +
@@ -4099,8 +4672,10 @@ function toolNamesHTML(){
   if(list.length){
     html += list.map(p =>
       '<div class="admin-row">' +
-        '<div class="t"><b>'+esc(p.name)+'</b>' +
-          '<span>'+(winCount(p.name) ? winCount(p.name)+'かい かって いる' : 'かちの きろくは まだ')+'</span></div>' +
+        '<button class="t" data-go2="#/card/'+encodeURIComponent(p.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
+          '<b style="display:block;font-size:14px;font-weight:400">'+esc(p.name)+' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(advPlays(p.name).length)+' ▶</span></b>' +
+          '<span style="font-size:11px;color:var(--muted)">'+esc(advTitle(adventurer(p.name)))+'・'+
+            (winCount(p.name) ? winCount(p.name)+'かい かって いる' : 'かちの きろくは まだ')+'</span></button>' +
         '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>' +
         '<button class="mini warn" data-delplayer="'+esc(p.name)+'">けす</button>' +
       '</div>').join('');
@@ -4113,7 +4688,8 @@ function toolNamesHTML(){
       '<h2 class="sec">きろくに ある なまえ</h2>' +
       '<p class="count">きろくには あるけれど、まだ とうろくして いない なまえです。</p>' +
       '<div class="chips" style="margin-top:8px">' +
-        unknown.map(u => '<button class="chip sm" data-addknown="'+esc(u.name)+'">＋ '+esc(u.name)+'（'+u.count+'）</button>').join('') +
+        unknown.map(u => '<button class="chip sm" data-addknown="'+esc(u.name)+'">＋ '+esc(u.name)+'（'+u.count+'）</button>' +
+          '<button class="mini" data-go2="#/card/'+encodeURIComponent(u.name)+'">カード</button>').join('') +
       '</div>';
   }
 
@@ -4311,6 +4887,8 @@ function toolBodyHTML(id){
   if(id === 'names')   return toolNamesHTML();
   if(id === 'log')     return toolLogHTML();
   if(id === 'jukebox') return toolJukeboxHTML();
+  if(id === 'choubo')  return '<div id="chouboBox">' + toolChouboHTML() + '</div>';
+  if(id === 'talk')    return '<div id="talkBox">' + toolTalkHTML() + '</div>';
   return '';
 }
 
@@ -4854,6 +5432,7 @@ function bind(r){
     const g0 = state.games.find(x => x.id === parts[0]);
     const pl0 = g0 ? playsOf(g0)[Number(parts[1])] : null;
     state.playPhotos = (pl0 && Array.isArray(pl0.p)) ? pl0.p.slice() : [];
+    state.withSel = (pl0 && Array.isArray(pl0.u)) ? pl0.u.slice() : [];
     render();
     /* なおす 欄が ひらいた あと、かんそうの ところまで うつる */
     setTimeout(() => {
@@ -4876,11 +5455,13 @@ function bind(r){
     const w = (document.getElementById('recW')||{value:''}).value.trim();
     const m = (document.getElementById('recM')||{value:''}).value.trim();
     const photos = (state.playPhotos || []).slice();
+    const u = collectMembers(w);
     ps[i] = {
       d: (document.getElementById('recD')||{value:''}).value || ps[i].d || todayStr(),
-      n: n || undefined,
+      n: (n || u.length) || undefined,
       w: w || undefined,
       m: m || undefined,
+      u: u.length ? u : undefined,
       p: photos.length ? photos : undefined
     };
     g.plays = ps;
@@ -5831,13 +6412,15 @@ function bind(r){
     const n = Number((document.getElementById('logN')||{value:''}).value) || 0;
     const w = (document.getElementById('logWin')||{value:''}).value.trim();
     const m = (document.getElementById('logMemo')||{value:''}).value.trim();
+    const u = collectMembers(w);
     let count = 0;
     state.logPicked.forEach(id => {
       const g = state.games.find(x => x.id === id);
       if(!g) return;
       const photos = (state.playPhotos || []).slice();
       g.plays = playsOf(g).concat([{
-        d, n: n || undefined, w: w || undefined, m: m || undefined,
+        d, n: (n || u.length) || undefined, w: w || undefined, m: m || undefined,
+        u: u.length ? u.slice() : undefined,
         p: photos.length ? photos : undefined
       }]);
       count++;
@@ -5845,6 +6428,7 @@ function bind(r){
     state.logPicked = [];
     state.playPhotos = [];
     saveGames(); render();
+    if(u.length) setTimeout(() => toast(u.join('・') + ' の ぼうけんしゃカードに きろく しました'), 1600);
     toast(count + 'ほんを きろく しました');
   };
 
@@ -5864,6 +6448,11 @@ function bind(r){
   const seChk = document.getElementById('seChk');
   if(seChk) seChk.onchange = e => setSeOn(e.target.checked);
   bindJukebox();
+  bindWithPicker();
+  const advCopy = document.getElementById('advCopy');
+  if(advCopy) advCopy.onclick = () => copyText(advShareText(currentRoute().param || ''));
+  bindChoubo();
+  bindTalk();
   app.querySelectorAll('[data-track]').forEach(b => b.onclick = () => {
     setBgmTrack(b.dataset.track);
     if(!sound.bgmOn) setBgmOn(true);          /* きょくを えらんだら ならす */
