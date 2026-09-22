@@ -1340,12 +1340,244 @@ function playBuffer(key, volume){
   }catch(e){ return false; }
 }
 
+/* ---------------- BGMの プレーヤー ----------------
+   iPhone では ふつうの Audio の「おおきさ」が かえられず、
+   くりかえしの つなぎめにも すきまが できる。
+   そこで きょくを Web Audio に よみこみ、
+   ・おおきさ（ゲイン）を じぶんで かける
+   ・はじめと おわりの むおんを けずる
+   ・おわりの よいん（リバーブ）に かさねて つぎの 1しゅうめを はじめる
+   ことで、どの きょくも なめらかに くりかえす。
+   Web Audio が つかえない とき（file:// で ひらいた ときなど）は ふつうの Audio に もどる。
+   ふつうの Audio と おなじ つかいかた（play/pause/src/loop/volume/currentTime…）が できる。 */
+class BgmPlayer{
+  constructor(){
+    this._src = ''; this._loop = true; this._vol = 0.45;
+    this.paused = true; this._want = false;
+    this._buf = null; this._bufSrc = ''; this._loading = null;
+    this._nodes = [];            /* ならして いる おと（かさなる ことが ある） */
+    this._seg = null;            /* いまの 1しゅう {at: ならしはじめた じこく, from: きょくの どこから} */
+    this._next = 0;              /* つぎの 1しゅうを はじめる じこく */
+    this._pos = 0;               /* とめた ときの いち */
+    this._tick = null;
+    this._ev = {};
+    this._el = null;             /* ふつうの Audio（よび） */
+    this._fallback = false;
+  }
+  addEventListener(t, f){ (this._ev[t] = this._ev[t] || []).push(f); }
+  _emit(t){ (this._ev[t] || []).forEach(f => { try{ f(); }catch(e){} }); }
+  _ctxOk(){ return !!audioCtx && !this._fallback && /^https?:$/.test(location.protocol); }
+
+  /* ---- ふつうの Audio（よび） ---- */
+  _useEl(){
+    if(this._el) return this._el;
+    const el = new Audio();
+    el.preload = 'none';
+    ['play','pause','loadedmetadata','timeupdate','error'].forEach(t => el.addEventListener(t, () => {
+      if(t === 'play') this.paused = false;
+      if(t === 'pause') this.paused = true;
+      this._emit(t);
+    }));
+    el.addEventListener('ended', () => { this.paused = true; this._emit('ended'); });
+    el.loop = this._loop; el.volume = this._vol; el.src = this._src;
+    this._el = el;
+    return el;
+  }
+
+  get src(){ return this._src; }
+  set src(v){
+    this.pause();
+    this._src = v; this._pos = 0;
+    if(this._bufSrc !== v){ this._buf = null; this._bufSrc = ''; this._loading = null; }
+    if(this._el){ this._el.src = v; }
+  }
+  load(){ if(this._el && this._fallback) this._el.load(); }
+  get loop(){ return this._loop; }
+  set loop(v){
+    v = !!v;
+    if(v === this._loop) return;
+    this._loop = v;
+    if(this._el) this._el.loop = v;
+    /* ながして いる とちゅうなら、いまの いちから かけなおす */
+    if(!this.paused && !this._fallback && this._buf){ const at = this.currentTime; this._stopNodes(); this._startAt(at); }
+  }
+  get volume(){ return this._vol; }
+  set volume(v){
+    this._vol = Math.min(1, Math.max(0, v));
+    if(this._el) this._el.volume = this._vol;
+    if(this._gain && audioCtx) this._gain.gain.setTargetAtTime(this._vol, audioCtx.currentTime, 0.05);
+  }
+  get duration(){
+    if(this._fallback) return this._el ? this._el.duration : NaN;
+    return this._buf ? this._buf.duration : NaN;
+  }
+  get currentTime(){
+    if(this._fallback) return this._el ? this._el.currentTime : 0;
+    if(this.paused || !this._seg || !audioCtx) return this._pos;
+    const t = this._seg.from + (audioCtx.currentTime - this._seg.at);
+    return Math.max(0, Math.min(t, this.duration || t));
+  }
+  set currentTime(v){
+    if(this._fallback){ if(this._el) this._el.currentTime = v; return; }
+    if(this.paused){ this._pos = v; return; }
+    this._stopNodes(); this._startAt(v);
+  }
+
+  /* ---- よみこみ ---- */
+  _fetch(){
+    if(this._buf && this._bufSrc === this._src) return Promise.resolve(this._buf);
+    if(this._loading) return this._loading;
+    const want = this._src;
+    this._loading = fetch(want).then(r => {
+      if(!r.ok) throw new Error('notfound');
+      return r.arrayBuffer();
+    }).then(ab => new Promise((ok, ng) => {
+      /* ふるい Safari は コールバック しか つかえない */
+      const pr = audioCtx.decodeAudioData(ab, ok, ng);
+      if(pr && pr.then) pr.then(ok, ng);
+    })).then(buf => {
+      if(this._src !== want) return null;       /* とちゅうで きょくが かわった */
+      this._buf = buf; this._bufSrc = want;
+      this._measure(buf);
+      this._emit('loadedmetadata');
+      return buf;
+    });
+    this._loading.catch(err => {
+      this._loading = null;
+      if(this._src !== want) return;
+      if(err && err.message === 'notfound'){ this._emit('error'); return; }
+      /* fetch が つかえない ばしょ → ふつうの Audio に きりかえ */
+      this._fallback = true;
+      if(this._want){ const el = this._useEl(); el.src = this._src; el.play().catch(() => {}); }
+    });
+    return this._loading;
+  }
+  /* はじめと おわりの むおん、おわりの よいんの ながさを しらべる */
+  _measure(buf){
+    const sr = buf.sampleRate, n = buf.length;
+    const chs = []; for(let c = 0; c < buf.numberOfChannels; c++) chs.push(buf.getChannelData(c));
+    const amp = i => { let m = 0; for(const d of chs){ const v = Math.abs(d[i]); if(v > m) m = v; } return m; };
+    const TH = 0.0015;                               /* だいたい -56dB */
+    let a = 0; while(a < n && amp(a) < TH) a++;
+    let b = n - 1; while(b > a && amp(b) < TH) b--;
+    if(b - a < sr) { a = 0; b = n - 1; }             /* みじかすぎる ときは そのまま */
+    /* よいん：おわりから みて、おとが おおきかった さいごの ところ（-30dB） */
+    const win = Math.floor(sr * 0.05);
+    let tail = b;
+    const rms = (i0) => { let s = 0, k = 0; for(let i = i0; i < i0 + win && i < n; i += 4){ const v = amp(i); s += v*v; k++; } return Math.sqrt(s / Math.max(1,k)); };
+    for(let i = b - win; i > a + sr; i -= win){ if(rms(i) > 0.03){ tail = i + win; break; } }
+    let over = Math.min(2.5, Math.max(0, (b - tail) / sr));
+    if(over < 0.08) over = 0;                        /* よいんが ない きょくは ぴったり つなぐ */
+    this._a = a / sr;                                /* 1しゅうの はじまり */
+    this._b = (b + 1) / sr;                          /* おとの おわり */
+    this._over = over;                               /* つぎと かさねる ながさ */
+  }
+
+  /* ---- ならす ---- */
+  _master(){
+    if(!this._gain){
+      this._gain = audioCtx.createGain();
+      this._gain.gain.value = this._vol;
+      this._gain.connect(audioCtx.destination);
+    }
+    return this._gain;
+  }
+  _voice(at, from, fadeIn){
+    const src = audioCtx.createBufferSource();
+    const g = audioCtx.createGain();
+    src.buffer = this._buf;
+    src.connect(g).connect(this._master());
+    if(fadeIn){ g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(1, at + fadeIn); }
+    src.start(at, Math.max(0, from));
+    const node = {src, g};
+    this._nodes.push(node);
+    src.onended = () => {
+      this._nodes = this._nodes.filter(x => x !== node);
+      /* くりかえさない ときは、さいごの おとが おわったら「おわり」 */
+      if(!this._loop && !this.paused && !this._nodes.length){
+        this.paused = true; this._pos = 0; this._seg = null;
+        this._stopTick(); this._emit('pause'); this._emit('ended');
+      }
+    };
+    return node;
+  }
+  _startAt(pos){
+    const now = audioCtx.currentTime + 0.03;
+    if(pos >= this._b - 0.05) pos = this._a;
+    const from = Math.max(pos, 0);
+    this._voice(now, from, from > this._a + 0.01 ? 0.03 : 0);
+    this._seg = {at: now, from: from};
+    this._next = now + (this._b - this._over - from);
+    this._startTick();
+  }
+  _schedule(){
+    if(this.paused || !this._loop || !this._buf) return;
+    /* つぎの 1しゅうを 1びょう まえに よやく する */
+    while(this._next - audioCtx.currentTime < 1.2){
+      const at = Math.max(this._next, audioCtx.currentTime + 0.02);
+      this._voice(at, this._a, 0);
+      const seg = {at: at, from: this._a};
+      /* 1しゅうめが はじまったら いちの けいさんを きりかえる */
+      const wait = Math.max(0, (at - audioCtx.currentTime) * 1000);
+      const gen = this._gen;
+      setTimeout(() => { if(!this.paused && gen === this._gen) this._seg = seg; }, wait);
+      this._next = at + (this._b - this._over - this._a);
+    }
+  }
+  _startTick(){
+    this._stopTick();
+    this._tick = setInterval(() => { this._schedule(); this._emit('timeupdate'); }, 250);
+    this._schedule();
+  }
+  _stopTick(){ if(this._tick){ clearInterval(this._tick); this._tick = null; } }
+  _stopNodes(){
+    this._gen = (this._gen || 0) + 1;
+    const t = audioCtx ? audioCtx.currentTime : 0;
+    this._nodes.forEach(n => {
+      n.src.onended = null;
+      try{ n.g.gain.setTargetAtTime(0.0001, t, 0.015); n.src.stop(t + 0.08); }catch(e){}
+    });
+    this._nodes = [];
+    this._stopTick();
+  }
+  play(){
+    this._want = true;
+    if(!this._ctxOk()){
+      const el = this._useEl();
+      if(el.src !== new URL(this._src, location.href).href) el.src = this._src;
+      return el.play();
+    }
+    if(audioCtx.state !== 'running' && audioCtx.resume) audioCtx.resume();
+    if(!this.paused) return Promise.resolve();
+    return this._fetch().then(buf => {
+      if(!buf || !this._want || !this.paused) return;
+      this.paused = false;
+      this._startAt(this._pos || this._a);
+      this._emit('play');
+    });
+  }
+  pause(){
+    this._want = false;
+    if(this._el && !this._el.paused) this._el.pause();
+    if(this.paused) return;
+    this._pos = this.currentTime;
+    this._stopNodes();
+    this.paused = true; this._seg = null;
+    this._emit('pause');
+  }
+}
+/* iPhone で アプリを もどした とき、とまった おとを うごかしなおす */
+document.addEventListener('visibilitychange', () => {
+  if(!document.hidden && audioCtx && audioCtx.state !== 'running' && sound.bgmOn){
+    try{ audioCtx.resume(); }catch(e){}
+  }
+});
+
 function initAudio(){
-  sound.bgm = new Audio();
+  sound.bgm = new BgmPlayer();
   sound.bgm.loop = (sound.mode === 'one');
   sound.bgm.volume = sound.volume;
-  sound.bgm.preload = 'none';        /* さいしょに ぜんぶ よみこまない（つうしんの せつやく） */
-  sound.bgm.src = currentTrack().file;
+  sound.bgm.src = currentTrack().file;    /* ならす まで よみこまない（つうしんの せつやく） */
   /* 1きょく おわったら つぎへ（くりかえし いがい） */
   sound.bgm.addEventListener('ended', () => {
     if(sound.mode === 'one') return;
