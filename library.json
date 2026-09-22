@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-22T04:28:29.596Z",
+  "version": "2026-09-22T09:55:33.827Z",
   "tags": [
     {
       "name": "初心者",
@@ -601,6 +601,7 @@
       "strategy": 3,
       "excitement": 4,
       "luck": 3,
+      "replay": 0,
       "tags": [
         "初心者",
         "家族向け",
@@ -609,7 +610,7 @@
         "軽量級",
         "パーティー"
       ],
-      "summary": "一見普通のUNOだけど、裏返したら激しい戦いに‼︎",
+      "summary": "一見普通のUNOだけど、裏返したら激しい戦いに?!",
       "quickRule": "",
       "detailRule": "",
       "recommendation": ""
