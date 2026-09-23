@@ -799,7 +799,7 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
     <button class="tab" data-go="#/"><span class="i" data-icon="search"></span>さがす</button>
     <button class="tab" data-go="#/list"><span class="i" data-icon="book"></span>ずかん</button>
     <button class="tab" data-go="#/random"><span class="i" data-icon="die"></span>おまかせ</button>
-    <button class="tab" data-go="#/tools"><span class="i" data-icon="sword"></span>どうぐ</button>
+    <button class="tab" data-go="#/tools"><span class="i" data-icon="sword"></span>どうぐ<span class="dot" id="friendDot" hidden></span></button>
     <button class="tab" data-go="#/admin"><span class="i" data-icon="gear"></span>かんり<span class="dot" id="dirtyDot" hidden></span></button>
   </div>
 </nav>
@@ -1715,6 +1715,11 @@ function playFanfare(){
   n.volume = sound.fanfare.volume;
   n.play().catch(()=>{});
 }
+function paintFriendDot(){
+  const d = document.getElementById('friendDot');
+  if(!d) return;
+  d.hidden = !(isOnline() && state.friends && (state.friends.incoming || []).length);
+}
 function paintDirtyDot(){
   const d = document.getElementById('dirtyDot');
   if(!d) return;
@@ -2085,7 +2090,12 @@ function ask(msg, onYes, opts){
   };
   yes.onclick = () => { close(); if(onYes) onYes(); };
   no.onclick = () => { close(); if(opts && opts.onNo) opts.onNo(); };
-  back.onclick = e => { if(e.target === back){ close(); if(opts && opts.onNo) opts.onNo(); } };
+  back.onclick = e => {
+    if(e.target !== back) return;
+    close();
+    if(opts && opts.onBack) opts.onBack();
+    else if(opts && opts.onNo) opts.onNo();
+  };
 }
 
 /* もじを いれて もらう ウィンドウ */
@@ -2442,9 +2452,11 @@ function render(){
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   if(['home','list','game','kai','card','tool'].indexOf(r.name) >= 0) maybeRefreshRequests(routeKey);
   if(['admin','game','tool','review','suggest'].indexOf(r.name) >= 0) maybeRefreshHelp(routeKey);
+  maybeCheckFriends();
   syncBgm();
   paintSoundBtns();
   paintDirtyDot();
+  paintFriendDot();
   paintTimer();
   paintMemoBadge();
   setupGrow(app);
@@ -5193,11 +5205,11 @@ function toolNamesHTML(){
   let html = welcomeHTML() + selfCardHTML();
 
   if(f.incoming.length){
-    html += '<div class="catlabel" style="color:var(--accent)">▶ なかまの もうしこみが きて います</div>' +
+    html += '<div class="catlabel" style="color:var(--accent)">▶ なかまに なりたそうに こちらを みている！</div>' +
       f.incoming.map(x =>
         '<div class="admin-row"><div class="t"><b style="font-size:14px;font-weight:400">'+esc(x.name)+'</b>' +
         '<span style="font-size:11px;color:var(--muted)">'+esc(x.code||'')+'</span></div>' +
-        '<button class="mini" data-fraccept="'+esc(x.id)+'">なかまに なる</button>' +
+        '<button class="mini" data-fraccept="'+esc(x.id)+'">なかまに する</button>' +
         '<button class="mini warn" data-frremove="'+esc(x.id)+'">ことわる</button></div>').join('');
   }
 
@@ -5531,6 +5543,13 @@ async function refreshHelp(){
   return changed;
 }
 /* べつの 画面に きた ときは かならず、おなじ 画面では 20びょうに 1かい とりに いく */
+/* もうしこみが とどいて いないか ときどき みる（1ぷんに 1かい） */
+function maybeCheckFriends(){
+  if(!isOnline()) return;
+  if(maybeCheckFriends.at && Date.now() - maybeCheckFriends.at < 60000) return;
+  maybeCheckFriends.at = Date.now();
+  refreshFriends().then(ch => { if(ch) render(); askFriendRequests(); }).catch(() => {});
+}
 function maybeRefreshHelp(key){
   if(!isOnline()) return;
   if(key === maybeRefreshHelp.key && refreshHelp.at && Date.now() - refreshHelp.at < 20000) return;
@@ -5896,6 +5915,37 @@ function bindWelcome(){
   if(later) later.onclick = () => { store.write(KEY.welcome, true); render(); };
 }
 
+/* なかまに なりたそうに こちらを みている！
+   アプリを ひらいた とき・もうしこみが とどいた ときに 1人ずつ たずねる。
+   そとを おして とじたら「あとで」（この ひらいて いる あいだは もう きかない）。 */
+function askFriendRequests(){
+  if(askFriendRequests.busy) return;
+  const seen = askFriendRequests.seen || (askFriendRequests.seen = {});
+  const next = ((state.friends && state.friends.incoming) || []).find(x => !seen[x.id]);
+  if(!next) return;
+  seen[next.id] = 1;
+  askFriendRequests.busy = true;
+  const done = () => { askFriendRequests.busy = false; setTimeout(askFriendRequests, 300); };
+  ask(next.name + ' が なかまに なりたそうに こちらを みている！\nなかまに してあげますか？', async () => {
+    try{
+      await api('/api/friend/accept', {method:'POST', body:{id:next.id}});
+      await refreshFriends(); await syncNet(); render();
+      playFanfare();
+      toast(next.name + ' が なかまに くわわった！');
+    }catch(e){ toast(e.message); }
+    done();
+  }, {
+    yes: 'なかまに する',
+    no: 'ことわる',
+    onNo: async () => {
+      try{ await api('/api/friend/remove', {method:'POST', body:{id:next.id}}); await refreshFriends(); render(); }
+      catch(e){ toast(e.message); }
+      done();
+    },
+    onBack: () => { done(); }
+  });
+}
+
 function bindFriends(){
   const add = document.getElementById('frAdd');
   if(add) add.onclick = async () => {
@@ -5927,7 +5977,8 @@ function bindFriends(){
     try{
       await api('/api/friend/accept', {method:'POST', body:{id:b.dataset.fraccept}});
       await refreshFriends(); await syncNet(); render();
-      toast('なかまに なりました');
+      playFanfare();
+      toast('なかまに くわわった！');
     }catch(e){ toast(e.message); }
   });
   app.querySelectorAll('[data-frremove]').forEach(b => b.onclick = () => {
@@ -8305,6 +8356,7 @@ if(isOnline()){
       let rch = false;
       try{ rch = await refreshRequests(); }catch(e){}
       if(r.got || r.pushed || fch || rch) render();
+      askFriendRequests();
     }catch(e){ /* つながらなければ この スマホの ぶんだけで うごく */ }
   })();
 }
