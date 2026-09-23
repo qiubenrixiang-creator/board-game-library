@@ -1194,6 +1194,16 @@ const ICONS = {
     '.#.##.#.',
     '..####..'
   ],
+  quill:[
+    '......##',
+    '.....##.',
+    '....##..',
+    '...##...',
+    '..##....',
+    '.##.....',
+    '##......',
+    '#.......'
+  ],
   talk:[
     '########',
     '#......#',
@@ -1902,6 +1912,8 @@ const state = {
   playShare: 'friends',                             /* この きろくを なかまに みせるか */
   reqs: {},                                         /* 「遊んでみたい」 gid -> {n, names, mine} */
   wantsBy: {},                                      /* 「遊んでみたい」 なまえ -> [gid, ...] */
+  help: {admin:null, meAdmin:false, inbox:[], mine:[]},   /* ずかんづくりの てつだい */
+  suggField: 'summary',                             /* せつめいを かく らん */
   amida: null,                                      /* あみだくじの ばん（autoReveal・allPaths も ここに 入る） */
   score: {names:[], rows:[]},                       /* てんすう表 */
   scoreSel: {r:0, c:0},                             /* てんすう表で えらんで いる マス */
@@ -2420,14 +2432,16 @@ function render(){
   const views = { home:viewHome, list:viewList, game:viewDetail, add:viewForm, edit:viewForm,
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
                   print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools,
-                  records:viewRecords, tool:viewTool, kai:viewKai, card:viewCard };
+                  records:viewRecords, tool:viewTool, kai:viewKai, card:viewCard,
+                  suggest:viewSuggest, review:viewReview };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
   const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', tool:'#/tools',
-                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin', card:'#/tools' };
+                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin', card:'#/tools', suggest:'#/tools', review:'#/admin' };
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
-  if(['home','list','game','kai','card','tool'].indexOf(r.name) >= 0) maybeRefreshRequests();
+  if(['home','list','game','kai','card','tool'].indexOf(r.name) >= 0) maybeRefreshRequests(routeKey);
+  if(['admin','game','tool','review','suggest'].indexOf(r.name) >= 0) maybeRefreshHelp(routeKey);
   syncBgm();
   paintSoundBtns();
   paintDirtyDot();
@@ -2863,7 +2877,7 @@ function viewDetail(id){
     '<button class="mini" data-go2="#/list" style="margin-bottom:14px">◀ ずかんへ もどる</button>' +
     '<h1 class="detail-title">'+esc(g.title)+newBadge(g)+'</h1>' +
     (isNewArrival(g) ? '<p class="count" style="margin:-6px 0 12px">'+esc(dateLabel(g.addedAt))+' に ずかんへ くわわりました。</p>' : '') +
-    gallery + reqBoxHTML(g) +
+    gallery + reqBoxHTML(g) + helpBoxHTML(g) +
 
     '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+esc(g.summary||'（みきにゅう）')+'</p></div>' +
     (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+esc(g.quickRule)+'</div></div>' : '') +
@@ -4754,7 +4768,8 @@ const TOOLS = [
   {id:'log',     name:'あそんだ きろく', icon:'notes',  desc:'つける・みる'},
   {id:'jukebox', name:'ジュークボックス', icon:'jukebox', desc:'BGMを えらぶ・きく'},
   {id:'choubo',  name:'しゅくやの ちょうぼ', icon:'coin', desc:'わりかんを する'},
-  {id:'talk',    name:'さかばの うわさばなし', icon:'talk', desc:'トークの おだい'}
+  {id:'talk',    name:'さかばの うわさばなし', icon:'talk', desc:'トークの おだい'},
+  {id:'help',    name:'ずかんづくり', icon:'quill', desc:'せつめいを かいて おくる'}
 ];
 
 function viewTools(){
@@ -5405,6 +5420,7 @@ function toolBodyHTML(id){
   if(id === 'jukebox') return toolJukeboxHTML();
   if(id === 'choubo')  return '<div id="chouboBox">' + toolChouboHTML() + '</div>';
   if(id === 'talk')    return '<div id="talkBox">' + toolTalkHTML() + '</div>';
+  if(id === 'help')    return toolHelpHTML();
   return '';
 }
 
@@ -5495,6 +5511,154 @@ function playsToPush(){
   }));
   return out;
 }
+/* ---------------- ずかんづくりの てつだい ----------------
+   なかまが ずかんの せつめいを かいて おくり、かんりにんが みくらべて とりこむ。
+   とりこんだ ものは「サイトを こうしんする」で みんなに とどく。 */
+const HELP_FIELDS = [
+  {id:'summary',        name:'ひとことで いうと', rows:3},
+  {id:'quickRule',      name:'30びょうルール',     rows:6},
+  {id:'recommendation', name:'おすすめ ポイント',  rows:5},
+  {id:'detailRule',     name:'くわしい ルール',    rows:10}
+];
+function helpFieldName(id){ const f = HELP_FIELDS.find(x => x.id === id); return f ? f.name : id; }
+async function refreshHelp(){
+  if(!isOnline()) return false;
+  const [a, d] = await Promise.all([api('/api/admin'), api('/api/suggest')]);
+  const next = {admin:a.admin || null, meAdmin:!!a.me_is_admin, inbox:d.inbox || [], mine:d.mine || []};
+  const changed = JSON.stringify(next) !== JSON.stringify(state.help);
+  state.help = next;
+  refreshHelp.at = Date.now();
+  return changed;
+}
+/* べつの 画面に きた ときは かならず、おなじ 画面では 20びょうに 1かい とりに いく */
+function maybeRefreshHelp(key){
+  if(!isOnline()) return;
+  if(key === maybeRefreshHelp.key && refreshHelp.at && Date.now() - refreshHelp.at < 20000) return;
+  maybeRefreshHelp.key = key;
+  refreshHelp.at = Date.now();
+  refreshHelp().then(ch => { if(ch) render(); }).catch(() => {});
+}
+/* せつめいが たりない ゲーム（なにが たりないか も かえす） */
+function missingFields(g){
+  return HELP_FIELDS.filter(f => !String(g[f.id] || '').trim()).map(f => f.id);
+}
+function helpTargets(){
+  return ownedGames().map(g => ({g, miss: missingFields(g)}))
+    .filter(x => x.miss.length)
+    .sort((a,b) => (a.miss.indexOf('summary') < 0) - (b.miss.indexOf('summary') < 0) ||
+                   b.miss.length - a.miss.length || a.g.title.localeCompare(b.g.title,'ja'));
+}
+function helpBoxHTML(g){
+  if(isWish(g) || !isOnline() || state.help.meAdmin) return '';
+  const miss = missingFields(g);
+  return '<div class="note" style="margin:0 0 14px">' +
+    (miss.length ? 'この ゲームは「'+miss.map(helpFieldName).join('」「')+'」が まだ ありません。<br>' : '') +
+    'あそんだ ことが あれば、せつめいを かいて ずかんづくりを てつだえます。' +
+    '<button class="btn small" data-go2="#/suggest/'+esc(g.id)+'" style="width:100%;margin-top:8px">✎ せつめいを かいて おくる</button></div>';
+}
+const HELP_STATUS = {open:'かんりにんの かくにん まち', done:'ずかんに とりこまれました', rejected:'こんかいは みおくり'};
+function toolHelpHTML(){
+  if(!isOnline()){
+    return '<p class="count" style="margin:0 0 10px">ずかんづくりを てつだうには、「なかまの なまえ」で ぼうけんしゃの証を つくって ください。</p>' +
+      '<button class="btn small" data-go2="#/tool/names" style="width:100%">なかまの なまえへ</button>';
+  }
+  const h = state.help;
+  const targets = helpTargets();
+  let html = '<p class="count" style="margin:0 0 10px">ずかんの せつめいを かいて おくると、かんりにんが みくらべて ずかんに とりこみます。' +
+    'あそんだ 人の ことばは、いちばん つたわる せつめいです。</p>';
+  if(h.meAdmin){
+    html += '<button class="btn primary" data-go2="#/review" style="width:100%;margin-bottom:14px">とどいた せつめいを みる（'+h.inbox.length+'）</button>';
+  }
+  if(h.mine.length){
+    html += '<div class="catlabel">じぶんが おくった もの</div>' + h.mine.slice(0, 20).map(x =>
+      '<div class="admin-row"><div class="t"><b>'+esc(x.t || '？')+'</b>' +
+        '<span>'+esc(helpFieldName(x.field))+'・'+esc(HELP_STATUS[x.status] || x.status)+'</span></div>' +
+        (x.status === 'open' ? '<button class="mini warn" data-sugdel="'+esc(x.id)+'">とりけす</button>' : '') +
+      '</div>').join('');
+  }
+  html += '<div class="catlabel" style="margin-top:12px">せつめいが まだの ゲーム（'+targets.length+'）</div>';
+  html += targets.length ? targets.slice(0, 60).map(x =>
+      '<div class="admin-row"><div class="t"><b>'+esc(x.g.title)+'</b>' +
+        '<span>まだ：'+esc(x.miss.map(helpFieldName).join('・'))+'</span></div>' +
+        '<button class="mini" data-go2="#/suggest/'+esc(x.g.id)+'">かく</button></div>').join('')
+    : '<div class="note">ぜんぶの ゲームに せつめいが あります。ありがとう！</div>';
+  return html;
+}
+function viewSuggest(gid){
+  const g = state.games.find(x => x.id === gid);
+  if(!g) return '<section class="page"><div class="empty">その ゲームは みつかりません</div></section>';
+  if(render._routeKey !== 'suggest/' + gid){
+    const miss = missingFields(g);
+    state.suggField = miss.length ? miss[0] : 'summary';
+  }
+  const f = HELP_FIELDS.find(x => x.id === state.suggField) || HELP_FIELDS[0];
+  const cur = String(g[f.id] || '');
+  return '<section class="page">' +
+    '<button class="mini" data-go2="#/game/'+esc(g.id)+'" style="margin-bottom:14px">◀ '+esc(g.title)+'へ もどる</button>' +
+    '<h1 class="lede">せつめいを かく</h1>' +
+    '<p class="sub">'+esc(g.title)+' の せつめいを かいて、かんりにんに おくります。</p>' +
+    '<div class="chips" style="margin-bottom:12px">' + HELP_FIELDS.map(x =>
+      '<button class="chip sm" data-sugfield="'+x.id+'" aria-pressed="'+(x.id===f.id)+'">'+x.name+
+        (String(g[x.id]||'').trim() ? '' : ' ・まだ')+'</button>').join('') + '</div>' +
+    (cur ? '<details style="margin-bottom:10px"><summary style="font-size:13px">いまの 「'+esc(f.name)+'」を みる</summary>' +
+        '<div class="win" style="margin-top:8px;white-space:pre-wrap;font-size:13px">'+esc(cur)+'</div></details>' : '') +
+    '<label class="lbl" for="sugText">'+esc(f.name)+'</label>' +
+    '<textarea id="sugText" rows="'+f.rows+'" style="min-height:'+(f.rows*22)+'px" placeholder="'+
+      (f.id === 'summary' ? 'れい：数字を ことばで つたえて、みんなで ならべる きょうりょく ゲーム。' :
+       f.id === 'quickRule' ? 'れい：1. カードを 1まいずつ くばる\\n2. …' : '')+'">'+esc(cur)+'</textarea>' +
+    '<p class="count" style="margin:6px 0 12px">いまの ぶんしょうを なおしても、あたらしく かいても だいじょうぶです。</p>' +
+    '<button class="btn primary" id="sugSend" data-sugg="'+esc(g.id)+'" style="width:100%">かんりにんに おくる</button>' +
+  '</section>';
+}
+function viewReview(){
+  const h = state.help;
+  let html = '<section class="page">' +
+    '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
+    '<h1 class="lede">とどいた せつめい</h1>';
+  if(!h.meAdmin){
+    return html + '<div class="note">かんりにんだけが みられます。</div></section>';
+  }
+  html += '<p class="sub">いまの ぶんしょうと くらべて、よければ「とりこむ」を おして ください。<br>' +
+    'とりこんだら、かんりの「サイトを こうしんする」で みんなに とどきます。</p>';
+  if(isDirty()) html += '<div class="note" style="margin-bottom:12px;border-color:var(--accent)">▶ とりこんだ ぶんが まだ サイトに でて いません。' +
+    '<button class="btn small" data-go2="#/admin" style="width:100%;margin-top:8px">かんりで サイトを こうしんする</button></div>';
+  if(!h.inbox.length) return html + '<div class="note">いまは とどいて いる せつめいは ありません。</div></section>';
+  html += h.inbox.map(x => {
+    const g = state.games.find(y => y.id === x.g);
+    const cur = g ? String(g[x.field] || '') : '';
+    return '<div class="win" style="margin-bottom:12px">' +
+      '<p style="margin:0 0 4px;color:var(--accent)">'+esc(g ? g.title : (x.t || '？'))+'</p>' +
+      '<p class="count" style="margin:0 0 8px">'+esc(helpFieldName(x.field))+'・'+esc(x.name)+' さんから・'+esc(dateLabel(String(x.at).slice(0,10)))+'</p>' +
+      '<div class="catlabel">とどいた ぶんしょう</div>' +
+      '<div style="white-space:pre-wrap;font-size:14px;border:2px solid var(--accent-2);padding:8px;margin-bottom:8px">'+esc(x.text)+'</div>' +
+      (cur ? '<details style="margin-bottom:8px"><summary style="font-size:12px;color:var(--muted)">いまの ぶんしょうと くらべる</summary>' +
+          '<div style="white-space:pre-wrap;font-size:13px;color:var(--muted);border:2px solid var(--frame);padding:8px;margin-top:6px">'+esc(cur)+'</div></details>'
+        : '<p class="count" style="margin:0 0 8px">いまは まだ かかれて いません。</p>') +
+      (g ? '' : '<p class="count" style="color:var(--danger);margin:0 0 8px">この ゲームは ずかんに ありません。</p>') +
+      '<div class="btn-row">' +
+        '<button class="btn small" style="flex:1" data-sugreject="'+esc(x.id)+'">みおくる</button>' +
+        (g ? '<button class="btn small primary" style="flex:1" data-sugaccept="'+esc(x.id)+'">とりこむ</button>' : '') +
+      '</div></div>';
+  }).join('');
+  return html + '</section>';
+}
+function helpAdminHTML(){
+  if(!isOnline()) return '';
+  const h = state.help;
+  let html = '<div class="divider"></div><h2 class="sec">ずかんづくりの てつだい</h2>';
+  if(h.meAdmin){
+    html += '<p class="count">なかまが かいた せつめいが とどきます。あなたが かんりにんです。</p>' +
+      '<button class="btn small" data-go2="#/review" style="width:100%;margin-bottom:16px">とどいた せつめいを みる（'+h.inbox.length+'）</button>';
+  }else if(h.admin){
+    html += '<p class="count">かんりにんは '+esc(h.admin.name)+' さんです。せつめいは「どうぐ → ずかんづくり」から おくれます。</p>';
+  }else{
+    html += '<p class="count">なかまが かいた せつめいを うけとる「かんりにん」を きめます。<br>' +
+      'かんりにんは 1人だけで、あとから ほかの 人は なれません。ずかんを もって いる 人が なって ください。</p>' +
+      '<button class="btn small" id="claimAdmin" style="width:100%;margin-bottom:16px">わたしが かんりにんに なる</button>';
+  }
+  return html;
+}
+
 /* ---------------- 遊んでみたい ----------------
    ずかんの ゲームを、じぶんの「遊んでみたい」に いれられる。
    じぶんで はずすまで のこる。ぼうけんしゃカードで だれが なにを
@@ -5523,9 +5687,10 @@ async function refreshRequests(){
   return changed;
 }
 /* ときどき とりに いく（おなじ 画面を なんども ひらいても 30びょうに 1かい） */
-function maybeRefreshRequests(){
+function maybeRefreshRequests(key){
   if(!isOnline()) return;
-  if(refreshRequests.at && Date.now() - refreshRequests.at < 30000) return;
+  if(key === maybeRefreshRequests.key && refreshRequests.at && Date.now() - refreshRequests.at < 30000) return;
+  maybeRefreshRequests.key = key;
   refreshRequests.at = Date.now();
   refreshRequests().then(ch => { if(ch) render(); }).catch(() => {});
 }
@@ -6024,6 +6189,7 @@ function viewAdmin(){
       'あそんだ きろく（かんそう・しゃしん）と、かしだし先の なまえは サイトに あげません。<br>' +
       'これらは この スマホの 中だけに のこります。</div>' +
 
+    helpAdminHTML() +
     '<div class="divider"></div><h2 class="sec">ぼうけんしゃの証・なかま</h2>' +
     '<p class="count">じぶんの ぼうけんしゃの証と なかまは「どうぐ → なかまの なまえ」に あります。</p>' +
     '<button class="btn small" data-go2="#/tool/names" style="width:100%;margin-bottom:16px">なかまの なまえへ</button>' +
@@ -7493,6 +7659,60 @@ function bind(r){
     toast(currentTrack().name + ' に しました');
   });
   bindPlayShare();
+  /* --- ずかんづくり --- */
+  app.querySelectorAll('[data-sugfield]').forEach(b => b.onclick = () => {
+    state.suggField = b.dataset.sugfield; render();
+  });
+  const sugSend = document.getElementById('sugSend');
+  if(sugSend) sugSend.onclick = async () => {
+    const gid = sugSend.dataset.sugg;
+    const g = state.games.find(x => x.id === gid);
+    const text = (document.getElementById('sugText') || {value:''}).value.trim();
+    if(!text) return toast('ぶんしょうを いれて ください');
+    if(g && text === String(g[state.suggField] || '').trim()) return toast('いまと おなじ ぶんしょうです');
+    sugSend.disabled = true;
+    try{
+      await api('/api/suggest', {method:'POST', body:{g:gid, t:g ? g.title : '', field:state.suggField, text}});
+      await refreshHelp();
+      toast('おくりました。ありがとう！');
+      go('#/tool/help');
+    }catch(e){ toast(e.message); sugSend.disabled = false; }
+  };
+  app.querySelectorAll('[data-sugdel]').forEach(b => b.onclick = () => {
+    ask('おくった せつめいを とりけしますか？', async () => {
+      try{ await api('/api/suggest/delete', {method:'POST', body:{id:b.dataset.sugdel}}); await refreshHelp(); render(); }
+      catch(e){ toast(e.message); }
+    });
+  });
+  app.querySelectorAll('[data-sugaccept]').forEach(b => b.onclick = async () => {
+    const x = state.help.inbox.find(y => y.id === b.dataset.sugaccept);
+    const g = x && state.games.find(y => y.id === x.g);
+    if(!x || !g) return;
+    b.disabled = true;
+    try{
+      await api('/api/suggest/close', {method:'POST', body:{id:x.id, status:'done'}});
+      g[x.field] = x.text;
+      if(x.field === 'summary') g.tags = (g.tags || []).filter(t => t !== 'データみきにゅう');
+      saveGames();
+      await refreshHelp();
+      render();
+      toast(g.title + ' に とりこみました');
+    }catch(e){ toast(e.message); b.disabled = false; }
+  });
+  app.querySelectorAll('[data-sugreject]').forEach(b => b.onclick = () => {
+    ask('この せつめいを みおくりますか？\nおくった 人には「こんかいは みおくり」と でます。', async () => {
+      try{ await api('/api/suggest/close', {method:'POST', body:{id:b.dataset.sugreject, status:'rejected'}}); await refreshHelp(); render(); }
+      catch(e){ toast(e.message); }
+    });
+  });
+  const claimAdmin = document.getElementById('claimAdmin');
+  if(claimAdmin) claimAdmin.onclick = () => {
+    ask('あなたが ずかんの かんりにんに なります。\n1人だけで、あとから かえられません。よろしいですか？', async () => {
+      try{ await api('/api/admin/claim', {method:'POST'}); await refreshHelp(); render(); toast('かんりにんに なりました'); }
+      catch(e){ toast(e.message); }
+    });
+  };
+
   app.querySelectorAll('[data-unwant]').forEach(b => b.onclick = async () => {
     try{ await setWant(b.dataset.unwant, false); render(); toast('「遊んでみたい」から はずしました'); }
     catch(e){ toast(e.message); }
