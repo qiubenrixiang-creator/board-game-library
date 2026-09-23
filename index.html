@@ -871,7 +871,6 @@ const KEY = {
   kai:'bgl.kaiShelf',        /* ボードゲーム会に もっていく たな */
   choubo:'bgl.choubo',        /* しゅくやの ちょうぼ（わりかん） */
   talk:'bgl.talkTopics',      /* じぶんで ついかした トークおだい */
-  shared:'bgl.sharedPlays',   /* みんなで わけあう ぼうけんの きろく */
   api:'bgl.apiBase',          /* さかばの サーバーの アドレス */
   acct:'bgl.account',         /* ぼうけんしゃの証（この スマホの もちぬし） */
   net:'bgl.netPlays',         /* さかばから とどいた きろく */
@@ -1887,11 +1886,9 @@ const state = {
   withSel: [],                                      /* きろくの「いっしょに あそんだ 人」 */
   choubo: {members:[], items:[]},                   /* ちょうぼ */
   talk: {cat:'all', idx:-1, order:[], who:'', custom:[]},  /* うわさばなし */
-  shared: {version:'', plays:[]},                   /* サイトから とどく みんなの きろく */
   net: {since:'', plays:[], del:[]},                /* さかばから とどいた きろく */
   gone: [],                                         /* けした きろく（もう かぞえない） */
   friends: {friends:[], incoming:[], outgoing:[]},  /* なかまの ようす */
-  recShareOpen: false,                              /* きろくの やりとりを ひらいて いるか */
   recQuery: '',                                     /* きろく画面の けんさく */
   recView: 'list',                                  /* いちらん／カレンダー／思い出 */
   calYm: null, calDay: null, memory: null,          /* カレンダーと 思い出の いま */
@@ -1925,8 +1922,7 @@ function loadAll(){
   if(nt && Array.isArray(nt.plays)) state.net = {since:String(nt.since||''), plays:nt.plays, del:Array.isArray(nt.del)?nt.del:[]};
   const gn = store.read(KEY.gone, null);
   if(Array.isArray(gn)) state.gone = gn;
-  const sh = store.read(KEY.shared, null);
-  if(sh && Array.isArray(sh.plays)) state.shared = {version:String(sh.version||''), plays:sh.plays};
+  try{ localStorage.removeItem('bgl.sharedPlays'); }catch(e){}   /* むかしの わけあい データを そうじ */
   const tc = store.read(KEY.talk, null);
   if(Array.isArray(tc)) state.talk.custom = tc;
   const ka = store.read(KEY.kai, null);
@@ -1997,23 +1993,6 @@ async function syncPublished(){
     }
     adoptSiteData(data);
   }catch(e){ /* library.json が無ければ 何も しない */ }
-}
-
-/* みんなの きろく（records.json）を とりに いく。
-   ずかんの データとは べつなので、へんしゅう中でも あんぜんに うけとれる。 */
-async function syncSharedPlays(){
-  if(location.protocol === 'file:') return;
-  try{
-    const res = await fetch('records.json?t=' + Date.now(), {cache:'no-store'});
-    if(!res.ok) return;
-    const data = await res.json();
-    if(!data || !Array.isArray(data.plays)) return;
-    if(String(data.version || '') === String(state.shared.version || '')) return;
-    state.shared = {version:String(data.version || ''), plays:data.plays};
-    saveShared();
-    const r = currentRoute();
-    if(r.name === 'card' || r.name === 'tool' || r.name === 'records' || r.name === 'stats') render();
-  }catch(e){ /* records.json が 無ければ なにも しない */ }
 }
 
 /* ---------------- utils ---------------- */
@@ -3955,23 +3934,19 @@ function playMembers(pl){
   if(w && list.indexOf(w) < 0) list.push(w);
   return list;
 }
-/* ---------------- みんなで わけあう ぼうけんの きろく ----------------
-   きろくを records.json として サイトに おくと、
-   だれの スマホで ひらいても おなじ ぼうけんしゃカードに なる。
-   かんそうと しゃしんは おくらない（この スマホの 中だけ）。 */
-function sharedPlays(){ return Array.isArray(state.shared.plays) ? state.shared.plays : []; }
-function saveShared(){ store.write(KEY.shared, state.shared); }
-/* おなじ きろくか どうかの めじるし */
+/* おなじ きろくか どうかの めじるし（日にち・ゲーム・かった人・メンバー） */
 function playKey(gid, pl){
   return String(gid) + '|' + (pl.d || '') + '|' + (pl.w || '') + '|' + playMembers(pl).slice().sort().join(',');
 }
-function sharedToPlay(r){
+/* さかばから とどいた きろくを、この アプリの かたちに なおす */
+function netToPlay(r){
   return {d:r.d || '', n:r.n || undefined, w:r.w || undefined, u:Array.isArray(r.u) ? r.u.slice() : []};
 }
-function sharedGame(r){
+function netGame(r){
   return state.games.find(x => x.id === r.g) ||
     {id:r.g, title:r.t || '？', tags:Array.isArray(r.k) ? r.k : [], playTime:Number(r.p) || 0, difficulty:Number(r.f) || 0};
 }
+
 /* けした きろくの しるし。
    けした きろくの コピーが さかばや サイトに のこって いても、
    もう かぞえない ように する。 */
@@ -4002,56 +3977,17 @@ function cardPlays(){
     out.push({g:g, pl:pl, mine:true});
   }));
   const add = r => {
-    const pl = sharedToPlay(r);
+    const pl = netToPlay(r);
     const key = playKey(r.g, pl);
     if(seen[key] || isGone(key)) return;     /* おなじ きろく・けした きろくは かぞえない */
     seen[key] = 1;
-    out.push({g:sharedGame(r), pl:pl, mine:false});
+    out.push({g:netGame(r), pl:pl, mine:false});
   };
   (Array.isArray(state.net.plays) ? state.net.plays : []).forEach(add);
-  sharedPlays().forEach(add);
   return out;
 }
-function sharedOnlyCount(){ return cardPlays().filter(r => !r.mine).length; }
-/* サイトに おくる かたち（かんそう・しゃしんは いれない） */
-function recordsForPublish(){
-  return cardPlays().map(r => {
-    const mem = playMembers(r.pl);
-    if(!mem.length) return null;             /* だれの きろくか わからない ものは おくらない */
-    return {g:r.g.id, t:r.g.title, k:(r.g.tags || []).slice(), p:Number(r.g.playTime) || 0,
-      f:Number(r.g.difficulty) || 0, d:r.pl.d || '', n:r.pl.n || undefined, w:r.pl.w || undefined, u:mem};
-  }).filter(Boolean).sort((a,b) => String(a.d).localeCompare(String(b.d)));
-}
-/* この スマホで つけた きろくだけ（ともだちに おくる とき） */
-function recordsMine(){
-  const out = [];
-  state.games.forEach(g => playsOf(g).forEach(pl => {
-    const mem = playMembers(pl);
-    if(!mem.length) return;
-    out.push({g:g.id, t:g.title, k:(g.tags||[]).slice(), p:Number(g.playTime)||0,
-      f:Number(g.difficulty)||0, d:pl.d || '', n:pl.n || undefined, w:pl.w || undefined, u:mem});
-  }));
-  return out;
-}
-/* もらった きろくを この スマホに とりこむ */
-function importRecords(list){
-  const seen = {};
-  state.games.forEach(g => playsOf(g).forEach(pl => { seen[playKey(g.id, pl)] = 1; }));
-  let added = 0, skipped = 0;
-  list.forEach(r => {
-    if(!r || !r.g) return;
-    const pl = sharedToPlay(r);
-    if(!playMembers(pl).length) return;
-    if(seen[playKey(r.g, pl)]){ skipped++; return; }
-    const g = state.games.find(x => x.id === r.g);
-    if(!g){ skipped++; return; }             /* ずかんに ない ゲームは とばす */
-    g.plays = playsOf(g).concat([pl]);
-    seen[playKey(r.g, pl)] = 1;
-    added++;
-  });
-  if(added) saveGames();
-  return {added, skipped};
-}
+/* なかまから とどいて いる きろくの かず */
+function fromFriendsCount(){ return cardPlays().filter(r => !r.mine).length; }
 /* きろくに でて くる ぼうけんしゃ ぜんいん */
 function allAdventurers(){
   const m = {};
@@ -4602,18 +4538,8 @@ function viewRecords(){
     '<button class="mini" data-go2="#/tools" style="margin-bottom:14px">◀ どうぐへ もどる</button>' +
     '<h1 class="lede">あそんだ きろく</h1>' +
     '<p class="sub">かんそうと しゃしんは この スマホの 中だけに のこります。</p>' +
-    (sharedOnlyCount() ? '<div class="note" style="margin-bottom:12px">みんなで わけあって いる きろくが '+sharedOnlyCount()+'けん あります。<br>' +
+    (fromFriendsCount() ? '<div class="note" style="margin-bottom:12px">なかまから とどいて いる きろくが '+fromFriendsCount()+'けん あります。<br>' +
       'この いちらんには でませんが、ぼうけんしゃカードには 入って います。</div>' : '') +
-
-    '<details id="recShare" style="margin-bottom:12px"'+(state.recShareOpen?' open':'')+'><summary style="font-size:13px">きろくを ともだちと やりとりする</summary>' +
-      '<div class="win" style="margin-top:10px">' +
-        '<p class="count" style="margin:0 0 8px">この スマホで つけた きろくを、かんりする 人に おくれます。' +
-          'おくられた 人が とりこんで こうかいすると、みんなの カードに 入ります。</p>' +
-        '<button class="btn small" id="recCopyBtn" style="width:100%;margin-bottom:12px">この スマホの きろくを コピー（'+recordsMine().length+'けん）</button>' +
-        '<label class="lbl" for="recPaste">もらった きろくを とりこむ</label>' +
-        '<textarea id="recPaste" placeholder="もらった もじれつを ここに はりつけ" style="min-height:80px"></textarea>' +
-        '<button class="btn small" id="recImportBtn" style="width:100%;margin-top:8px">とりこむ</button>' +
-      '</div></details>' +
 
     '<div class="chips" style="margin-bottom:12px">' +
       [['list','いちらん'],['cal','カレンダー'],['memory','思い出を めくる']].map(o =>
@@ -5853,63 +5779,6 @@ function viewAdmin(){
       'あそんだ きろく（かんそう・しゃしん）と、かしだし先の なまえは サイトに あげません。<br>' +
       'これらは この スマホの 中だけに のこります。</div>' +
 
-    '<div class="divider"></div><h2 class="sec">ぼうけんの きろくを わけあう</h2>' +
-    '<p class="count">きろくを サイトに おくと、ともだちが じぶんの スマホで ひらいても おなじ ぼうけんしゃカードが みられます。' +
-      'スマホを かえても レベルは つづきます。<br>' +
-      '<span style="color:var(--accent)">おくるのは「日にち・ゲーム・にんずう・かった人・いっしょに あそんだ 人」だけです。' +
-      'かんそうと しゃしんは おくりません。</span></p>' +
-    '<div class="win" style="margin-bottom:10px">' +
-      '<p style="margin:0 0 4px;font-size:14px">おくれる きろく：<span style="color:var(--accent)">'+recordsForPublish().length+'けん</span>' +
-        '　ぼうけんしゃ：<span style="color:var(--accent)">'+allAdventurers().filter(a => a.plays).length+'人</span></p>' +
-      '<p class="count" style="margin:0">「いっしょに あそんだ 人」が 入って いない きろくは おくられません。</p>' +
-    '</div>' +
-    '<button class="btn primary" id="recPubBtn" style="margin-bottom:6px">ぼうけんの きろくを こうかいする</button>' +
-    '<div id="recPubStatus"></div>' +
-    (state.shared.version ? '<p class="count" style="margin:10px 0 16px">サイトには いま '+sharedPlays().length+'けんの きろくが あります。</p>'
-      : '<p class="count" style="margin:10px 0 16px">まだ わけあって いません。</p>') +
-
-    '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:16px">' +
-      '<input type="checkbox" id="sharePriv" '+(sharePrivateOn()?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
-      '<span style="font-size:13px">かんそうや かしだし先も こうかいする<br>' +
-      '<span style="color:var(--muted);font-size:11.5px">ONに すると だれでも 見られる ばしょに のります。ふつうは OFFの ままで だいじょうぶです。</span></span></label>' +
-
-    '<details style="margin:14px 0 16px"'+(cfg.token?'':' open')+'><summary>さいしょの せってい（1かいだけ）</summary>' +
-      '<p class="count" style="margin:10px 0">サイトを おいて いる ばしょ（GitHub）の なまえと、かきこみ用の あいことばを いれます。この スマホの なかにだけ ほぞんされ、ともだちには みえません。</p>' +
-      '<div class="form-group"><label class="lbl" for="ghOwner">ユーザーめい</label>' +
-        '<input type="text" id="ghOwner" value="'+esc(cfg.owner)+'" placeholder="れい：taro123" autocapitalize="off" autocorrect="off"></div>' +
-      '<div class="form-group"><label class="lbl" for="ghRepo">おきばの なまえ</label>' +
-        '<input type="text" id="ghRepo" value="'+esc(cfg.repo)+'" placeholder="れい：board-game-library" autocapitalize="off" autocorrect="off"></div>' +
-      '<div class="form-group"><label class="lbl" for="ghBranch">えだの なまえ<span class="hint">たいてい main</span></label>' +
-        '<input type="text" id="ghBranch" value="'+esc(cfg.branch)+'" placeholder="main" autocapitalize="off" autocorrect="off"></div>' +
-      '<div class="form-group"><label class="lbl" for="ghToken">かきこみ用の あいことば</label>' +
-        '<input type="password" id="ghToken" value="'+esc(cfg.token)+'" placeholder="ghp_… で はじまる もじれつ" autocapitalize="off" autocorrect="off"></div>' +
-      '<div class="note">あいことばは GitHubの Settings → Developer settings → Personal access tokens で つくれます。この おきばだけに、かきこみ（Contents: Read and write）を ゆるすと あんぜんです。</div>' +
-    '</details>' +
-
-    '<details style="margin:0 0 16px"><summary>じどうを つかわない ばあい（てさぎょう）</summary>' +
-      '<div class="win" style="margin-top:10px">' +
-        '<p style="margin:0 0 10px;font-size:14px"><span style="color:var(--accent)">1.</span> したの ボタンで データの ファイルを ほぞんする</p>' +
-        '<button class="btn small" id="exportBtn" style="width:100%;margin-bottom:14px">ともだちよう データを つくる</button>' +
-        '<p style="margin:0 0 6px;font-size:14px"><span style="color:var(--accent)">2.</span> ほぞんした ファイルを、この サイトを おいた ばしょへ そのまま アップロードする</p>' +
-        '<p class="count" style="margin:0">ファイルの なまえは かえないで ください。</p>' +
-      '</div></details>' +
-
-    '<p class="count" style="margin-bottom:6px">スマホを かえる ときや、まえの ないように もどす ときは こちら。</p>' +
-    storageMeterHTML() +
-    '<div style="height:14px"></div>' +
-    backupNoticeHTML() +
-
-    '<div class="btn-row" style="margin-bottom:8px">' +
-      '<button class="btn small" id="backupBtn" style="flex:1">じぶん用の ひかえを つくる</button>' +
-      '<label class="btn small" style="flex:1;cursor:pointer;display:flex">ほぞんした データを よみこむ' +
-        '<input type="file" id="importFile" accept="application/json,.json"></label>' +
-    '</div>' +
-    '<p class="count" style="margin:0 0 16px">「じぶん用の ひかえ」には かんそうや かしだし先も 入ります。この ファイルは サイトに あげないで ください。</p>' +
-
-    '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:14px">' +
-      '<input type="checkbox" id="localOnly" '+(localOnly?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
-      '<span style="font-size:13px">この スマホの へんしゅうを ゆうせんする<br>' +
-      '<span style="color:var(--muted);font-size:11.5px">ゲームを ついか・へんしゅうする 人（かんりする 人）は ONに して ください。つくりかけの ないようが きえなく なります。</span></span></label>' +
     '<div class="divider"></div><h2 class="sec">ぼうけんしゃの証・なかま</h2>' +
     '<p class="count">じぶんの ぼうけんしゃの証と なかまは「どうぐ → なかまの なまえ」に あります。</p>' +
     '<button class="btn small" data-go2="#/tool/names" style="width:100%;margin-bottom:16px">なかまの なまえへ</button>' +
@@ -6047,7 +5916,7 @@ function pubStatus(msg, kind){
   const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
   el.innerHTML = '<p class="count" style="color:'+color+';margin:10px 0 0">'+esc(msg)+'</p>';
 }
-/* サイトに ファイルを 1つ おく（library.json / records.json 共通） */
+/* サイトに ファイルを 1つ おく（library.json） */
 async function putSiteFile(path, obj, cfg){
   const api = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' +
               encodeURIComponent(cfg.repo) + '/contents/' + path;
@@ -6112,40 +5981,6 @@ async function publishToSite(){
     if(btn) btn.disabled = false;
   }
 }
-function recStatus(msg, kind){
-  const el = document.getElementById('recPubStatus');
-  if(!el) return;
-  const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
-  el.innerHTML = '<p class="count" style="color:'+color+';margin:10px 0 0">'+esc(msg)+'</p>';
-}
-async function publishRecords(){
-  const cfg = siteConfigFromForm();
-  if(!cfg.owner || !cfg.repo || !cfg.token){
-    recStatus('さきに「さいしょの せってい」を いれて ください。', 'ng');
-    return;
-  }
-  const plays = recordsForPublish();
-  if(!plays.length){
-    recStatus('おくれる きろくが ありません。きろくに「いっしょに あそんだ 人」を いれて ください。', 'ng');
-    return;
-  }
-  const btn = document.getElementById('recPubBtn');
-  if(btn) btn.disabled = true;
-  recStatus('サイトに つないで います…');
-  try{
-    const ver = new Date().toISOString();
-    await putSiteFile('records.json', {version:ver, plays:plays}, cfg);
-    state.shared = {version:ver, plays:plays};
-    saveShared();
-    recStatus(plays.length + 'けんの きろくを わけあいました！ 1〜2ふん あとに みんなの カードに でます。', 'ok');
-    toast('ぼうけんの きろくを こうかい しました');
-  }catch(err){
-    recStatus((err && err.message) ? err.message : 'つうしんに しっぱい しました。でんぱを たしかめて ください。', 'ng');
-  }finally{
-    if(btn) btn.disabled = false;
-  }
-}
-
 /* ---------------- 共有・QR ---------------- */
 function publicUrl(){
   if(location.protocol === 'file:') return '';
@@ -7407,32 +7242,6 @@ function bind(r){
   };
   const publishBtn = document.getElementById('publishBtn');
   if(publishBtn) publishBtn.onclick = publishToSite;
-  const recPubBtn = document.getElementById('recPubBtn');
-  if(recPubBtn) recPubBtn.onclick = () => ask(
-    'ぼうけんの きろく '+recordsForPublish().length+'けんを サイトに おきます。\nかんそうと しゃしんは おくりません。',
-    publishRecords);
-  const recCopyBtn = document.getElementById('recCopyBtn');
-  if(recCopyBtn) recCopyBtn.onclick = () => {
-    const mine = recordsMine();
-    if(!mine.length) return toast('おくれる きろくが ありません');
-    copyText(JSON.stringify({bgl:'records', plays:mine}));
-  };
-  const recShare = document.getElementById('recShare');
-  if(recShare) recShare.addEventListener('toggle', () => { state.recShareOpen = recShare.open; });
-  const recImportBtn = document.getElementById('recImportBtn');
-  if(recImportBtn) recImportBtn.onclick = () => {
-    const ta = document.getElementById('recPaste');
-    const txt = (ta ? ta.value : '').trim();
-    if(!txt) return toast('もらった もじれつを はりつけて ください');
-    let data = null;
-    try{ data = JSON.parse(txt); }catch(e){ return toast('もじれつが よみとれません'); }
-    const list = Array.isArray(data) ? data : (data && Array.isArray(data.plays) ? data.plays : null);
-    if(!list) return toast('きろくの もじれつでは ないようです');
-    const res = importRecords(list);
-    state.recShareOpen = true;
-    render(); autoSync();
-    toast(res.added + 'けんを とりこみました' + (res.skipped ? '（'+res.skipped+'けんは すでに あるか、ずかんに ない ゲーム）' : ''));
-  };
   const qrBtn = document.getElementById('qrBtn');
   if(qrBtn) qrBtn.onclick = () => showQR(document.getElementById('shareUrl').value.trim());
   const copyUrlBtn = document.getElementById('copyUrlBtn');
@@ -7975,7 +7784,6 @@ adoptKaiFromUrl();
 catchFriendCode();
 render();
 syncPublished();
-syncSharedPlays();
 /* ログイン して いれば、そっと さかばと やりとり する */
 if(isOnline()){
   (async () => {
