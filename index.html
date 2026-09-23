@@ -859,7 +859,9 @@ const KEY = {
   gh:'bgl.siteConfig',
   bgm:'bgl.bgmEnabled',
   se:'bgl.seEnabled',
-  dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか */
+  dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか（ふるい しるし） */
+  pubsig:'bgl.publishedSig', /* さいごに サイトと そろえた ときの ずかんの ないようの しるし */
+  preAdopt:'bgl.beforeSiteAdopt', /* サイトに そろえる まえの ひかえ */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
   bgmMode:'bgl.bgmMode',    /* ジュークボックスの ながしかた */
   bgmVol:'bgl.bgmVolume',   /* BGMの おおきさ */
@@ -2005,8 +2007,33 @@ function loadAll(){
 /* この端末で へんしゅう した しるし。
    これが ついて いる あいだは、サイト側の データで かってに 上書き しない。 */
 function markDirty(){ store.write(KEY.dirty, true); }
-function clearDirty(){ store.write(KEY.dirty, false); }
-function isDirty(){ return store.read(KEY.dirty, false); }
+/* ずかんの ないよう（あそんだ きろく・かしだしを のぞく）の しるし */
+function libSig(games, tags){
+  const strip = (games || []).map(g => {
+    const c = Object.assign({}, g);
+    ['plays', 'lentTo', 'lentDate'].forEach(f => { delete c[f]; });
+    return c;
+  });
+  const str = JSON.stringify([strip, tags || []]);
+  let h1 = 0x811c9dc5, h2 = 5381;
+  for(let i = 0; i < str.length; i++){
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 16777619) >>> 0;
+    h2 = (Math.imul(h2, 33) + c) >>> 0;
+  }
+  return str.length + ':' + h1.toString(36) + h2.toString(36);
+}
+function curSig(){ return libSig(state.games, state.tags); }
+function clearDirty(){ store.write(KEY.dirty, false); store.write(KEY.pubsig, curSig()); }
+function isDirty(){
+  const sig = store.read(KEY.pubsig, '');
+  if(!sig) return store.read(KEY.dirty, false);   /* まだ しるしが ない ふるい 端末 */
+  return sig !== curSig();
+}
+function isPublisher(){
+  const c = getSiteConfig();
+  return !!(c.owner && c.repo && c.token);
+}
 
 function saveGames(){ store.write(KEY.games, state.games); markDirty(); }
 function saveTags(){ store.write(KEY.tags, state.tags); markDirty(); }
@@ -2014,6 +2041,12 @@ function saveFilters(){ store.write(KEY.filters, state.filters); }
 
 let pendingSiteData = null;   /* サイト側に あるが、まだ とりこんで いない データ */
 
+let siteInfo = null;   /* さいごに みた サイトの ないよう {version, games, tags, at} */
+function keepBeforeAdopt(){
+  try{ if(localStorage.getItem(KEY.games) == null) return; }catch(e){ return; }   /* はじめての 人は ひかえ いらない */
+  try{ store.write(KEY.preAdopt, {at:Date.now(), games:state.games, tags:state.tags, pubver:store.read(KEY.pubver, '')}); }
+  catch(e){}
+}
 function adoptSiteData(data){
   state.games = mergePrivate(data.games);
   if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
@@ -2025,28 +2058,55 @@ function adoptSiteData(data){
   render();
 }
 
+async function fetchSiteLibrary(){
+  const res = await fetch('library.json?t=' + Date.now(), {cache:'no-store'});
+  if(!res.ok) throw new Error('http ' + res.status);
+  const data = await res.json();
+  if(!data || !Array.isArray(data.games)) throw new Error('format');
+  siteInfo = {version:String(data.version || ''), games:data.games, tags:data.tags, at:Date.now()};
+  return data;
+}
 async function syncPublished(){
   if(location.protocol === 'file:') return;
-  if(store.read(KEY.localOnly, false)) return;
-  try{
-    const res = await fetch('library.json?t=' + Date.now(), {cache:'no-store'});
-    if(!res.ok) return;
-    const data = await res.json();
-    if(!data || !Array.isArray(data.games)) return;
-    const ver = String(data.version || '');
-    if(ver && ver === store.read(KEY.pubver, '')) return;
+  let data;
+  try{ data = await fetchSiteLibrary(); }
+  catch(e){ return; }   /* library.json が無ければ 何も しない */
+  const inAdmin = () => currentRoute().name === 'admin';
+  const ver = String(data.version || '');
+  const siteSig = libSig(data.games, data.tags);
 
-    /* この端末で ついか・へんしゅう して いる ばあいは、ぜったいに 上書き しない。
-       かんり画面から 手動で とりこめる ように しておく だけ。 */
-    if(isDirty()){
-      pendingSiteData = data;
-      const r = currentRoute();
-      if(r.name === 'admin') render();
-      return;
-    }
-    adoptSiteData(data);
-  }catch(e){ /* library.json が無ければ 何も しない */ }
+  /* もう おなじ ないよう なら、しるしを そろえる だけ */
+  if(siteSig === curSig()){
+    store.write(KEY.pubver, ver);
+    clearDirty();
+    pendingSiteData = null;
+    if(inAdmin()) render();
+    return;
+  }
+  if(store.read(KEY.localOnly, false)){ if(inAdmin()) render(); return; }
+  if(ver && ver === store.read(KEY.pubver, '')){ if(inAdmin()) render(); return; }
+
+  /* サイトを こうしん できる 端末（かんりにん）で、まだ だして いない へんしゅうが ある ときは
+     上書き しない。かんり画面で えらべる ように して おく。 */
+  if(isPublisher() && isDirty()){
+    pendingSiteData = data;
+    if(inAdmin()) render();
+    return;
+  }
+  /* それ いがいの 端末は、サイトの あたらしい ずかんに そろえる（まえの ないようは ひかえに のこす） */
+  const before = state.games.length;
+  keepBeforeAdopt();
+  adoptSiteData(data);
+  if(before !== state.games.length) toast('ずかんを さいしんに しました（' + state.games.length + 'さくひん）');
 }
+/* アプリに もどって きた ときも サイトを みに いく（ホーム画面の アプリは よみこみ なおさない ため） */
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState !== 'visible') return;
+  const t = Date.now();
+  if(t - (syncPublished._last || 0) < 60000) return;
+  syncPublished._last = t;
+  syncPublished();
+});
 
 /* ---------------- utils ---------------- */
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => (
@@ -5757,7 +5817,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.23-g';
+const APP_VERSION = '2026.09.23-h';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -6528,6 +6588,46 @@ function bindOnline(){
     });
 }
 
+function fmtVer(v){
+  const d = new Date(v);
+  if(!v || isNaN(d)) return '';
+  const p = n => String(n).padStart(2, '0');
+  return (d.getMonth()+1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+function syncBoxHTML(){
+  if(location.protocol === 'file:') return '';
+  const here = state.games.length;
+  const localOnly = store.read(KEY.localOnly, false);
+  const pre = store.read(KEY.preAdopt, null);
+  let body, btn = '', tone = 'var(--line)';
+  if(!siteInfo){
+    body = 'サイトの ずかんを しらべて います…';
+  }else{
+    const n = siteInfo.games.length;
+    const same = libSig(siteInfo.games, siteInfo.tags) === curSig();
+    const line = 'サイト：<b>' + n + 'さくひん</b>' + (fmtVer(siteInfo.version) ? '（' + fmtVer(siteInfo.version) + ' こうしん）' : '') +
+                 '<br>この端末：<b>' + here + 'さくひん</b>';
+    if(same){
+      body = line + '<br><span style="color:var(--accent)">✓ サイトと おなじ ないようです</span>';
+    }else{
+      tone = 'var(--accent)';
+      let why;
+      if(localOnly) why = '▶ この端末は「じぶんの へんしゅうを ゆうせん」に なって いるので、サイトの ないようを とりこみません。';
+      else if(isPublisher() && isDirty()) why = '▶ この端末で へんしゅう した ぶんが あります。みんなに みせるなら したの「サイトを こうしんする」、サイトに あわせるなら「そろえる」を おして ください。';
+      else why = '▶ サイトと ちがう ないようです。';
+      body = line + '<br>' + why;
+      btn = '<button class="btn small" id="alignSiteBtn" style="width:100%;margin-top:8px">サイトの ないよう（' + n + 'さくひん）に そろえる</button>';
+    }
+  }
+  if(pre && Array.isArray(pre.games)){
+    btn += '<p class="count" style="margin:8px 0 0">まえの ないよう（' + pre.games.length + 'さくひん・' + fmtVer(pre.at) + '）の ひかえが あります。' +
+           '<button class="mini" id="restorePreBtn" style="margin-left:6px">もとに もどす</button></p>';
+  }
+  return '<div class="note" id="syncBox" style="margin-bottom:14px;border-style:solid;border-color:' + tone + ';color:var(--text)">' +
+    '<b>サイトとの どうき</b><br>' + body + btn +
+    '<button class="mini" id="recheckSiteBtn" style="margin-top:8px">もういちど しらべる</button></div>';
+}
+
 function viewAdmin(){
   const localOnly = store.read(KEY.localOnly, false);
   const cfg = getSiteConfig();
@@ -6548,6 +6648,7 @@ function viewAdmin(){
   return '<section class="page">' +
     '<h1 class="lede">かんり</h1>' +
     '<p class="sub">ゲームの ついか・へんしゅう・さくじょ と、ともだちに みせる ための じゅんびが できます。</p>' +
+    syncBoxHTML() +
     '<button class="btn primary" data-go2="#/add" style="margin-bottom:10px">＋ ゲームを ついかする</button>' +
     '<div class="btn-row" style="margin-bottom:10px">' +
       '<button class="btn small" style="flex:1" data-go2="#/stats">とうけいを みる</button>' +
@@ -6577,12 +6678,6 @@ function viewAdmin(){
       '<button class="mini" id="addFavBtn">' + esc(FAV_TAG) + ' タグを つくる</button> ' +
       'すきな ゲームに つけて おくと、さがす画面から すぐ よびだせます。</p>') +
 
-    (pendingSiteData ?
-      '<div class="note" style="margin-bottom:14px;border-color:var(--accent);color:var(--text)">' +
-      'サイトには べつの ないよう（'+pendingSiteData.games.length+'さくひん）が あります。<br>' +
-      'この スマホの ないよう（'+state.games.length+'さくひん）は そのまま のこして あります。<br>' +
-      '<button class="mini" id="pullSiteBtn" style="margin-top:8px">サイトの ないように いれかえる</button>' +
-      '</div>' : '') +
 
     '<div class="divider"></div><h2 class="sec">ともだちの がめんにも だす</h2>' +
     '<p class="count">ついかした ゲームは、いまは この スマホ（パソコン）の なかだけに あります。<br>' +
@@ -6795,9 +6890,14 @@ async function publishToSite(){
   pubStatus('サイトに つないで います…');
   try{
     const ver = new Date().toISOString();
-    await putSiteFile('library.json', {version:ver, tags:state.tags, games:gamesForPublish()}, cfg);
+    const pubGames = gamesForPublish();
+    await putSiteFile('library.json', {version:ver, tags:state.tags, games:pubGames}, cfg);
     store.write(KEY.pubver, ver);
     clearDirty();
+    siteInfo = {version:ver, games:pubGames, tags:state.tags, at:Date.now()};
+    pendingSiteData = null;
+    const box = document.getElementById('syncBox');
+    if(box) box.outerHTML = syncBoxHTML();
     pubStatus('こうしん しました！ 1〜2ふん あとに ともだちの がめんにも でます。', 'ok');
     toast('サイトを こうしん しました');
   }catch(err){
@@ -8228,6 +8328,43 @@ function bind(r){
     if(!url) return toast('URLが ありません');
     if(navigator.share) navigator.share({title:'Board Game Library', url}).catch(()=>{});
     else copyText(url);
+  };
+  const alignSiteBtn = document.getElementById('alignSiteBtn');
+  if(alignSiteBtn) alignSiteBtn.onclick = async () => {
+    let data;
+    try{ data = await fetchSiteLibrary(); }
+    catch(e){ return toast('サイトに つながりません'); }
+    ask('この端末の ずかんを、サイトの ないよう（' + data.games.length + 'さくひん）に そろえます。\n' +
+        'あそんだ きろく・かしだしは のこります。\nいまの ないようは ひかえに のこします。よろしいですか？', () => {
+      keepBeforeAdopt();
+      store.write(KEY.localOnly, false);
+      adoptSiteData(data);
+      toast('サイトの ないように そろえました（' + state.games.length + 'さくひん）');
+    });
+  };
+  const restorePreBtn = document.getElementById('restorePreBtn');
+  if(restorePreBtn) restorePreBtn.onclick = () => {
+    const pre = store.read(KEY.preAdopt, null);
+    if(!pre || !Array.isArray(pre.games)) return;
+    ask('そろえる まえの ないよう（' + pre.games.length + 'さくひん）に もどします。\nよろしいですか？', () => {
+      state.games = pre.games;
+      if(Array.isArray(pre.tags) && pre.tags.length) state.tags = pre.tags;
+      store.write(KEY.games, state.games);
+      store.write(KEY.tags, state.tags);
+      markDirty();
+      /* つぎに サイトが こうしん されるまでは、この ないようの まま */
+      if(siteInfo) store.write(KEY.pubver, siteInfo.version);
+      store.write(KEY.pubsig, 'restored');
+      store.write(KEY.preAdopt, null);
+      render(); toast('もとに もどしました');
+    });
+  };
+  const recheckSiteBtn = document.getElementById('recheckSiteBtn');
+  if(recheckSiteBtn) recheckSiteBtn.onclick = async () => {
+    siteInfo = null; render();
+    await syncPublished();
+    if(!siteInfo) toast('サイトに つながりません');
+    render();
   };
   const pullSiteBtn = document.getElementById('pullSiteBtn');
   if(pullSiteBtn) pullSiteBtn.onclick = () => {
