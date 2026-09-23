@@ -873,7 +873,8 @@ const KEY = {
   talk:'bgl.talkTopics',      /* じぶんで ついかした トークおだい */
   shared:'bgl.sharedPlays',   /* みんなで わけあう ぼうけんの きろく */
   api:'bgl.apiBase',          /* さかばの サーバーの アドレス */
-  acct:'bgl.account'          /* ぼうけんしゃの証（この スマホの もちぬし） */
+  acct:'bgl.account',         /* ぼうけんしゃの証（この スマホの もちぬし） */
+  net:'bgl.netPlays'          /* さかばから とどいた きろく */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -1884,6 +1885,8 @@ const state = {
   choubo: {members:[], items:[]},                   /* ちょうぼ */
   talk: {cat:'all', idx:-1, order:[], who:'', custom:[]},  /* うわさばなし */
   shared: {version:'', plays:[]},                   /* サイトから とどく みんなの きろく */
+  net: {since:'', plays:[]},                        /* さかばから とどいた きろく */
+  friends: {friends:[], incoming:[], outgoing:[]},  /* なかまの ようす */
   recShareOpen: false,                              /* きろくの やりとりを ひらいて いるか */
   recQuery: '',                                     /* きろく画面の けんさく */
   recView: 'list',                                  /* いちらん／カレンダー／思い出 */
@@ -1914,6 +1917,8 @@ function loadAll(){
   state.today = store.read(KEY.today, null);
   const cb = store.read(KEY.choubo, null);
   if(cb && typeof cb === 'object') state.choubo = {members:Array.isArray(cb.members)?cb.members:[], items:Array.isArray(cb.items)?cb.items:[]};
+  const nt = store.read(KEY.net, null);
+  if(nt && Array.isArray(nt.plays)) state.net = {since:String(nt.since||''), plays:nt.plays};
   const sh = store.read(KEY.shared, null);
   if(sh && Array.isArray(sh.plays)) state.shared = {version:String(sh.version||''), plays:sh.plays};
   const tc = store.read(KEY.talk, null);
@@ -3968,12 +3973,14 @@ function cardPlays(){
     seen[playKey(g.id, pl)] = 1;
     out.push({g:g, pl:pl, mine:true});
   }));
-  sharedPlays().forEach(r => {
+  const add = r => {
     const pl = sharedToPlay(r);
     if(seen[playKey(r.g, pl)]) return;       /* おなじ きろくは かぞえない */
     seen[playKey(r.g, pl)] = 1;
     out.push({g:sharedGame(r), pl:pl, mine:false});
-  });
+  };
+  (Array.isArray(state.net.plays) ? state.net.plays : []).forEach(add);
+  sharedPlays().forEach(add);
   return out;
 }
 function sharedOnlyCount(){ return cardPlays().filter(r => !r.mine).length; }
@@ -5308,6 +5315,149 @@ async function api(path, opts){
   }
   return data;
 }
+function saveNet(){ store.write(KEY.net, state.net); }
+function netCount(){ return Array.isArray(state.net.plays) ? state.net.plays.length : 0; }
+
+/* きろく 1つに つける とおしばんごう（さかばで おなじ きろくを 見わける ため） */
+function playSid(pl){
+  if(!pl.sid) pl.sid = 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  return pl.sid;
+}
+/* まだ あずけて いない きろくを あつめる */
+function playsToPush(){
+  const out = [];
+  state.games.forEach(g => playsOf(g).forEach(pl => {
+    const mem = playMembers(pl);
+    if(!mem.length || pl.pushed) return;
+    out.push({play:pl, row:{
+      id: playSid(pl), g:g.id, t:g.title, k:(g.tags||[]).slice(),
+      p:Number(g.playTime)||0, f:Number(g.difficulty)||0,
+      d:pl.d||'', n:pl.n||undefined, w:pl.w||undefined, u:mem
+    }});
+  }));
+  return out;
+}
+/* さかばと きろくを やりとりする */
+async function syncNet(){
+  if(!isOnline()) return {pushed:0, got:0};
+  let pushed = 0;
+  const pending = playsToPush();
+  if(pending.length){
+    for(let i = 0; i < pending.length; i += 100){
+      const part = pending.slice(i, i + 100);
+      await api('/api/plays', {method:'POST', body:{plays: part.map(x => x.row)}});
+      part.forEach(x => { x.play.pushed = 1; });
+      pushed += part.length;
+    }
+    saveGames();
+  }
+  let got = 0, guard = 0;
+  while(guard++ < 10){
+    const d = await api('/api/plays?since=' + encodeURIComponent(state.net.since || ''));
+    const byId = {};
+    (state.net.plays || []).forEach(r => { byId[r.id] = r; });
+    (d.plays || []).forEach(r => { byId[r.id] = r; got++; });
+    state.net = {since: d.since || state.net.since, plays: Object.keys(byId).map(k => byId[k])};
+    saveNet();
+    if(!d.more) break;
+  }
+  return {pushed, got};
+}
+/* きろくを つけた あとに、そっと さかばへ あずける。
+   つながらなくても きろくは この スマホに のこる。 */
+function autoSync(){
+  if(!isOnline()) return;
+  clearTimeout(autoSync._t);
+  autoSync._t = setTimeout(() => {
+    syncNet().then(r => { if(r.got) render(); }).catch(() => {});
+  }, 400);
+}
+async function refreshFriends(){
+  if(!isOnline()) return;
+  const d = await api('/api/friends');
+  state.friends = {friends:d.friends || [], incoming:d.incoming || [], outgoing:d.outgoing || []};
+}
+function friendRowHTML(f, kind){
+  const lv = advLevel(advPlays(f.name).length);
+  return '<div class="admin-row">' +
+    '<button class="t" data-go2="#/card/'+encodeURIComponent(f.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
+      '<b style="display:block;font-size:14px;font-weight:400">'+esc(f.name)+
+        (kind === 'ok' ? ' <span style="color:var(--accent);font-size:12px">Lv.'+lv+' ▶</span>' : '') + '</b>' +
+      '<span style="font-size:11px;color:var(--muted)">'+esc(f.code || '')+'</span></button>' +
+    (kind === 'in' ? '<button class="mini" data-fraccept="'+esc(f.id)+'">なかまに なる</button>' : '') +
+    '<button class="mini warn" data-frremove="'+esc(f.id)+'">' + (kind === 'ok' ? 'はずす' : 'ことわる') + '</button>' +
+  '</div>';
+}
+function friendsHTML(){
+  const f = state.friends || {friends:[], incoming:[], outgoing:[]};
+  let html = '<div class="catlabel" style="margin-top:14px">なかま（'+f.friends.length+'人）</div>';
+  html += f.friends.length ? f.friends.map(x => friendRowHTML(x, 'ok')).join('')
+    : '<div class="note" style="margin-bottom:8px">まだ なかまが いません。ともだちコードを おしえあって ください。</div>';
+  if(f.incoming.length){
+    html += '<div class="catlabel" style="margin-top:12px;color:var(--accent)">▶ もうしこみが きて います（'+f.incoming.length+'）</div>' +
+      f.incoming.map(x => friendRowHTML(x, 'in')).join('');
+  }
+  if(f.outgoing.length){
+    html += '<div class="catlabel" style="margin-top:12px">へんじ まち（'+f.outgoing.length+'）</div>' +
+      f.outgoing.map(x => friendRowHTML(x, 'out')).join('');
+  }
+  html += '<div class="row" style="margin-top:12px">' +
+      '<input type="text" id="frCode" placeholder="ともだちコード" maxlength="8" ' +
+        'autocapitalize="characters" autocorrect="off" spellcheck="false" style="flex:2;letter-spacing:2px">' +
+      '<button class="mini" id="frAdd" style="flex:0 0 auto">なかまに なる</button></div>' +
+    '<div id="frStatus"></div>';
+  return html;
+}
+function paintFriends(){
+  const box = document.getElementById('friendsBox');
+  if(!box) return;
+  const keep = (document.getElementById('frCode') || {}).value || '';
+  box.innerHTML = friendsHTML();
+  const inp = document.getElementById('frCode');
+  if(inp) inp.value = keep;
+  bindFriends();
+}
+function frStatus(msg, kind){
+  const el = document.getElementById('frStatus');
+  if(!el) return;
+  const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
+  el.innerHTML = msg ? '<p class="count" style="color:'+color+';margin:8px 0 0">'+esc(msg)+'</p>' : '';
+}
+function bindFriends(){
+  const box = document.getElementById('friendsBox');
+  if(!box) return;
+  const add = document.getElementById('frAdd');
+  if(add) add.onclick = async () => {
+    const inp = document.getElementById('frCode');
+    const code = (inp ? inp.value : '').trim().toUpperCase();
+    if(!code) return frStatus('ともだちコードを いれて ください', 'ng');
+    frStatus('おくって います…');
+    try{
+      const d = await api('/api/friend/add', {method:'POST', body:{code}});
+      if(inp) inp.value = '';
+      await refreshFriends();
+      paintFriends();
+      frStatus(d.name + ' さんに ' + d.message, 'ok');
+      if(d.status === 'ok'){ await syncNet(); render(); }
+    }catch(e){ frStatus(e.message, 'ng'); }
+  };
+  box.querySelectorAll('[data-fraccept]').forEach(b => b.onclick = async () => {
+    try{
+      await api('/api/friend/accept', {method:'POST', body:{id:b.dataset.fraccept}});
+      await refreshFriends(); await syncNet(); render();
+      toast('なかまに なりました');
+    }catch(e){ frStatus(e.message, 'ng'); }
+  });
+  box.querySelectorAll('[data-frremove]').forEach(b => b.onclick = () => {
+    ask('この人との つながりを けしますか？', async () => {
+      try{
+        await api('/api/friend/remove', {method:'POST', body:{id:b.dataset.frremove}});
+        await refreshFriends(); paintFriends();
+      }catch(e){ frStatus(e.message, 'ng'); }
+    });
+  });
+}
+
 function acctStatus(msg, kind){
   const el = document.getElementById('acctStatus');
   if(!el) return;
@@ -5336,10 +5486,18 @@ function onlineHTML(){
       '<div class="btn-row" style="margin-bottom:8px">' +
         '<button class="btn small" style="flex:1" id="acctRename">なまえを かえる</button>' +
         '<button class="btn small" style="flex:1" id="acctCopy">ともだちコードを コピー</button></div>' +
-      '<button class="btn small" id="acctTransfer" style="width:100%;margin-bottom:8px">べつの スマホに ひきつぐ</button>' +
-      '<div id="acctTransferBox"></div>' +
-      '<button class="btn small danger" id="acctLogout" style="width:100%;margin-bottom:6px">この スマホから はなれる</button>' +
-      '<p class="count" style="margin:0 0 6px">はなれる まえに、かならず ひきつぎコードを つくって ください。</p>';
+      '<div id="friendsBox">' + friendsHTML() + '</div>' +
+      '<div class="divider"></div>' +
+      '<button class="btn primary" id="netSync" style="margin-bottom:6px">さかばと きろくを やりとりする</button>' +
+      '<p class="count" style="margin:0 0 12px">じぶんの きろくを あずけ、なかまの きろくを うけとります。' +
+        (netCount() ? 'いま '+netCount()+'けん うけとって います。' : '') + '</p>' +
+      '<details style="margin-bottom:8px"><summary style="font-size:12px;color:var(--muted)">スマホを かえる・はなれる</summary>' +
+        '<div style="margin-top:10px">' +
+        '<button class="btn small" id="acctTransfer" style="width:100%;margin-bottom:8px">べつの スマホに ひきつぐ</button>' +
+        '<div id="acctTransferBox"></div>' +
+        '<button class="btn small danger" id="acctLogout" style="width:100%;margin-bottom:6px">この スマホから はなれる</button>' +
+        '<p class="count" style="margin:0">はなれる まえに、かならず ひきつぎコードを つくって ください。</p></div>' +
+      '</details>';
   }else{
     html += '<div class="win" style="margin-bottom:10px">' +
         '<label class="lbl" for="acctName">なまえ</label>' +
@@ -5394,6 +5552,7 @@ function bindOnline(){
       if(!state.players.some(p => p.name === d.name)){ addPlayer(d.name); }
       render();
       toast('さかばに とうろく しました');
+      try{ await syncNet(); render(); }catch(e){}
     }catch(e){ acctStatus(e.message, 'ng'); signup.disabled = false; }
   };
 
@@ -5410,6 +5569,7 @@ function bindOnline(){
       if(!state.players.some(x => x.name === d.name)) addPlayer(d.name);
       render();
       toast('おかえりなさい、'+d.name+' さん');
+      try{ await refreshFriends(); await syncNet(); render(); }catch(e){}
     }catch(e){ acctStatus(e.message, 'ng'); claimBtn.disabled = false; }
   };
 
@@ -5454,10 +5614,28 @@ function bindOnline(){
     }catch(e){ acctStatus(e.message, 'ng'); }
   };
 
+  bindFriends();
+  const sync = document.getElementById('netSync');
+  if(sync) sync.onclick = async () => {
+    sync.disabled = true;
+    acctStatus('さかばと やりとり して います…');
+    try{
+      const r = await syncNet();
+      await refreshFriends();
+      render();
+      toast('あずけた '+r.pushed+'けん／うけとった '+r.got+'けん');
+    }catch(e){ acctStatus(e.message, 'ng'); sync.disabled = false; }
+  };
+
   const logout = document.getElementById('acctLogout');
   if(logout) logout.onclick = () => ask(
     'この スマホから ぼうけんしゃの証を けします。\nひきつぎコードが ないと もどれません。',
-    () => { saveAccount(null); render(); toast('はなれました'); });
+    () => {
+      saveAccount(null);
+      state.net = {since:'', plays:[]}; saveNet();
+      state.friends = {friends:[], incoming:[], outgoing:[]};
+      render(); toast('はなれました');
+    });
 }
 
 function viewAdmin(){
@@ -6061,7 +6239,9 @@ function bind(r){
     const m = (document.getElementById('recM')||{value:''}).value.trim();
     const photos = (state.playPhotos || []).slice();
     const u = collectMembers(w);
+    const keepSid = ps[i].sid;
     ps[i] = {
+      sid: keepSid,
       d: (document.getElementById('recD')||{value:''}).value || ps[i].d || todayStr(),
       n: (n || u.length) || undefined,
       w: w || undefined,
@@ -6072,7 +6252,7 @@ function bind(r){
     g.plays = ps;
     state.recEdit = '';
     state.playPhotos = [];
-    saveGames(); render(); toast('きろくを なおしました');
+    saveGames(); render(); autoSync(); toast('きろくを なおしました');
   });
 
   app.querySelectorAll('[data-delrec]').forEach(b => b.onclick = () => {
@@ -6664,7 +6844,7 @@ function bind(r){
     const w = (document.getElementById('playWin')||{value:''}).value.trim();
     const memo = (document.getElementById('playMemo')||{value:''}).value.trim();
     g.plays = playsOf(g).concat([{d, n: n || undefined, w: w || undefined, m: memo || undefined}]);
-    saveGames(); render();
+    saveGames(); render(); autoSync();
     toast('きろく しました');
   };
   app.querySelectorAll('[data-delplay]').forEach(b => b.onclick = () => {
@@ -7032,7 +7212,7 @@ function bind(r){
     });
     state.logPicked = [];
     state.playPhotos = [];
-    saveGames(); render();
+    saveGames(); render(); autoSync();
     if(u.length) setTimeout(() => toast(u.join('・') + ' の ぼうけんしゃカードに きろく しました'), 1600);
     toast(count + 'ほんを きろく しました');
   };
@@ -7089,7 +7269,7 @@ function bind(r){
     if(!list) return toast('きろくの もじれつでは ないようです');
     const res = importRecords(list);
     state.recShareOpen = true;
-    render();
+    render(); autoSync();
     toast(res.added + 'けんを とりこみました' + (res.skipped ? '（'+res.skipped+'けんは すでに あるか、ずかんに ない ゲーム）' : ''));
   };
   const qrBtn = document.getElementById('qrBtn');
@@ -7633,6 +7813,16 @@ adoptKaiFromUrl();
 render();
 syncPublished();
 syncSharedPlays();
+/* ログイン して いれば、そっと さかばと やりとり する */
+if(isOnline()){
+  (async () => {
+    try{
+      const r = await syncNet();
+      await refreshFriends();
+      if(r.got || r.pushed || (state.friends.incoming || []).length) render();
+    }catch(e){ /* つながらなければ この スマホの ぶんだけで うごく */ }
+  })();
+}
 
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
