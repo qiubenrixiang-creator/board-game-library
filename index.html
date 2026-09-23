@@ -785,8 +785,9 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
 .listopts .chips{flex:1 1 auto}
 .listopts select{flex:0 1 170px;min-width:130px}
 /* 1ぎょう ひょうじ */
-.crow-list{display:grid;gap:5px}
+.crow-list{display:grid;grid-template-columns:minmax(0,1fr);gap:5px}
 .crow{
+  min-width:0;max-width:100%;overflow:hidden;
   display:flex;align-items:center;gap:8px;width:100%;padding:10px 11px;
   background:var(--panel);border:2px solid var(--frame);color:var(--text);
   text-align:left;font-size:14px;cursor:pointer;
@@ -2827,13 +2828,12 @@ function viewHome(){
     '<button class="btn primary" id="searchBtn" style="margin-bottom:11px">▶ おすすめを みる（'+n+'）</button>' +
     '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
     '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、それに あう ゲームだけから ひきます。</p>' +
-    treasureHTML() +
   '</section>';
 }
 
 /* しゃしんを 大きく ならべる かたち（たなを ながめる かんじ） */
 function gameTile(g){
-  const marks = newBadge(g) + reqBadge(g) +
+  const marks = newBadge(g) + reqBadge(g) + sleepBadge(g) +
     (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
     (isLent(g) ? '<span class="badge">かしだし中</span>' : '');
   return '<button class="gtile" data-open="'+esc(g.id)+'">' +
@@ -2855,7 +2855,7 @@ function gameCard(g, hitTags){
     (videosOf(g).length ? '<span class="badge" style="border-color:var(--accent-2);color:var(--accent-2)">どうが'+(videosOf(g).length>1?' '+videosOf(g).length:'')+'</span>' : '') +
     (playCount(g) ? '<span class="badge">'+playCount(g)+'かい</span>' : '');
   return '<button class="gcard" data-open="'+esc(g.id)+'">' + thumbHTML(g) +
-    '<div><h3>'+esc(g.title)+fresh+reqBadge(g)+beginner+marks+'</h3>' +
+    '<div><h3>'+esc(g.title)+fresh+reqBadge(g)+sleepBadge(g)+beginner+marks+'</h3>' +
     '<div class="meta"><span><b>'+playersText(g)+'</b></span><span><b>'+(Number(g.playTime)||0)+'分</b></span>' +
     '<span>むずかしさ '+stars(g.difficulty)+'</span></div>' +
     '<p class="summary">'+esc(g.summary||'')+'</p>' +
@@ -2938,7 +2938,11 @@ function sleepingGames(){
 }
 function sleepLabel(g){
   const d = sleepDays(g);
-  return d === null ? 'まだ いちども あそんで いない' : d + '日 ねむっている';
+  return d === null ? 'まだ あそんで いない' : d + '日 あそんで いない';
+}
+function sleepBadge(g){
+  return state.listMode === 'sleep' && currentRoute().name === 'list'
+    ? '<span class="badge" style="border-color:var(--accent-2);color:var(--accent-2)">' + esc(sleepLabel(g)) + '</span>' : '';
 }
 function treasureHTML(){
   const all = sleepingGames();
@@ -3021,11 +3025,11 @@ function listResultsHTML(){
         ? '<div class="crow-list">' + arr.map(g => compactRow(g)).join('') + '</div>'
         : '<div class="card-list">' + arr.map(g => gameCard(g, f.tags)).join('') + '</div>';
   if(state.listMode === 'sleep' && list.length){
-    html += '<p class="count" style="margin:-4px 0 12px">' + SLEEP_DAYS + '日いじょう あそんで いない ゲームです。ながく ねむっている じゅんに ならべて います。</p>';
+    html += '<p class="count" style="margin:-4px 0 12px">' + SLEEP_DAYS + '日いじょう あそんで いない ゲームです。' +
+      'さいごに あそんだ 日が ふるい じゅんに、そのあと まだ いちども あそんで いない ゲームを ならべて います。</p>';
   }
   /* なまえ順の ときは「あいうえお」で わけて、とびさき ボタンを だす */
-  const useIndex = list.length >= 15 && state.listSort === 'title' && !(c.filtered && !c.q) &&
-                   ['own','wish','lent'].indexOf(state.listMode) >= 0;
+  const useIndex = false;   /* あいうえお の みだしは つかわない */
   if(list.length && useIndex){
     const groups = [];
     list.forEach(g => {
@@ -3064,7 +3068,7 @@ function viewList(){
       [['own','もっている'],['wish','ほしい'],['lent','かしだし中']]
         .concat(newArrivals().length ? [['new','新入荷（'+newArrivals().length+'）']] : [])
         .concat(requestedGames().length ? [['req','遊んでみたい（'+requestedGames().length+'）']] : [])
-        .concat(state.listMode === 'sleep' ? [['sleep','ねむっている（'+sleepingGames().length+'）']] : []).map(m =>
+        .concat(sleepingGames().length ? [['sleep','最近遊んでいない（'+sleepingGames().length+'）']] : []).map(m =>
         '<button class="chip sm" data-listmode="'+m[0]+'" aria-pressed="'+(state.listMode===m[0])+'">'+m[1]+'</button>').join('') +
     '</div>' +
 
@@ -6000,7 +6004,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.23-k';
+const APP_VERSION = '2026.09.23-l';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
