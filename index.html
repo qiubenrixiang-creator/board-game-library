@@ -1972,7 +1972,7 @@ function bindJukebox(){
 const state = {
   games: [], tags: [],
   filters: { time:null, players:null, playersN:6, tags:[], playersMode:'exact', playersTo:null },
-  listQuery:'', listSort:'title', listView: store.read('bgl.listView', 'list'), listMode:'own',   /* own / wish / lent */
+  listQuery:'', listSort:'title', listView: (store.read('bgl.listView', 'list') === 'grid' ? 'grid' : 'list'), listMode:'own',   /* own / wish / lent */
   today: null,                                      /* きょうの にんずう */
   bulkIndex: 0,                                     /* まとめて入力の いちばんめ */
   logPicked: [], logQuery: '',                      /* まとめて きろく の えらび */
@@ -2897,12 +2897,12 @@ function bindKanaJump(root){
     window.scrollTo({top: Math.max(0, top), behavior:'smooth'});
   });
 }
-const LIST_VIEWS = ['list', 'compact', 'grid'];
+const LIST_VIEWS = ['list', 'grid'];   /* 1ぎょう ひょうじは やめた */
 /* ボタンには「おすと つぎに なる かたち」を だす（まえと おなじ きまり） */
 function listViewLabel(){
   const i = LIST_VIEWS.indexOf(state.listView);
   const next = LIST_VIEWS[((i < 0 ? 0 : i) + 1) % LIST_VIEWS.length];
-  return next === 'compact' ? '≡ 1ぎょう' : next === 'grid' ? '▦ しゃしん' : '▤ カード';
+  return next === 'grid' ? '▦ しゃしん' : '▤ リスト';
 }
 function compactRow(g){
   const marks = (isNewArrival(g) ? '<span class="badge new">新</span>' : '') +
@@ -3021,9 +3021,7 @@ function listResultsHTML(){
 
   const block = arr => (state.listView === 'grid')
       ? '<div class="tile-grid">' + arr.map(g => gameTile(g)).join('') + '</div>'
-      : (state.listView === 'compact')
-        ? '<div class="crow-list">' + arr.map(g => compactRow(g)).join('') + '</div>'
-        : '<div class="card-list">' + arr.map(g => gameCard(g, f.tags)).join('') + '</div>';
+      : '<div class="card-list">' + arr.map(g => gameCard(g, f.tags)).join('') + '</div>';
   if(state.listMode === 'sleep' && list.length){
     html += '<p class="count" style="margin:-4px 0 12px">' + SLEEP_DAYS + '日いじょう あそんで いない ゲームです。' +
       'さいごに あそんだ 日が ふるい じゅんに、そのあと まだ いちども あそんで いない ゲームを ならべて います。</p>';
@@ -6004,7 +6002,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.23-l';
+const APP_VERSION = '2026.09.24-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
