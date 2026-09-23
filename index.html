@@ -870,7 +870,8 @@ const KEY = {
   today:'bgl.todayPlayers',  /* きょうの メンバーの にんずう */
   kai:'bgl.kaiShelf',        /* ボードゲーム会に もっていく たな */
   choubo:'bgl.choubo',        /* しゅくやの ちょうぼ（わりかん） */
-  talk:'bgl.talkTopics'       /* じぶんで ついかした トークおだい */
+  talk:'bgl.talkTopics',      /* じぶんで ついかした トークおだい */
+  shared:'bgl.sharedPlays'    /* みんなで わけあう ぼうけんの きろく */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -1880,6 +1881,8 @@ const state = {
   withSel: [],                                      /* きろくの「いっしょに あそんだ 人」 */
   choubo: {members:[], items:[]},                   /* ちょうぼ */
   talk: {cat:'all', idx:-1, order:[], who:'', custom:[]},  /* うわさばなし */
+  shared: {version:'', plays:[]},                   /* サイトから とどく みんなの きろく */
+  recShareOpen: false,                              /* きろくの やりとりを ひらいて いるか */
   recQuery: '',                                     /* きろく画面の けんさく */
   recView: 'list',                                  /* いちらん／カレンダー／思い出 */
   calYm: null, calDay: null, memory: null,          /* カレンダーと 思い出の いま */
@@ -1909,6 +1912,8 @@ function loadAll(){
   state.today = store.read(KEY.today, null);
   const cb = store.read(KEY.choubo, null);
   if(cb && typeof cb === 'object') state.choubo = {members:Array.isArray(cb.members)?cb.members:[], items:Array.isArray(cb.items)?cb.items:[]};
+  const sh = store.read(KEY.shared, null);
+  if(sh && Array.isArray(sh.plays)) state.shared = {version:String(sh.version||''), plays:sh.plays};
   const tc = store.read(KEY.talk, null);
   if(Array.isArray(tc)) state.talk.custom = tc;
   const ka = store.read(KEY.kai, null);
@@ -1979,6 +1984,23 @@ async function syncPublished(){
     }
     adoptSiteData(data);
   }catch(e){ /* library.json が無ければ 何も しない */ }
+}
+
+/* みんなの きろく（records.json）を とりに いく。
+   ずかんの データとは べつなので、へんしゅう中でも あんぜんに うけとれる。 */
+async function syncSharedPlays(){
+  if(location.protocol === 'file:') return;
+  try{
+    const res = await fetch('records.json?t=' + Date.now(), {cache:'no-store'});
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data || !Array.isArray(data.plays)) return;
+    if(String(data.version || '') === String(state.shared.version || '')) return;
+    state.shared = {version:String(data.version || ''), plays:data.plays};
+    saveShared();
+    const r = currentRoute();
+    if(r.name === 'card' || r.name === 'tool' || r.name === 'records' || r.name === 'stats') render();
+  }catch(e){ /* records.json が 無ければ なにも しない */ }
 }
 
 /* ---------------- utils ---------------- */
@@ -3429,11 +3451,8 @@ const ADV_STATS = [
 ];
 /* その人が でて くる きろく */
 function advPlays(name){
-  const out = [];
-  state.games.forEach(g => playsOf(g).forEach(pl => {
-    if(playMembers(pl).indexOf(name) >= 0) out.push({g:g, pl:pl});
-  }));
-  return out.sort((a,b) => String(a.pl.d||'').localeCompare(String(b.pl.d||'')));
+  return cardPlays().filter(r => playMembers(r.pl).indexOf(name) >= 0)
+    .sort((a,b) => String(a.pl.d||'').localeCompare(String(b.pl.d||'')));
 }
 function advLevel(n){ return Math.min(99, 1 + Math.floor(Math.sqrt(n * 6))); }
 function advNextLevelAt(lv){ for(let n = 0; n < 100000; n++){ if(advLevel(n) > lv) return n; } return 0; }
@@ -3503,7 +3522,7 @@ function adventurer(name){
   ];
 
   return {
-    name, plays: ps.length, wins: wins.length,
+    name, plays: ps.length, mine: ps.filter(r => r.mine).length, wins: wins.length,
     rate: vs.length ? Math.round(vsWins / vs.length * 100) : null,
     minutes, stats, badges, best,
     kinds: Object.keys(games).length,
@@ -3564,6 +3583,7 @@ function viewCard(param){
       (a.badges.some(b => !b.ok) ? '<p class="count" style="margin:8px 0 0">つぎの じっせき：'+esc(a.badges.find(b => !b.ok).hint)+'</p>' : '') +
     '</div>' +
     (!a.plays ? '<div class="note" style="margin-top:12px">まだ きろくが ありません。「きょう あそんだ」で いっしょに あそんだ 人に えらぶと、カードが そだちます。</div>' : '') +
+    '<p class="count" style="margin:10px 0 0">きろくの うちわけ：この スマホ '+a.mine+'けん／みんなで わけあった きろく '+(a.plays - a.mine)+'けん</p>' +
     '<div class="btn-row" style="margin-top:14px">' +
       '<button class="btn small" style="flex:1" data-go2="#/playlog">きろくを つける</button>' +
       '<button class="btn small" style="flex:1" id="advCopy">カードを コピー</button></div>' +
@@ -3913,9 +3933,7 @@ function renamePlayer(oldName, newName){
 }
 /* その人が かった かいすう */
 function winCount(name){
-  let n = 0;
-  state.games.forEach(g => playsOf(g).forEach(pl => { if(pl.w === name) n++; }));
-  return n;
+  return cardPlays().filter(r => r.pl.w === name).length;
 }
 /* その きろくに でて くる 人（いっしょに あそんだ 人＋かった人） */
 function playMembers(pl){
@@ -3924,6 +3942,87 @@ function playMembers(pl){
   if(w && list.indexOf(w) < 0) list.push(w);
   return list;
 }
+/* ---------------- みんなで わけあう ぼうけんの きろく ----------------
+   きろくを records.json として サイトに おくと、
+   だれの スマホで ひらいても おなじ ぼうけんしゃカードに なる。
+   かんそうと しゃしんは おくらない（この スマホの 中だけ）。 */
+function sharedPlays(){ return Array.isArray(state.shared.plays) ? state.shared.plays : []; }
+function saveShared(){ store.write(KEY.shared, state.shared); }
+/* おなじ きろくか どうかの めじるし */
+function playKey(gid, pl){
+  return String(gid) + '|' + (pl.d || '') + '|' + (pl.w || '') + '|' + playMembers(pl).slice().sort().join(',');
+}
+function sharedToPlay(r){
+  return {d:r.d || '', n:r.n || undefined, w:r.w || undefined, u:Array.isArray(r.u) ? r.u.slice() : []};
+}
+function sharedGame(r){
+  return state.games.find(x => x.id === r.g) ||
+    {id:r.g, title:r.t || '？', tags:Array.isArray(r.k) ? r.k : [], playTime:Number(r.p) || 0, difficulty:Number(r.f) || 0};
+}
+/* ぼうけんしゃカードの もとに なる きろく（この スマホ＋みんなの きろく） */
+function cardPlays(){
+  const out = [], seen = {};
+  state.games.forEach(g => playsOf(g).forEach(pl => {
+    seen[playKey(g.id, pl)] = 1;
+    out.push({g:g, pl:pl, mine:true});
+  }));
+  sharedPlays().forEach(r => {
+    const pl = sharedToPlay(r);
+    if(seen[playKey(r.g, pl)]) return;       /* おなじ きろくは かぞえない */
+    seen[playKey(r.g, pl)] = 1;
+    out.push({g:sharedGame(r), pl:pl, mine:false});
+  });
+  return out;
+}
+function sharedOnlyCount(){ return cardPlays().filter(r => !r.mine).length; }
+/* サイトに おくる かたち（かんそう・しゃしんは いれない） */
+function recordsForPublish(){
+  return cardPlays().map(r => {
+    const mem = playMembers(r.pl);
+    if(!mem.length) return null;             /* だれの きろくか わからない ものは おくらない */
+    return {g:r.g.id, t:r.g.title, k:(r.g.tags || []).slice(), p:Number(r.g.playTime) || 0,
+      f:Number(r.g.difficulty) || 0, d:r.pl.d || '', n:r.pl.n || undefined, w:r.pl.w || undefined, u:mem};
+  }).filter(Boolean).sort((a,b) => String(a.d).localeCompare(String(b.d)));
+}
+/* この スマホで つけた きろくだけ（ともだちに おくる とき） */
+function recordsMine(){
+  const out = [];
+  state.games.forEach(g => playsOf(g).forEach(pl => {
+    const mem = playMembers(pl);
+    if(!mem.length) return;
+    out.push({g:g.id, t:g.title, k:(g.tags||[]).slice(), p:Number(g.playTime)||0,
+      f:Number(g.difficulty)||0, d:pl.d || '', n:pl.n || undefined, w:pl.w || undefined, u:mem});
+  }));
+  return out;
+}
+/* もらった きろくを この スマホに とりこむ */
+function importRecords(list){
+  const seen = {};
+  state.games.forEach(g => playsOf(g).forEach(pl => { seen[playKey(g.id, pl)] = 1; }));
+  let added = 0, skipped = 0;
+  list.forEach(r => {
+    if(!r || !r.g) return;
+    const pl = sharedToPlay(r);
+    if(!playMembers(pl).length) return;
+    if(seen[playKey(r.g, pl)]){ skipped++; return; }
+    const g = state.games.find(x => x.id === r.g);
+    if(!g){ skipped++; return; }             /* ずかんに ない ゲームは とばす */
+    g.plays = playsOf(g).concat([pl]);
+    seen[playKey(r.g, pl)] = 1;
+    added++;
+  });
+  if(added) saveGames();
+  return {added, skipped};
+}
+/* きろくに でて くる ぼうけんしゃ ぜんいん */
+function allAdventurers(){
+  const m = {};
+  cardPlays().forEach(r => playMembers(r.pl).forEach(n => { m[n] = (m[n] || 0) + 1; }));
+  state.players.forEach(p => { if(!(p.name in m)) m[p.name] = 0; });
+  return Object.keys(m).map(n => ({name:n, plays:m[n]}))
+    .sort((a,b) => b.plays - a.plays || a.name.localeCompare(b.name,'ja'));
+}
+
 function splitNames(text){
   return String(text || '').split(/[\s、,，・]+/).map(x => x.trim()).filter(Boolean);
 }
@@ -3990,13 +4089,8 @@ function chosenToday(){
 /* きろくに でて くるが、まだ とうろく して いない なまえ */
 function unknownPlayers(){
   const known = state.players.map(p => p.name);
-  const seen = {};
-  state.games.forEach(g => playsOf(g).forEach(pl => {
-    playMembers(pl).forEach(w => {
-      if(w && known.indexOf(w) < 0) seen[w] = (seen[w] || 0) + 1;
-    });
-  }));
-  return Object.keys(seen).map(n => ({name:n, count:seen[n]})).sort((a,b) => b.count - a.count);
+  return allAdventurers().filter(a => known.indexOf(a.name) < 0)
+    .map(a => ({name:a.name, count:a.plays}));
 }
 /* とうろく した なまえから、きょうの メンバーを えらぶ ぶひん。
    おした 人が 入力らんに くわわり、もう一度 おすと はずれる。 */
@@ -4469,7 +4563,19 @@ function viewRecords(){
   let html = '<section class="page">' +
     '<button class="mini" data-go2="#/tools" style="margin-bottom:14px">◀ どうぐへ もどる</button>' +
     '<h1 class="lede">あそんだ きろく</h1>' +
-    '<p class="sub">この きろくは サイトには でません（この スマホの 中だけ）。</p>' +
+    '<p class="sub">かんそうと しゃしんは この スマホの 中だけに のこります。</p>' +
+    (sharedOnlyCount() ? '<div class="note" style="margin-bottom:12px">みんなで わけあって いる きろくが '+sharedOnlyCount()+'けん あります。<br>' +
+      'この いちらんには でませんが、ぼうけんしゃカードには 入って います。</div>' : '') +
+
+    '<details id="recShare" style="margin-bottom:12px"'+(state.recShareOpen?' open':'')+'><summary style="font-size:13px">きろくを ともだちと やりとりする</summary>' +
+      '<div class="win" style="margin-top:10px">' +
+        '<p class="count" style="margin:0 0 8px">この スマホで つけた きろくを、かんりする 人に おくれます。' +
+          'おくられた 人が とりこんで こうかいすると、みんなの カードに 入ります。</p>' +
+        '<button class="btn small" id="recCopyBtn" style="width:100%;margin-bottom:12px">この スマホの きろくを コピー（'+recordsMine().length+'けん）</button>' +
+        '<label class="lbl" for="recPaste">もらった きろくを とりこむ</label>' +
+        '<textarea id="recPaste" placeholder="もらった もじれつを ここに はりつけ" style="min-height:80px"></textarea>' +
+        '<button class="btn small" id="recImportBtn" style="width:100%;margin-top:8px">とりこむ</button>' +
+      '</div></details>' +
 
     '<div class="chips" style="margin-bottom:12px">' +
       [['list','いちらん'],['cal','カレンダー'],['memory','思い出を めくる']].map(o =>
@@ -4917,11 +5023,18 @@ function toolNamesHTML(){
   if(unknown.length){
     html += '<div class="divider"></div>' +
       '<h2 class="sec">きろくに ある なまえ</h2>' +
-      '<p class="count">きろくには あるけれど、まだ とうろくして いない なまえです。</p>' +
-      '<div class="chips" style="margin-top:8px">' +
-        unknown.map(u => '<button class="chip sm" data-addknown="'+esc(u.name)+'">＋ '+esc(u.name)+'（'+u.count+'）</button>' +
-          '<button class="mini" data-go2="#/card/'+encodeURIComponent(u.name)+'">カード</button>').join('') +
-      '</div>';
+      '<p class="count">きろくには あるけれど、まだ とうろくして いない なまえです。カードは いま すぐ みられます。</p>' +
+      unknown.map(u =>
+        '<div class="admin-row">' +
+          '<button class="t" data-go2="#/card/'+encodeURIComponent(u.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
+            '<b style="display:block;font-size:14px;font-weight:400">'+esc(u.name)+' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(u.count)+' ▶</span></b>' +
+            '<span style="font-size:11px;color:var(--muted)">'+u.count+'かいの きろく</span></button>' +
+          '<button class="mini" data-addknown="'+esc(u.name)+'">とうろく</button>' +
+        '</div>').join('');
+  }
+  if(sharedOnlyCount()){
+    html += '<div class="note" style="margin-top:12px">みんなで わけあって いる きろくを '+sharedOnlyCount()+'けん うけとって います。' +
+      'スマホを かえても、おなじ なまえなら レベルは つづきます。</div>';
   }
 
   return html;
@@ -5217,6 +5330,21 @@ function viewAdmin(){
       'あそんだ きろく（かんそう・しゃしん）と、かしだし先の なまえは サイトに あげません。<br>' +
       'これらは この スマホの 中だけに のこります。</div>' +
 
+    '<div class="divider"></div><h2 class="sec">ぼうけんの きろくを わけあう</h2>' +
+    '<p class="count">きろくを サイトに おくと、ともだちが じぶんの スマホで ひらいても おなじ ぼうけんしゃカードが みられます。' +
+      'スマホを かえても レベルは つづきます。<br>' +
+      '<span style="color:var(--accent)">おくるのは「日にち・ゲーム・にんずう・かった人・いっしょに あそんだ 人」だけです。' +
+      'かんそうと しゃしんは おくりません。</span></p>' +
+    '<div class="win" style="margin-bottom:10px">' +
+      '<p style="margin:0 0 4px;font-size:14px">おくれる きろく：<span style="color:var(--accent)">'+recordsForPublish().length+'けん</span>' +
+        '　ぼうけんしゃ：<span style="color:var(--accent)">'+allAdventurers().filter(a => a.plays).length+'人</span></p>' +
+      '<p class="count" style="margin:0">「いっしょに あそんだ 人」が 入って いない きろくは おくられません。</p>' +
+    '</div>' +
+    '<button class="btn primary" id="recPubBtn" style="margin-bottom:6px">ぼうけんの きろくを こうかいする</button>' +
+    '<div id="recPubStatus"></div>' +
+    (state.shared.version ? '<p class="count" style="margin:10px 0 16px">サイトには いま '+sharedPlays().length+'けんの きろくが あります。</p>'
+      : '<p class="count" style="margin:10px 0 16px">まだ わけあって いません。</p>') +
+
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:16px">' +
       '<input type="checkbox" id="sharePriv" '+(sharePrivateOn()?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
       '<span style="font-size:13px">かんそうや かしだし先も こうかいする<br>' +
@@ -5392,59 +5520,100 @@ function pubStatus(msg, kind){
   const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
   el.innerHTML = '<p class="count" style="color:'+color+';margin:10px 0 0">'+esc(msg)+'</p>';
 }
-async function publishToSite(){
-  const cfg = {
-    owner: (document.getElementById('ghOwner')||{value:''}).value.trim(),
-    repo:  (document.getElementById('ghRepo')||{value:''}).value.trim(),
-    branch:((document.getElementById('ghBranch')||{value:''}).value.trim() || 'main'),
-    token: (document.getElementById('ghToken')||{value:''}).value.trim()
+/* サイトに ファイルを 1つ おく（library.json / records.json 共通） */
+async function putSiteFile(path, obj, cfg){
+  const api = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' +
+              encodeURIComponent(cfg.repo) + '/contents/' + path;
+  const headers = { 'Authorization':'Bearer ' + cfg.token, 'Accept':'application/vnd.github+json' };
+
+  let sha = null;
+  const cur = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), {headers});
+  if(cur.status === 200){ sha = (await cur.json()).sha; }
+  else if(cur.status === 401){ throw new Error('あいことば（トークン）が ちがうか、きげんが きれています。'); }
+  else if(cur.status === 403){ throw new Error('この あいことばには かきこむ けんげんが ありません。'); }
+  else if(cur.status !== 404){ throw new Error('サイトが みつかりません。ユーザーめいと おきばの なまえを たしかめて ください。'); }
+
+  const payload = {
+    message: path + ' を こうしん',
+    content: toBase64Utf8(JSON.stringify(obj, null, 2)),
+    branch: cfg.branch
   };
+  if(sha) payload.sha = sha;
+
+  const put = await fetch(api, {
+    method:'PUT',
+    headers: Object.assign({'Content-Type':'application/json'}, headers),
+    body: JSON.stringify(payload)
+  });
+  if(!put.ok){
+    if(put.status === 404) throw new Error('おきばが みつかりません。ユーザーめい・おきばの なまえ・ブランチを たしかめて ください。');
+    if(put.status === 409) throw new Error('ブランチの なまえが ちがうかも しれません（main か master）。');
+    throw new Error('こうしん できませんでした（' + put.status + '）。');
+  }
+}
+function siteConfigFromForm(){
+  const f = id => (document.getElementById(id) || {value:''}).value.trim();
+  const saved = getSiteConfig();
+  const cfg = {
+    owner: f('ghOwner') || saved.owner,
+    repo:  f('ghRepo')  || saved.repo,
+    branch:f('ghBranch') || saved.branch || 'main',
+    token: f('ghToken') || saved.token
+  };
+  if(cfg.owner && cfg.repo && cfg.token) saveSiteConfig(cfg);
+  return cfg;
+}
+async function publishToSite(){
+  const cfg = siteConfigFromForm();
   if(!cfg.owner || !cfg.repo || !cfg.token){
     pubStatus('さいしょの せっていを ぜんぶ いれて ください。', 'ng');
     return;
   }
-  saveSiteConfig(cfg);
-
   const btn = document.getElementById('publishBtn');
   if(btn) btn.disabled = true;
   pubStatus('サイトに つないで います…');
-
-  const api = 'https://api.github.com/repos/' + encodeURIComponent(cfg.owner) + '/' +
-              encodeURIComponent(cfg.repo) + '/contents/library.json';
-  const headers = { 'Authorization':'Bearer ' + cfg.token, 'Accept':'application/vnd.github+json' };
-
   try{
-    let sha = null;
-    const cur = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), {headers});
-    if(cur.status === 200){ sha = (await cur.json()).sha; }
-    else if(cur.status === 401){ throw new Error('あいことば（トークン）が ちがうか、きげんが きれています。'); }
-    else if(cur.status === 403){ throw new Error('この あいことばには かきこむ けんげんが ありません。'); }
-    else if(cur.status !== 404){ throw new Error('サイトが みつかりません。ユーザーめいと おきばの なまえを たしかめて ください。'); }
-
     const ver = new Date().toISOString();
-    const payload = {
-      message: 'ボードゲームを こうしん',
-      content: toBase64Utf8(JSON.stringify({version:ver, tags:state.tags, games:gamesForPublish()}, null, 2)),
-      branch: cfg.branch
-    };
-    if(sha) payload.sha = sha;
-
-    const put = await fetch(api, {
-      method:'PUT',
-      headers: Object.assign({'Content-Type':'application/json'}, headers),
-      body: JSON.stringify(payload)
-    });
-    if(!put.ok){
-      if(put.status === 404) throw new Error('おきばが みつかりません。ユーザーめい・おきばの なまえ・ブランチを たしかめて ください。');
-      if(put.status === 409) throw new Error('ブランチの なまえが ちがうかも しれません（main か master）。');
-      throw new Error('こうしん できませんでした（' + put.status + '）。');
-    }
+    await putSiteFile('library.json', {version:ver, tags:state.tags, games:gamesForPublish()}, cfg);
     store.write(KEY.pubver, ver);
     clearDirty();
     pubStatus('こうしん しました！ 1〜2ふん あとに ともだちの がめんにも でます。', 'ok');
     toast('サイトを こうしん しました');
   }catch(err){
     pubStatus((err && err.message) ? err.message : 'つうしんに しっぱい しました。でんぱを たしかめて ください。', 'ng');
+  }finally{
+    if(btn) btn.disabled = false;
+  }
+}
+function recStatus(msg, kind){
+  const el = document.getElementById('recPubStatus');
+  if(!el) return;
+  const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
+  el.innerHTML = '<p class="count" style="color:'+color+';margin:10px 0 0">'+esc(msg)+'</p>';
+}
+async function publishRecords(){
+  const cfg = siteConfigFromForm();
+  if(!cfg.owner || !cfg.repo || !cfg.token){
+    recStatus('さきに「さいしょの せってい」を いれて ください。', 'ng');
+    return;
+  }
+  const plays = recordsForPublish();
+  if(!plays.length){
+    recStatus('おくれる きろくが ありません。きろくに「いっしょに あそんだ 人」を いれて ください。', 'ng');
+    return;
+  }
+  const btn = document.getElementById('recPubBtn');
+  if(btn) btn.disabled = true;
+  recStatus('サイトに つないで います…');
+  try{
+    const ver = new Date().toISOString();
+    await putSiteFile('records.json', {version:ver, plays:plays}, cfg);
+    state.shared = {version:ver, plays:plays};
+    saveShared();
+    recStatus(plays.length + 'けんの きろくを わけあいました！ 1〜2ふん あとに みんなの カードに でます。', 'ok');
+    toast('ぼうけんの きろくを こうかい しました');
+  }catch(err){
+    recStatus((err && err.message) ? err.message : 'つうしんに しっぱい しました。でんぱを たしかめて ください。', 'ng');
   }finally{
     if(btn) btn.disabled = false;
   }
@@ -6691,6 +6860,32 @@ function bind(r){
   });
   const publishBtn = document.getElementById('publishBtn');
   if(publishBtn) publishBtn.onclick = publishToSite;
+  const recPubBtn = document.getElementById('recPubBtn');
+  if(recPubBtn) recPubBtn.onclick = () => ask(
+    'ぼうけんの きろく '+recordsForPublish().length+'けんを サイトに おきます。\nかんそうと しゃしんは おくりません。',
+    publishRecords);
+  const recCopyBtn = document.getElementById('recCopyBtn');
+  if(recCopyBtn) recCopyBtn.onclick = () => {
+    const mine = recordsMine();
+    if(!mine.length) return toast('おくれる きろくが ありません');
+    copyText(JSON.stringify({bgl:'records', plays:mine}));
+  };
+  const recShare = document.getElementById('recShare');
+  if(recShare) recShare.addEventListener('toggle', () => { state.recShareOpen = recShare.open; });
+  const recImportBtn = document.getElementById('recImportBtn');
+  if(recImportBtn) recImportBtn.onclick = () => {
+    const ta = document.getElementById('recPaste');
+    const txt = (ta ? ta.value : '').trim();
+    if(!txt) return toast('もらった もじれつを はりつけて ください');
+    let data = null;
+    try{ data = JSON.parse(txt); }catch(e){ return toast('もじれつが よみとれません'); }
+    const list = Array.isArray(data) ? data : (data && Array.isArray(data.plays) ? data.plays : null);
+    if(!list) return toast('きろくの もじれつでは ないようです');
+    const res = importRecords(list);
+    state.recShareOpen = true;
+    render();
+    toast(res.added + 'けんを とりこみました' + (res.skipped ? '（'+res.skipped+'けんは すでに あるか、ずかんに ない ゲーム）' : ''));
+  };
   const qrBtn = document.getElementById('qrBtn');
   if(qrBtn) qrBtn.onclick = () => showQR(document.getElementById('shareUrl').value.trim());
   const copyUrlBtn = document.getElementById('copyUrlBtn');
@@ -7231,6 +7426,7 @@ loadAll();
 adoptKaiFromUrl();
 render();
 syncPublished();
+syncSharedPlays();
 
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
