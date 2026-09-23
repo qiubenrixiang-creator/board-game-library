@@ -881,7 +881,8 @@ const KEY = {
   net:'bgl.netPlays',         /* さかばから とどいた きろく */
   gone:'bgl.gonePlays',       /* けした きろくの しるし */
   welcome:'bgl.welcomeDone',  /* さいしょの あんないを すませたか */
-  frWait:'bgl.friendWait'     /* リンクで もらった ともだちコード */
+  frWait:'bgl.friendWait',    /* リンクで もらった ともだちコード */
+  profile:'bgl.myProfile'     /* じぶんの しょうごう・いちおし */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -1918,6 +1919,9 @@ const state = {
   reqs: {},                                         /* 「遊んでみたい」 gid -> {n, names, mine} */
   wantsBy: {},                                      /* 「遊んでみたい」 なまえ -> [gid, ...] */
   help: {admin:null, meAdmin:false, inbox:[], mine:[]},   /* ずかんづくりの てつだい */
+  profile: {title:'', titles:[], favs:[], bio:'', job:''},   /* じぶんの しょうごう・いちおし・ひとこと・ジョブ */
+  jobPick: false,                                   /* ジョブを えらぶ まどを ひらいて いるか */
+  titlePick: false,                                 /* しょうごうを えらぶ まどを ひらいて いるか */
   suggField: 'summary',                             /* せつめいを かく らん */
   amida: null,                                      /* あみだくじの ばん（autoReveal・allPaths も ここに 入る） */
   score: {names:[], rows:[]},                       /* てんすう表 */
@@ -1945,6 +1949,8 @@ function loadAll(){
   if(cb && typeof cb === 'object') state.choubo = {members:Array.isArray(cb.members)?cb.members:[], items:Array.isArray(cb.items)?cb.items:[]};
   const nt = store.read(KEY.net, null);
   if(nt && Array.isArray(nt.plays)) state.net = {since:String(nt.since||''), plays:nt.plays, del:Array.isArray(nt.del)?nt.del:[]};
+  const pf = store.read(KEY.profile, null);
+  if(pf && typeof pf === 'object') state.profile = {title:pf.title||'', titles:Array.isArray(pf.titles)?pf.titles:[], favs:Array.isArray(pf.favs)?pf.favs:[], bio:pf.bio||'', job:pf.job||''};
   const gn = store.read(KEY.gone, null);
   if(Array.isArray(gn)) state.gone = gn;
   try{ localStorage.removeItem('bgl.sharedPlays'); }catch(e){}   /* むかしの わけあい データを そうじ */
@@ -2452,6 +2458,9 @@ function render(){
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   if(['home','list','game','kai','card','tool'].indexOf(r.name) >= 0) maybeRefreshRequests(routeKey);
   if(['admin','game','tool','review','suggest'].indexOf(r.name) >= 0) maybeRefreshHelp(routeKey);
+  if(r.name === 'card' && account() && r.param === account().name && render._routeKey !== routeKey){
+    recordEarnedTitles().then(ch => { if(ch) render(); }).catch(() => {});
+  }
   maybeCheckFriends();
   syncBgm();
   paintSoundBtns();
@@ -2889,7 +2898,7 @@ function viewDetail(id){
     '<button class="mini" data-go2="#/list" style="margin-bottom:14px">◀ ずかんへ もどる</button>' +
     '<h1 class="detail-title">'+esc(g.title)+newBadge(g)+'</h1>' +
     (isNewArrival(g) ? '<p class="count" style="margin:-6px 0 12px">'+esc(dateLabel(g.addedAt))+' に ずかんへ くわわりました。</p>' : '') +
-    gallery + reqBoxHTML(g) + helpBoxHTML(g) +
+    gallery + favBoxHTML(g) + reqBoxHTML(g) + helpBoxHTML(g) +
 
     '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+esc(g.summary||'（みきにゅう）')+'</p></div>' +
     (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+esc(g.quickRule)+'</div></div>' : '') +
@@ -3514,18 +3523,37 @@ function viewKai(){
    あそんだ きろく（いっしょに あそんだ 人・かった人）から
    その場で けいさん する。データは ふえないので おもく ならない。
    ========================================================= */
+/* しょうごうは「いちばん たかい ステータス」と「レベルの だんかい」で きまる。
+   titles は だんかい 1〜4 の じゅん（みならい → いちにんまえ → たつじん → でんせつ）。 */
 const ADV_STATS = [
-  {id:'atk',   name:'こうげき',  note:'たいせんでの かちやすさ',   title:'むてきの けんし'},
-  {id:'int',   name:'かしこさ',  note:'頭脳戦・おもい ゲーム',      title:'さかばの けんじゃ'},
-  {id:'bond',  name:'きずな',    note:'協力ゲーム',                 title:'きょうりょくの ゆうしゃ'},
-  {id:'trick', name:'だまし',    note:'正体隠匿・うそを つく ゲーム', title:'うそつきの たつじん'},
-  {id:'luck',  name:'うん',      note:'運要素の ある ゲーム',       title:'うんめいの ギャンブラー'},
-  {id:'party', name:'もりあげ',  note:'盛り上がる・パーティー',     title:'さかばの おどりこ'},
-  {id:'spd',   name:'すばやさ',  note:'みじかい・かるい ゲーム',    title:'しっぷうの とうぞく'},
-  {id:'hp',    name:'たいりょく', note:'あそんだ じかんの ごうけい', title:'ふくつの せんし'},
-  {id:'know',  name:'ちしき',    note:'あそんだ ゲームの しゅるい', title:'さすらいの ぎんゆうしじん'},
-  {id:'charm', name:'じんぼう',  note:'いっしょに あそんだ なかま',  title:'さかばの かおやく'}
+  {id:'atk',   name:'こうげき',  note:'たいせんでの かちやすさ',
+   titles:['けんしの たまご','うでききの けんし','むてきの けんし','でんせつの けんせい']},
+  {id:'int',   name:'かしこさ',  note:'頭脳戦・おもい ゲーム',
+   titles:['まほうの みならい','さかばの まほうつかい','さかばの けんじゃ','だいけんじゃ']},
+  {id:'bond',  name:'きずな',    note:'協力ゲーム',
+   titles:['たびの なかま','きずなの まもりて','きょうりょくの ゆうしゃ','でんせつの ゆうしゃ']},
+  {id:'trick', name:'だまし',    note:'正体隠匿・うそを つく ゲーム',
+   titles:['ちいさな うそつき','かめんの あくやく','うそつきの たつじん','まぼろしの ペテンし']},
+  {id:'luck',  name:'うん',      note:'運要素の ある ゲーム',
+   titles:['ついてる たびびと','サイコロつかい','うんめいの ギャンブラー','めがみの おきにいり']},
+  {id:'party', name:'もりあげ',  note:'盛り上がる・パーティー',
+   titles:['にぎやかな たびびと','さかばの おどりこ','さかばの スター','うたげの おう']},
+  {id:'spd',   name:'すばやさ',  note:'みじかい・かるい ゲーム',
+   titles:['かけだしの とうぞく','すばしこい とうぞく','しっぷうの とうぞく','かぜの かいとう']},
+  {id:'hp',    name:'たいりょく', note:'あそんだ じかんの ごうけい',
+   titles:['がんばりやの へいし','ねばりづよい せんし','ふくつの せんし','ふじみの せんし']},
+  {id:'know',  name:'ちしき',    note:'あそんだ ゲームの しゅるい',
+   titles:['ものしりの たびびと','さすらいの ぎんゆうしじん','ずかんの まもりびと','ボードゲームはかせ']},
+  {id:'charm', name:'じんぼう',  note:'いっしょに あそんだ なかま',
+   titles:['さかばの しんいり','さかばの じょうれん','さかばの かおやく','さかばの あるじ']}
 ];
+const TITLE_TIERS = [
+  {name:'みならい',     from:1,  to:5},
+  {name:'いちにんまえ', from:6,  to:14},
+  {name:'たつじん',     from:15, to:29},
+  {name:'でんせつ',     from:30, to:99}
+];
+function titleTier(lv){ return lv >= 30 ? 3 : lv >= 15 ? 2 : lv >= 6 ? 1 : 0; }
 /* その人が でて くる きろく */
 function advPlays(name){
   return cardPlays().filter(r => playMembers(r.pl).indexOf(name) >= 0)
@@ -3588,13 +3616,13 @@ function adventurer(name){
     {name:'はじめての ぼうけん', ok: ps.length >= 1,   hint:'1かい あそぶ'},
     {name:'はじめての しょうり', ok: wins.length >= 1, hint:'1かい かつ'},
     {name:'10かいの ぼうけん',   ok: ps.length >= 10,  hint:'10かい あそぶ'},
-    {name:'でんせつの ぼうけんしゃ', ok: ps.length >= 50, hint:'50かい あそぶ'},
+    {name:'ベテラン ぼうけんしゃ', ok: ps.length >= 50, hint:'50かい あそぶ'},
     {name:'3れんしょう',         ok: best >= 3,        hint:'3かい つづけて かつ'},
     {name:'10しゅるい せいは',   ok: Object.keys(games).length >= 10, hint:'10しゅるいの ゲームで あそぶ'},
     {name:'ジャンル マスター',   ok: Object.keys(genres).length >= 5, hint:'5つの ジャンルで あそぶ'},
     {name:'ゆうじょうの あかし', ok: raw.bond >= 10,   hint:'協力ゲームを 10かい'},
     {name:'さかばの なかまたち', ok: raw.charm >= 5,   hint:'5人と いっしょに あそぶ'},
-    {name:'よふかしの ぼうけん', ok: maxDay >= 5,      hint:'1日に 5ゲーム あそぶ'},
+    {name:'あそびつくしの 1にち', ok: maxDay >= 5,     hint:'1日に 5ゲーム あそぶ'},
     {name:'じゅうりょうきゅうの ちょうせん', ok: Object.keys(games).some(id => { const g = state.games.find(x => x.id === id); return g && hasTag(g,'重量級'); }), hint:'重量級で あそぶ'}
   ];
 
@@ -3607,13 +3635,225 @@ function adventurer(name){
     last: ps.length ? ps[ps.length-1].pl.d : ''
   };
 }
+/* ---------------- ジョブ ----------------
+   いちおしの ゲーム（3つまで）から きまる。
+   1. ゲームごとに「その ゲームらしさ」を あらわす ジョブを 1つ きめる
+      （あそびかたの タグ ＞ パーティー ＞ ふんいきの タグ の じゅんに おもく みる）
+   2. 3つの ゲームで たすうけつ。ぜんぶ ちがえば「ゆうしゃ」 */
+const JOBS = [
+  {id:'thief',    name:'とうぞく',     tags:{'正体隠匿':3}, desc:'うそと かけひきで しょうぶ する（正体隠匿・ブラフ）'},
+  {id:'priest',   name:'そうりょ',     tags:{'協力':3}, desc:'みんなで ちからを あわせる（協力）'},
+  {id:'merchant', name:'しょうにん',   tags:{'デッキ構築':3,'ドラフト':3}, desc:'くみたてて ふやして いく（デッキ構築・ドラフト）'},
+  {id:'seer',     name:'うらないし',   tags:{'トリックテイキング':3}, desc:'カードの ながれを よむ（トリックテイキング）'},
+  {id:'mage',     name:'まほうつかい', tags:{'ワーカープレイスメント':3,'頭脳戦':1,'重量級':1}, desc:'じっくり かんがえて かつ（頭脳戦・重量級）'},
+  {id:'dancer',   name:'おどりこ',     tags:{'パーティー':2,'盛り上がる':1}, desc:'その場を もりあげる（パーティー）'},
+  {id:'jester',   name:'あそびにん',   tags:{'運要素':1}, desc:'うんと ハプニングを たのしむ（運要素）'},
+  {id:'warrior',  name:'せんし',       tags:{'対戦':1}, desc:'まっこうから ぶつかる（対戦）'},
+  {id:'traveler', name:'たびびと',     tags:{'家族向け':1,'軽量級':1}, desc:'だれとでも きがるに あそぶ（家族向け・軽量級）'}
+];
+const HERO_JOB = {id:'hero', name:'ゆうしゃ', desc:'なんでも こなす（いろいろな ゲームが すき）'};
+function jobById(id){ return id === 'hero' ? HERO_JOB : (JOBS.find(j => j.id === id) || null); }
+/* その人の ジョブ（じぶんで えらんで いれば それ、なければ いちおしから） */
+function jobFor(pf){
+  if(!pf) return null;
+  if(pf.job){ const j = jobById(pf.job); if(j) return Object.assign({manual:true}, j); }
+  const j = jobOf(pf.favs);
+  return j ? Object.assign({manual:false}, j) : null;
+}
+function jobScores(g){
+  const pts = {};
+  (g.tags || []).forEach(t => JOBS.forEach(j => { if(j.tags[t]) pts[j.id] = (pts[j.id] || 0) + j.tags[t]; }));
+  return pts;
+}
+/* その ゲームの ジョブ（おなじ てんなら JOBS の じゅん） */
+function gameJob(g){
+  const pts = jobScores(g);
+  let best = null;
+  JOBS.forEach(j => { if(pts[j.id] && (!best || pts[j.id] > pts[best.id])) best = j; });
+  return best;
+}
+function jobOf(favIds){
+  const games = (favIds || []).map(id => state.games.find(g => g.id === id)).filter(Boolean);
+  if(!games.length) return null;
+  const votes = {}, total = {};
+  games.forEach(g => {
+    const j = gameJob(g);
+    if(j) votes[j.id] = (votes[j.id] || 0) + 1;
+    const p = jobScores(g);
+    Object.keys(p).forEach(k => { total[k] = (total[k] || 0) + p[k]; });
+  });
+  const ids = Object.keys(votes);
+  if(!ids.length) return HERO_JOB;
+  const max = Math.max(...ids.map(k => votes[k]));
+  const tops = ids.filter(k => votes[k] === max);
+  if(tops.length >= 3) return HERO_JOB;                           /* みんな ちがう → なんでも こなす */
+  tops.sort((x, y) => (total[y] || 0) - (total[x] || 0) ||
+                      JOBS.findIndex(j => j.id === x) - JOBS.findIndex(j => j.id === y));
+  return JOBS.find(j => j.id === tops[0]);
+}
+
+/* ---------------- しょうごうの きろく ---------------- */
+function titleKey(statId, tier){ return statId + ':' + tier; }
+function titleByKey(k){
+  const m = /^([a-z]+):([0-3])$/.exec(String(k || ''));
+  if(!m) return '';
+  const st = ADV_STATS.find(x => x.id === m[1]);
+  return st ? st.titles[Number(m[2])] : '';
+}
+function titleHowText(k){
+  const m = /^([a-z]+):([0-3])$/.exec(String(k || ''));
+  if(!m) return '';
+  const st = ADV_STATS.find(x => x.id === m[1]);
+  const t = TITLE_TIERS[Number(m[2])];
+  if(!st || !t) return '';
+  return st.name + 'が いちばん たかい まま、Lv.' + t.from + ' いじょうに なる';
+}
+/* その人の プロフィール（じぶん／なかま だけ。ゲストは なし） */
+function profileFor(name){
+  const a = account();
+  if(a && a.name === name) return state.profile;
+  const f = friendList().find(x => x.name === name);
+  return f ? {title:f.title || '', titles:f.titles || [], favs:f.favs || [], bio:f.bio || '', job:f.job || ''} : null;
+}
+/* ひとに みせる しょうごう（えらんで いれば それ、なければ じどう） */
+function shownTitle(name, a){
+  const pf = profileFor(name);
+  if(pf && pf.title && pf.titles.some(x => x.k === pf.title)) return titleByKey(pf.title);
+  return advTitle(a);
+}
+function saveProfileLocal(){ store.write(KEY.profile, state.profile); }
+async function refreshProfile(){
+  if(!isOnline()) return false;
+  const d = await api('/api/me');
+  const next = {title:d.title || '', titles:d.titles || [], favs:d.favs || [], bio:d.bio || '', job:d.job || ''};
+  const changed = JSON.stringify(next) !== JSON.stringify(state.profile);
+  state.profile = next; saveProfileLocal();
+  return changed;
+}
+async function saveProfile(patch){
+  const d = await api('/api/profile', {method:'POST', body:patch});
+  state.profile = {title:d.title || '', titles:d.titles || [], favs:d.favs || [], bio:d.bio || '', job:d.job || ''};
+  saveProfileLocal();
+}
+/* いまの しょうごうを「てにいれた」ことに する（おなじ けいとうの 下の だんかいも） */
+async function recordEarnedTitles(){
+  const me = account();
+  if(!me || !isOnline()) return false;
+  const a = adventurer(me.name);
+  if(!a.plays) return false;
+  const top = advTopStat(a), tier = titleTier(advLevel(a.plays));
+  const have = state.profile.titles.map(x => x.k);
+  const add = [];
+  for(let t = 0; t <= tier; t++){
+    const k = titleKey(top.id, t);
+    if(have.indexOf(k) < 0) add.push({k, at: todayStr()});
+  }
+  if(!add.length) return false;
+  await saveProfile({earned: add});
+  return true;
+}
+
+function advTopStat(a){
+  return ADV_STATS.slice().sort((x,y) => a.stats[y.id] - a.stats[x.id])[0];
+}
 function advTitle(a){
   if(!a.plays) return 'たびだちまえの わかもの';
-  const top = ADV_STATS.slice().sort((x,y) => a.stats[y.id] - a.stats[x.id])[0];
-  const lv = advLevel(a.plays);
-  const rank = lv < 6 ? 'みならいの ' : (lv >= 30 ? 'でんせつの ' : '');
-  return rank + top.title;
+  return advTopStat(a).titles[titleTier(advLevel(a.plays))];
 }
+/* しょうごうの いちらん
+   てにいれた ものには いつ・どうやって を、まだの ものには とりかたを だす。 */
+function titleListHTML(a, name){
+  const pf = profileFor(name);
+  const earned = pf ? pf.titles : [];
+  const lv = advLevel(a.plays);
+  const nowKey = a.plays ? titleKey(advTopStat(a).id, titleTier(lv)) : '';
+  const shownKey = (pf && pf.title && earned.some(x => x.k === pf.title)) ? pf.title : nowKey;
+  const got = k => earned.find(x => x.k === k) || (k === nowKey ? {k, at:''} : null);
+  const total = ADV_STATS.length * TITLE_TIERS.length;
+  const gotCount = ADV_STATS.reduce((n, st) => n + st.titles.filter((_, i) => got(titleKey(st.id, i))).length, 0);
+  return '<details style="margin:0 0 12px"'+(state.titleListOpen ? ' open' : '')+' id="titleList">' +
+    '<summary style="font-size:12px;color:var(--muted)">しょうごうの いちらん（'+gotCount+' / '+total+'）</summary>' +
+    '<p class="count" style="margin:6px 0 8px">いちばん たかい ステータスと レベルで しょうごうが てに はいります。<br>' +
+      TITLE_TIERS.map(t => t.name+'（Lv.'+t.from+(t.to < 99 ? '〜'+t.to : '〜')+'）').join('・') + '</p>' +
+    ADV_STATS.map(st =>
+      '<div style="margin:0 0 10px">' +
+        '<div class="catlabel" style="margin:0 0 2px">'+st.name+'</div>' +
+        '<p class="count" style="margin:0 0 4px;font-size:11px">てに いれかた：'+st.name+'が いちばん たかい まま レベルを あげる</p>' +
+        st.titles.map((t, i) => {
+          const k = titleKey(st.id, i), g = got(k), tt = TITLE_TIERS[i];
+          const mark = k === shownKey ? '▶' : (g ? '✓' : '・');
+          return '<div class="row" style="gap:6px;font-size:12.5px;line-height:1.7;align-items:baseline">' +
+            '<span style="flex:1;min-width:0;color:'+(g ? 'var(--accent)' : 'var(--muted)')+'">'+mark+' '+esc(g ? t : '？？？')+'</span>' +
+            '<span style="flex:0 0 auto;font-size:11px;color:var(--muted)">Lv.'+tt.from+'〜' +
+              (g && g.at ? '　'+esc(dateLabel(g.at))+' ゲット' : (g ? '　いま' : '')) + '</span></div>';
+        }).join('') +
+      '</div>').join('') +
+    '<p class="count" style="margin:4px 0 0">まだ あそんで いない ときは「たびだちまえの わかもの」です。</p>' +
+  '</details>';
+}
+/* じぶんの カードで しょうごうを えらぶ */
+function titlePickHTML(a){
+  const pf = state.profile;
+  const nowKey = a.plays ? titleKey(advTopStat(a).id, titleTier(advLevel(a.plays))) : '';
+  const keys = pf.titles.map(x => x.k);
+  if(nowKey && keys.indexOf(nowKey) < 0) keys.push(nowKey);
+  if(!keys.length) return '<p class="count" style="margin:8px 0 0">あそぶと しょうごうが てに はいります。</p>';
+  return '<div class="chips" style="margin-top:8px">' +
+    '<button class="chip sm" data-picktitle="" aria-pressed="'+(!pf.title)+'">じどう（'+esc(advTitle(a))+'）</button>' +
+    keys.map(k => '<button class="chip sm" data-picktitle="'+esc(k)+'" aria-pressed="'+(pf.title === k)+'">'+esc(titleByKey(k))+'</button>').join('') +
+  '</div>';
+}
+/* じぶんの カードで ジョブを えらぶ */
+function jobPickHTML(){
+  const pf = state.profile;
+  const auto = jobOf(pf.favs);
+  const row = (id, name, desc, on) =>
+    '<button data-pickjob="'+id+'" style="all:unset;display:block;width:100%;box-sizing:border-box;cursor:pointer;padding:7px 9px;margin:0 0 6px;' +
+      'border:2px solid '+(on ? 'var(--accent)' : 'var(--frame)')+'">' +
+      '<span style="color:'+(on ? 'var(--accent)' : 'var(--text)')+'">'+(on ? '▶ ' : '')+esc(name)+'</span>' +
+      '<span style="display:block;font-size:11px;color:var(--muted)">'+esc(desc)+'</span></button>';
+  return '<div style="margin:8px 0 12px">' +
+    row('', 'じどう'+(auto ? '（いまは '+auto.name+'）' : ''), 'いちおしの ゲームから きめる', !pf.job) +
+    JOBS.concat([HERO_JOB]).map(j => row(j.id, j.name, j.desc, pf.job === j.id)).join('') +
+  '</div>';
+}
+/* さいきんの ぼうけん（あたらしい じゅんに 3つ） */
+function recentHTML(name, a){
+  const ps = advPlays(name).slice().sort((x, y) => String(y.pl.d||'').localeCompare(String(x.pl.d||''))).slice(0, 3);
+  if(!ps.length) return '';
+  return '<div class="catlabel" style="margin-top:4px">さいきんの ぼうけん</div>' +
+    ps.map(r => {
+      const mates = playMembers(r.pl).filter(n => n !== name);
+      const res = r.pl.w ? (r.pl.w === name ? '<span style="color:var(--accent)">かち</span>' : 'まけ') : '';
+      const inBook = state.games.some(g => g.id === r.g.id);
+      return '<div style="display:flex;gap:8px;align-items:baseline;font-size:13px;margin:0 0 5px">' +
+        '<span style="flex:0 0 auto;color:var(--muted);font-size:11.5px">'+esc(dateLabel(r.pl.d))+'</span>' +
+        (inBook ? '<button data-open="'+esc(r.g.id)+'" style="all:unset;cursor:pointer;flex:1;min-width:0">'+esc(r.g.title)+'</button>'
+                : '<span style="flex:1;min-width:0">'+esc(r.g.title)+'</span>') +
+        '<span style="flex:0 0 auto;font-size:11.5px;color:var(--muted)">' +
+          (mates.length ? esc(mates.slice(0,2).join('・'))+(mates.length > 2 ? ' ほか' : '')+' と' : 'ひとりで') +
+          (res ? '・'+res : '') + '</span>' +
+      '</div>';
+    }).join('') + '<div style="height:10px"></div>';
+}
+
+/* いちおしの ゲーム と ジョブ */
+function favsCardHTML(name){
+  const pf = profileFor(name);
+  if(!pf) return '';
+  const a = account();
+  const isMe = !!(a && a.name === name);
+  const games = pf.favs.map(id => state.games.find(g => g.id === id)).filter(Boolean);
+  let html = '<div class="catlabel" style="margin-top:14px">いちおしの ゲーム（'+games.length+' / 3）</div>';
+  if(!games.length){
+    return html + '<p class="count" style="margin:0">' + (isMe
+      ? 'ゲームの くわしい 画面の「★ いちおし」で えらぶと、ジョブが きまります。'
+      : 'まだ えらばれて いません。') + '</p>';
+  }
+  return html + '<div class="adv-badges">' + games.map(g =>
+    '<button class="adv-badge" data-open="'+esc(g.id)+'" style="all:unset;cursor:pointer;border:2px solid var(--accent);color:var(--accent);padding:2px 7px;font-size:12px">★ '+esc(g.title)+'</button>').join('') + '</div>';
+}
+
 function viewCard(param){
   const name = String(param || '').trim();
   const back = '<button class="mini" data-go2="#/tool/names" style="margin-bottom:14px">◀ なかまの なまえへ</button>';
@@ -3625,12 +3865,32 @@ function viewCard(param){
   const top = Math.max(...ADV_STATS.map(s => a.stats[s.id]));
   const got = a.badges.filter(b => b.ok).length;
   const hours = a.minutes >= 60 ? Math.floor(a.minutes/60)+'じかん'+(a.minutes%60 ? (a.minutes%60)+'ふん' : '') : a.minutes+'ふん';
+  const acc = account();
+  const isMe = !!(acc && acc.name === name);
+  const pf = profileFor(name);
+  const job = jobFor(pf);
+  if(render._routeKey !== 'card/' + name){ state.titlePick = false; state.jobPick = false; }
 
   return '<section class="page">' + back +
     '<h1 class="lede">ぼうけんしゃカード</h1>' +
     '<div class="adv">' +
       '<div class="adv-head"><span class="adv-name">▶ '+esc(name)+'</span><span class="adv-lv">Lv.'+lv+'</span></div>' +
-      '<div class="adv-title"><small>しょうごう</small><span>'+esc(advTitle(a))+'</span>' +
+      ((job || (isMe && isOnline())) ?
+        '<p style="margin:-4px 0 8px;font-size:14px"><span class="count">ジョブ：</span>' +
+          (job ? '<span style="color:var(--accent-2)">'+esc(job.name)+'</span>' +
+                 '<span class="count" style="font-size:11px">　'+(job.manual ? 'じぶんで えらんだ' : 'いちおしから')+'</span>'
+               : '<span class="count">まだ きまって いません</span>') +
+          (isMe && isOnline() ? ' <button class="mini" id="jobPickBtn" style="margin-left:6px;font-size:11px;padding:1px 6px">えらぶ</button>' : '') +
+        '</p>' : '') +
+      (isMe && state.jobPick ? jobPickHTML() : '') +
+      ((pf && pf.bio) || (isMe && isOnline()) ?
+        '<div style="margin:0 0 12px;padding:7px 10px;border:2px dashed var(--muted);font-size:13.5px">' +
+          (pf && pf.bio ? '「'+esc(pf.bio)+'」' : '<span class="count">ひとことは まだ ありません</span>') +
+          (isMe && isOnline() ? ' <button class="mini" id="bioEditBtn" style="font-size:11px;padding:1px 6px;margin-left:4px">かく</button>' : '') +
+        '</div>' : '') +
+      '<div class="adv-title"><small>しょうごう'+(isMe && isOnline() ? ' <button class="mini" id="titlePickBtn" style="margin-left:6px;font-size:11px;padding:1px 6px">えらぶ</button>' : '')+'</small>' +
+        '<span>'+esc(shownTitle(name, a))+'</span>' +
+        (isMe && state.titlePick ? titlePickHTML(a) : '') +
         '<div class="adv-exp" title="つぎの レベルまで"><div style="width:'+expPct+'%"></div></div>' +
         (lv < 99 ? '<small style="margin-top:3px">つぎの レベルまで あと '+Math.max(0, next - a.plays)+'かい</small>' : '') +
       '</div>' +
@@ -3644,6 +3904,7 @@ function viewCard(param){
         '<span>あいぼう</span><b>'+(a.mate ? esc(a.mate) : '―')+'</b>' +
         '<span>さいごの ぼうけん</span><b>'+(a.last ? esc(dateLabel(a.last)) : '―')+'</b>' +
       '</div>' +
+      recentHTML(name, a) +
       '<div class="catlabel">ステータス</div>' +
       '<div class="adv-stats">' + ADV_STATS.map(st =>
         '<span>'+st.name+'</span>' +
@@ -3651,13 +3912,15 @@ function viewCard(param){
         '<span class="v">'+a.stats[st.id]+'</span>').join('') +
       '</div>' +
       '<details style="margin:0 0 12px"><summary style="font-size:12px;color:var(--muted)">ステータスの きまりかた</summary>' +
-        '<p class="count" style="margin:6px 0 0">' + ADV_STATS.map(st => st.name+'：'+st.note).join('<br>') + '<br>いちばん たかい ステータスで しょうごうが きまります。</p></details>' +
+        '<p class="count" style="margin:6px 0 0">' + ADV_STATS.map(st => st.name+'：'+st.note).join('<br>') + '</p></details>' +
+      titleListHTML(a, name) +
       '<div class="catlabel">じっせき（'+got+' / '+a.badges.length+'）</div>' +
       '<div class="adv-badges">' + a.badges.map(b =>
         b.ok ? '<span class="adv-badge">'+esc(b.name)+'</span>'
              : '<span class="adv-badge locked" title="'+esc(b.hint)+'">？？？</span>').join('') +
       '</div>' +
       (a.badges.some(b => !b.ok) ? '<p class="count" style="margin:8px 0 0">つぎの じっせき：'+esc(a.badges.find(b => !b.ok).hint)+'</p>' : '') +
+      favsCardHTML(name) +
       wantsCardHTML(name) +
     '</div>' +
     (!a.plays ? '<div class="note" style="margin-top:12px">まだ きろくが ありません。「きょう あそんだ」で いっしょに あそんだ 人に えらぶと、カードが そだちます。</div>' : '') +
@@ -3670,7 +3933,9 @@ function viewCard(param){
 function advShareText(name){
   const a = adventurer(name);
   return '【ぼうけんしゃカード】' + name + '  Lv.' + advLevel(a.plays) + '\n' +
-    'しょうごう：' + advTitle(a) + '\n' +
+    'しょうごう：' + shownTitle(name, a) + '\n' +
+    (jobFor(profileFor(name)) ? 'ジョブ：' + jobFor(profileFor(name)).name + '\n' : '') +
+    (profileFor(name) && profileFor(name).bio ? '「' + profileFor(name).bio + '」\n' : '') +
     'あそんだ ' + a.plays + 'かい／かった ' + a.wins + 'かい\n' +
     ADV_STATS.map(st => st.name + ' ' + a.stats[st.id]).join('／');
 }
@@ -5312,7 +5577,7 @@ function toolVoteHTML(){
 
   if(!v){
 
-    return '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ルールの きめかたなどを みんなで きめられます。</p>' +
+    return '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ハウスルールなどを みんなで きめられます。</p>' +
       '<div class="row" style="margin-bottom:10px">' +
         '<input type="text" id="voteTitle" placeholder="なにを きめる？（れい：つぎの ゲーム）" value="'+esc(state.voteTitle||'')+'" style="flex:2"></div>' +
 
@@ -5376,7 +5641,7 @@ function saveTurn(){ store.write(KEY.turn, state.turn); }
 function toolTurnHTML(){
   const t = state.turn;
   if(!t){
-    return '<p class="count" style="margin:0 0 10px">あそぶ 人を ならべて、いまの てばんを だします。<br>ちょうこう する 人が いても「だれの ばん？」が なくなります。</p>' +
+    return '<p class="count" style="margin:0 0 10px">あそぶ 人を ならべて、いまの てばんを だします。<br>よそみ して いた 人が いても「だれの ばん？」と ならなく なります。</p>' +
       '<div class="row" style="margin-bottom:8px">' +
         '<input type="text" id="turnNames" placeholder="たろう はなこ じろう" value="'+esc(state.lastNames)+'" style="flex:2">' +
         '<button class="mini warn" data-clearnames="turnNames" style="flex:0 0 auto">けす</button></div>' +
@@ -5566,6 +5831,22 @@ function helpTargets(){
     .filter(x => x.miss.length)
     .sort((a,b) => (a.miss.indexOf('summary') < 0) - (b.miss.indexOf('summary') < 0) ||
                    b.miss.length - a.miss.length || a.g.title.localeCompare(b.g.title,'ja'));
+}
+/* この ゲームを いちおしに して いる 人 と、じぶんの ★ */
+function favBoxHTML(g){
+  if(isWish(g)) return '';
+  const me = account();
+  const fans = [];
+  if(me && state.profile.favs.indexOf(g.id) >= 0) fans.push(me.name);
+  friendList().forEach(f => { if((f.favs || []).indexOf(g.id) >= 0) fans.push(f.name); });
+  if(!isOnline() && !fans.length) return '';
+  const mine = !!(me && state.profile.favs.indexOf(g.id) >= 0);
+  return '<div class="row" style="align-items:center;gap:8px;margin:0 0 14px">' +
+    (isOnline() ? '<button class="btn small'+(mine ? ' primary' : '')+'" id="favToggle" data-favg="'+esc(g.id)+'" style="flex:0 0 auto">'+
+      (mine ? '★ いちおし中' : '☆ いちおし')+'</button>' : '') +
+    '<span class="count" style="flex:1;margin:0">' + (fans.length
+      ? 'いちおしの なかま：'+esc(fans.join('・'))
+      : 'いちおしに すると ジョブが きまります（3つまで）') + '</span></div>';
 }
 function helpBoxHTML(g){
   if(isWish(g) || !isOnline() || state.help.meAdmin) return '';
@@ -5837,7 +6118,11 @@ function autoSync(){
   if(!isOnline()) return;
   clearTimeout(autoSync._t);
   autoSync._t = setTimeout(() => {
-    syncNet().then(r => { if(r.got) render(); }).catch(() => {});
+    syncNet().then(async r => {
+      let ch = false;
+      try{ ch = await recordEarnedTitles(); }catch(e){}
+      if(r.got || ch) render();
+    }).catch(() => {});
   }, 400);
 }
 async function refreshFriends(){
@@ -5875,6 +6160,7 @@ async function becomeAdventurer(name){
   const d = await api('/api/signup', {method:'POST', body:{name:n}, auth:false});
   saveAccount({id:d.id, name:d.name, code:d.code, token:d.token});
   await flushFriendWait();
+  try{ await refreshProfile(); }catch(e){}
   return d;
 }
 /* リンクや QRから もらった ともだちコードを つかう */
@@ -6098,7 +6384,7 @@ function bindOnline(){
       if(!state.players.some(x => x.name === d.name)) addPlayer(d.name);
       render();
       toast('おかえりなさい、'+d.name+' さん');
-      try{ await refreshFriends(); await syncNet(); render(); }catch(e){}
+      try{ await refreshFriends(); await syncNet(); await refreshProfile(); render(); }catch(e){}
     }catch(e){ acctStatus(e.message, 'ng'); claimBtn.disabled = false; }
   };
 
@@ -6163,6 +6449,7 @@ function bindOnline(){
       saveAccount(null);
       state.net = {since:'', plays:[], del:[]}; saveNet();
       state.friends = {friends:[], incoming:[], outgoing:[]};
+      state.profile = {title:'', titles:[], favs:[], bio:'', job:''}; saveProfileLocal();
       render(); toast('はなれました');
     });
 }
@@ -6790,7 +7077,7 @@ function bind(r){
 
   const amidaBackEdit = document.getElementById('amidaBackEdit');
   if(amidaBackEdit) amidaBackEdit.onclick = () => {
-    ask('線を ひきなおしますか？\nいままでの けっかは ふせ なおします。', () => {
+    ask('線を ひきなおしますか？\nいままでの けっかは けされます。', () => {
       const a = state.amida;
       a.phase = 'edit'; a.opened = []; a.result = null;
       render();
@@ -7586,12 +7873,12 @@ function bind(r){
     if(e.target.checked){
       ask('かんそうや かしだし先の なまえが、\nだれでも 見られる ばしょに のります。\nよろしいですか？', () => {
         store.write(KEY.sharePriv, true);
-        toast('こうかいする せってい に しました');
+        toast('こうかいする せっていに しました');
       }, {onNo: () => { e.target.checked = false; }});
       return;
     }
     store.write(KEY.sharePriv, false);
-    toast('こうかい しない せってい に しました');
+    toast('こうかい しない せっていに しました');
   };
   const printBtn = document.getElementById('printBtn');
   if(printBtn) printBtn.onclick = () => window.print();
@@ -7710,6 +7997,58 @@ function bind(r){
     toast(currentTrack().name + ' に しました');
   });
   bindPlayShare();
+  /* --- しょうごう・いちおし --- */
+  const titlePickBtn = document.getElementById('titlePickBtn');
+  if(titlePickBtn) titlePickBtn.onclick = () => { state.titlePick = !state.titlePick; render(); };
+  app.querySelectorAll('[data-picktitle]').forEach(b => b.onclick = async () => {
+    const k = b.dataset.picktitle;
+    try{
+      /* いまの しょうごうが まだ きろく されて いなければ さきに きろく */
+      await recordEarnedTitles();
+      await saveProfile({title:k});
+      state.titlePick = false; render();
+      toast(k ? '「'+titleByKey(k)+'」を みせます' : 'しょうごうを じどうに しました');
+    }catch(e){ toast(e.message); }
+  });
+  const jobPickBtn = document.getElementById('jobPickBtn');
+  if(jobPickBtn) jobPickBtn.onclick = () => { state.jobPick = !state.jobPick; render(); };
+  app.querySelectorAll('[data-pickjob]').forEach(b => b.onclick = async () => {
+    try{
+      await saveProfile({job: b.dataset.pickjob});
+      state.jobPick = false; render();
+      const j = jobFor(state.profile);
+      toast(b.dataset.pickjob ? ('ジョブを '+j.name+' に しました') : ('ジョブを じどうに しました' + (j ? '（'+j.name+'）' : '')));
+    }catch(e){ toast(e.message); }
+  });
+  const bioEditBtn = document.getElementById('bioEditBtn');
+  if(bioEditBtn) bioEditBtn.onclick = () => {
+    askText('ひとこと（40もじまで）', state.profile.bio || '', async v => {
+      const bio = String(v || '').trim().slice(0, 40);
+      try{ await saveProfile({bio}); render(); toast(bio ? 'ひとことを かきました' : 'ひとことを けしました'); }
+      catch(e){ toast(e.message); }
+    });
+  };
+  const titleList = document.getElementById('titleList');
+  if(titleList) titleList.addEventListener('toggle', () => { state.titleListOpen = titleList.open; });
+  const favToggle = document.getElementById('favToggle');
+  if(favToggle) favToggle.onclick = async () => {
+    const gid = favToggle.dataset.favg;
+    const favs = state.profile.favs.slice();
+    const i = favs.indexOf(gid);
+    if(i >= 0) favs.splice(i, 1);
+    else{
+      if(favs.length >= 3) return toast('いちおしは 3つまでです。カードから どれかを はずして ください');
+      favs.push(gid);
+    }
+    favToggle.disabled = true;
+    try{
+      await saveProfile({favs});
+      render();
+      const job = jobFor(state.profile);
+      toast(i >= 0 ? 'いちおしから はずしました' : ('いちおしに しました' + (job ? '（ジョブ：'+job.name+'）' : '')));
+    }catch(e){ toast(e.message); favToggle.disabled = false; }
+  };
+
   /* --- ずかんづくり --- */
   app.querySelectorAll('[data-sugfield]').forEach(b => b.onclick = () => {
     state.suggField = b.dataset.sugfield; render();
@@ -8353,9 +8692,10 @@ if(isOnline()){
       await flushFriendWait();
       const r = await syncNet();
       const fch = await refreshFriends();
-      let rch = false;
+      let rch = false, pch = false;
       try{ rch = await refreshRequests(); }catch(e){}
-      if(r.got || r.pushed || fch || rch) render();
+      try{ pch = await refreshProfile(); await recordEarnedTitles(); }catch(e){}
+      if(r.got || r.pushed || fch || rch || pch) render();
       askFriendRequests();
     }catch(e){ /* つながらなければ この スマホの ぶんだけで うごく */ }
   })();
