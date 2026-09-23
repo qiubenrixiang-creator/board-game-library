@@ -778,8 +778,9 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
   max-width:88vw;text-align:center;
 }
 #toast.show{opacity:1}
-.searchbar{display:flex;gap:8px;margin:0 0 10px}
-.searchbar input{flex:1;min-width:0}
+.searchbar{display:flex;gap:8px;margin:0 0 14px}
+.searchbar input{flex:2;min-width:0}
+.searchbar select{flex:1.2;min-width:0}
 .listopts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
 .listopts .chips{flex:1 1 auto}
 .listopts select{flex:0 1 170px;min-width:130px}
@@ -797,15 +798,17 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
 /* あいうえお ジャンプ */
 .kana-jump{
   position:sticky;top:calc(59px + env(safe-area-inset-top));z-index:20;
-  display:flex;flex-wrap:wrap;gap:4px;padding:6px 0;margin:0 0 8px;
+  display:flex;flex-wrap:nowrap;gap:3px;padding:4px 0;margin:0 0 6px;
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
   background:var(--bg);
 }
+.kana-jump::-webkit-scrollbar{display:none}
 .kana-jump button{
-  min-width:34px;padding:5px 6px;font-size:13px;border:2px solid var(--frame);
+  flex:0 0 auto;min-width:28px;padding:3px 5px;font-size:12px;border:1px solid var(--frame);
   background:var(--panel);color:var(--text);cursor:pointer;
 }
 .kana-jump button:active{background:var(--text);color:var(--panel)}
-.kana-h{font-size:15px;color:var(--accent-2);margin:14px 0 8px;padding-bottom:3px;border-bottom:2px solid var(--line);scroll-margin-top:110px}
+.kana-h{font-size:14px;color:var(--accent-2);margin:12px 0 6px;padding-bottom:3px;border-bottom:2px solid var(--line);scroll-margin-top:110px}
 .kana-h .hint{font-size:11px}
 /* ねむっている たからばこ */
 .treasure{display:flex;gap:10px;align-items:center;margin:0 0 14px;padding:10px;border-color:var(--accent-2)}
@@ -2569,7 +2572,6 @@ function render(){
   }
   /* どうぐの 画面に いる あいだは、よこ むきの ならべかたを つかう */
   document.body.classList.toggle('tool-page', r.name === 'tool' || r.name === 'tools');
-  document.body.classList.toggle('has-gobar', r.name === 'home');
   /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
      いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
   const sameScreen = (render._routeKey === routeKey);
@@ -2788,7 +2790,7 @@ function viewHome(){
     '<h1 class="lede">きょうは なにで あそぶ？</h1>' + kaiBarHTML() + todayBar +
     (newArrivals().length ? '<button class="btn small" id="newArrivalBtn" style="width:100%;margin-bottom:12px">' +
       '▶ 新入荷（'+newArrivals().length+'）を みる</button>' : '') +
-    homeNoticeHTML() + treasureHTML() +
+    homeNoticeHTML() +
     '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>' +
       (kaiOn() ? 'きょうの たなには '+poolGames().length+'さくひんが ある。' : 'ずかんには '+ownedGames().length+'さくひんが とうろく されている。') + '</p>' +
 
@@ -2822,9 +2824,10 @@ function viewHome(){
 
     (hasFilter(f) ? '<p class="count">えらんだ じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '') +
 
-    '<div class="go-bar"><button class="btn hero" id="searchBtn"><span class="arrow">▶</span> おすすめを みる（'+n+'）</button></div>' +
+    '<button class="btn primary" id="searchBtn" style="margin-bottom:11px">▶ おすすめを みる（'+n+'）</button>' +
     '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
     '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、それに あう ゲームだけから ひきます。</p>' +
+    treasureHTML() +
   '</section>';
 }
 
@@ -2894,6 +2897,13 @@ function bindKanaJump(root){
     window.scrollTo({top: Math.max(0, top), behavior:'smooth'});
   });
 }
+const LIST_VIEWS = ['list', 'compact', 'grid'];
+/* ボタンには「おすと つぎに なる かたち」を だす（まえと おなじ きまり） */
+function listViewLabel(){
+  const i = LIST_VIEWS.indexOf(state.listView);
+  const next = LIST_VIEWS[((i < 0 ? 0 : i) + 1) % LIST_VIEWS.length];
+  return next === 'compact' ? '≡ 1ぎょう' : next === 'grid' ? '▦ しゃしん' : '▤ カード';
+}
 function compactRow(g){
   const marks = (isNewArrival(g) ? '<span class="badge new">新</span>' : '') +
     (isLent(g) ? '<span class="badge">かしだし</span>' : '') +
@@ -2937,16 +2947,15 @@ function treasureHTML(){
   const pool = napped.length ? napped : all;
   const seed = todayStr().split('-').join('') * 1;
   const g = pool[(seed + (state.treasureShift || 0)) % pool.length];
-  return '<div class="win treasure">' + thumbHTML(g, 'mini') +
-    '<div class="tr-body">' +
-      '<div class="catlabel" style="margin:0;color:var(--accent-2)">ねむっている たからばこ</div>' +
-      '<div class="tr-title">' + esc(g.title) + '</div>' +
-      '<div class="count" style="margin:0">' + esc(sleepLabel(g)) + '・' + playersText(g) + '・' + (Number(g.playTime)||0) + '分</div>' +
-      '<div class="chips" style="margin-top:6px">' +
-        '<button class="mini" data-open="' + esc(g.id) + '">ひらく</button>' +
-        (pool.length > 1 ? '<button class="mini" id="treasureNext">べつの はこ</button>' : '') +
-        '<button class="mini" id="treasureAll">ぜんぶ（' + all.length + '）</button>' +
-      '</div></div></div>';
+  return '<div class="divider"></div>' +
+    '<p class="count" style="margin:0 0 6px;color:var(--accent-2)">ねむっている たからばこ<span class="hint">しばらく あそんで いない ゲーム</span></p>' +
+    '<div class="btn-row" style="gap:8px">' +
+      '<button class="btn small" data-open="' + esc(g.id) + '" style="flex:1;min-width:0;justify-content:flex-start;text-align:left">' +
+        '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">▶ ' + esc(g.title) +
+        ' <span style="color:var(--muted);font-size:11px">' + esc(sleepLabel(g)) + '</span></span></button>' +
+      (pool.length > 1 ? '<button class="btn small" id="treasureNext" style="flex:0 0 auto">べつの はこ</button>' : '') +
+    '</div>' +
+    '<p class="count" style="margin:6px 0 0;text-align:right"><button class="mini" id="treasureAll">ねむっている ゲームを ぜんぶ みる（' + all.length + '）</button></p>';
 }
 
 /* 一覧は「けんさく欄」と「けっか」を わけて 持つ。
@@ -3055,16 +3064,14 @@ function viewList(){
       [['own','もっている'],['wish','ほしい'],['lent','かしだし中']]
         .concat(newArrivals().length ? [['new','新入荷（'+newArrivals().length+'）']] : [])
         .concat(requestedGames().length ? [['req','遊んでみたい（'+requestedGames().length+'）']] : [])
-        .concat(sleepingGames().length ? [['sleep','ねむっている（'+sleepingGames().length+'）']] : []).map(m =>
+        .concat(state.listMode === 'sleep' ? [['sleep','ねむっている（'+sleepingGames().length+'）']] : []).map(m =>
         '<button class="chip sm" data-listmode="'+m[0]+'" aria-pressed="'+(state.listMode===m[0])+'">'+m[1]+'</button>').join('') +
     '</div>' +
 
     '<div class="searchbar">' +
-      '<input type="search" id="listQ" placeholder="なまえで さがす（かな・漢字 どちらでも）" ' +
-        'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></div>' +
-    '<div class="listopts">' +
-      '<div class="chips">' + [['list','カード'],['compact','1ぎょう'],['grid','しゃしん']].map(v =>
-        '<button class="chip sm" data-listview="'+v[0]+'" aria-pressed="'+(state.listView===v[0])+'">'+v[1]+'</button>').join('') + '</div>' +
+      '<input type="search" id="listQ" placeholder="なまえで さがす" ' +
+        'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">' +
+      '<button class="mini" id="listViewBtn" style="flex:0 0 auto" aria-label="ならべかたを かえる">' + listViewLabel() + '</button>' +
       '<select id="listSort" aria-label="ならびじゅん">' +
         ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順',
          'replay:また あそびたい順','excitement:もりあがる順','plays:あそんだ かず順',
@@ -5993,7 +6000,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.23-j';
+const APP_VERSION = '2026.09.23-k';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7265,12 +7272,14 @@ function bind(r){
   }
   const listSort = document.getElementById('listSort');
   if(listSort) listSort.onchange = e => { state.listSort = e.target.value; updateListResults(); };
-  app.querySelectorAll('[data-listview]').forEach(b => b.onclick = () => {
-    state.listView = b.dataset.listview;
+  /* ならべかた：カード → 1ぎょう → しゃしん → カード … の じゅんに かわる */
+  const listViewBtn = document.getElementById('listViewBtn');
+  if(listViewBtn) listViewBtn.onclick = () => {
+    state.listView = LIST_VIEWS[(LIST_VIEWS.indexOf(state.listView) + 1) % LIST_VIEWS.length];
     store.write('bgl.listView', state.listView);
-    app.querySelectorAll('[data-listview]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.listview === state.listView)));
+    listViewBtn.textContent = listViewLabel();
     updateListResults();
-  });
+  };
   bindKanaJump(app);
 
   const rollBtn = document.getElementById('rollBtn');
