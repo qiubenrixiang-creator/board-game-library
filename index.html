@@ -874,7 +874,10 @@ const KEY = {
   shared:'bgl.sharedPlays',   /* みんなで わけあう ぼうけんの きろく */
   api:'bgl.apiBase',          /* さかばの サーバーの アドレス */
   acct:'bgl.account',         /* ぼうけんしゃの証（この スマホの もちぬし） */
-  net:'bgl.netPlays'          /* さかばから とどいた きろく */
+  net:'bgl.netPlays',         /* さかばから とどいた きろく */
+  gone:'bgl.gonePlays',       /* けした きろくの しるし */
+  welcome:'bgl.welcomeDone',  /* さいしょの あんないを すませたか */
+  frWait:'bgl.friendWait'     /* リンクで もらった ともだちコード */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -1885,7 +1888,8 @@ const state = {
   choubo: {members:[], items:[]},                   /* ちょうぼ */
   talk: {cat:'all', idx:-1, order:[], who:'', custom:[]},  /* うわさばなし */
   shared: {version:'', plays:[]},                   /* サイトから とどく みんなの きろく */
-  net: {since:'', plays:[]},                        /* さかばから とどいた きろく */
+  net: {since:'', plays:[], del:[]},                /* さかばから とどいた きろく */
+  gone: [],                                         /* けした きろく（もう かぞえない） */
   friends: {friends:[], incoming:[], outgoing:[]},  /* なかまの ようす */
   recShareOpen: false,                              /* きろくの やりとりを ひらいて いるか */
   recQuery: '',                                     /* きろく画面の けんさく */
@@ -1918,7 +1922,9 @@ function loadAll(){
   const cb = store.read(KEY.choubo, null);
   if(cb && typeof cb === 'object') state.choubo = {members:Array.isArray(cb.members)?cb.members:[], items:Array.isArray(cb.items)?cb.items:[]};
   const nt = store.read(KEY.net, null);
-  if(nt && Array.isArray(nt.plays)) state.net = {since:String(nt.since||''), plays:nt.plays};
+  if(nt && Array.isArray(nt.plays)) state.net = {since:String(nt.since||''), plays:nt.plays, del:Array.isArray(nt.del)?nt.del:[]};
+  const gn = store.read(KEY.gone, null);
+  if(Array.isArray(gn)) state.gone = gn;
   const sh = store.read(KEY.shared, null);
   if(sh && Array.isArray(sh.plays)) state.shared = {version:String(sh.version||''), plays:sh.plays};
   const tc = store.read(KEY.talk, null);
@@ -3966,6 +3972,28 @@ function sharedGame(r){
   return state.games.find(x => x.id === r.g) ||
     {id:r.g, title:r.t || '？', tags:Array.isArray(r.k) ? r.k : [], playTime:Number(r.p) || 0, difficulty:Number(r.f) || 0};
 }
+/* けした きろくの しるし。
+   けした きろくの コピーが さかばや サイトに のこって いても、
+   もう かぞえない ように する。 */
+function saveGone(){ store.write(KEY.gone, state.gone); }
+function isGone(key){ return state.gone.indexOf(key) >= 0; }
+function addGone(key){
+  if(!key || isGone(key)) return;
+  state.gone.push(key);
+  if(state.gone.length > 600) state.gone = state.gone.slice(-600);
+  saveGone();
+}
+/* きろくを けす とき（ばしょを とわず）に よぶ */
+function forgetPlay(gid, pl){
+  addGone(playKey(gid, pl));
+  if(pl && pl.sid){
+    if(!Array.isArray(state.net.del)) state.net.del = [];
+    if(state.net.del.indexOf(pl.sid) < 0) state.net.del.push(pl.sid);
+    state.net.plays = (state.net.plays || []).filter(r => r.id !== pl.sid);
+    saveNet();
+  }
+}
+
 /* ぼうけんしゃカードの もとに なる きろく（この スマホ＋みんなの きろく） */
 function cardPlays(){
   const out = [], seen = {};
@@ -3975,8 +4003,9 @@ function cardPlays(){
   }));
   const add = r => {
     const pl = sharedToPlay(r);
-    if(seen[playKey(r.g, pl)]) return;       /* おなじ きろくは かぞえない */
-    seen[playKey(r.g, pl)] = 1;
+    const key = playKey(r.g, pl);
+    if(seen[key] || isGone(key)) return;     /* おなじ きろく・けした きろくは かぞえない */
+    seen[key] = 1;
     out.push({g:sharedGame(r), pl:pl, mine:false});
   };
   (Array.isArray(state.net.plays) ? state.net.plays : []).forEach(add);
@@ -5003,52 +5032,124 @@ function toolAmidaHTML(){
   return html;
 }
 
+/* =========================================================
+   なかまの なまえ（人の いちらん）
+   ・じぶん  … この スマホの もちぬし（1人）
+   ・なかま  … じぶんの スマホを もって いて、きろくが とどく人
+   ・ゲスト  … なまえだけの人。きろくにも カードにも つかえる
+   ========================================================= */
+function friendList(){ return (state.friends && state.friends.friends) || []; }
+function personKind(name){
+  const a = account();
+  if(a && a.name === name) return 'me';
+  if(friendList().some(f => f.name === name)) return 'friend';
+  return 'guest';
+}
+function allPeople(){
+  const m = {};
+  const touch = n => { if(n && !(n in m)) m[n] = 0; };
+  state.players.forEach(p => touch(p.name));
+  friendList().forEach(f => touch(f.name));
+  const a = account(); if(a) touch(a.name);
+  cardPlays().forEach(r => playMembers(r.pl).forEach(n => { touch(n); m[n]++; }));
+  const rank = k => (k === 'me' ? 0 : k === 'friend' ? 1 : 2);
+  return Object.keys(m).map(n => ({
+    name: n, plays: m[n], kind: personKind(n),
+    listed: state.players.some(p => p.name === n)
+  })).sort((x, y) => rank(x.kind) - rank(y.kind) || y.plays - x.plays || x.name.localeCompare(y.name, 'ja'));
+}
+function personRowHTML(p){
+  const badge = p.kind === 'me' ? '<span class="badge">じぶん</span>'
+    : p.kind === 'friend' ? '<span class="badge" style="border-color:var(--accent-2);color:var(--accent-2)">なかま</span>'
+    : '<span class="badge" style="border-color:var(--muted);color:var(--muted)">ゲスト</span>';
+  let btns = '';
+  if(p.kind === 'friend') btns = '<button class="mini warn" data-frbyname="'+esc(p.name)+'">はずす</button>';
+  else if(p.kind === 'guest'){
+    btns = (isOnline() ? '<button class="mini" data-frlink="'+esc(p.name)+'">つなぐ</button>' : '') +
+      (p.listed ? '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>' +
+                  '<button class="mini warn" data-delplayer="'+esc(p.name)+'">けす</button>'
+                : '<button class="mini" data-addknown="'+esc(p.name)+'">＋</button>');
+  }else{
+    btns = '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>';
+  }
+  return '<div class="admin-row">' +
+    '<button class="t" data-go2="#/card/'+encodeURIComponent(p.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
+      '<b style="display:block;font-size:14px;font-weight:400">'+esc(p.name)+' '+badge+
+        ' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(p.plays)+' ▶</span></b>' +
+      '<span style="font-size:11px;color:var(--muted)">'+(p.plays ? p.plays+'かいの きろく' : 'きろくは まだ')+'</span></button>' +
+    btns + '</div>';
+}
+/* さいしょの 1かいだけ だす あんない */
+function welcomeHTML(){
+  if(account() || store.read(KEY.welcome, false)) return '';
+  const names = state.players.map(p => p.name);
+  return '<div class="win" style="margin-bottom:14px;border-color:var(--accent)">' +
+    '<p style="margin:0 0 8px;font-size:16px;color:var(--accent)">▶ さかばへ ようこそ</p>' +
+    (names.length
+      ? '<p class="count" style="margin:0 0 8px">この 中の どれが あなたですか？<br>えらぶと、これまでの きろくが あなたの ぼうけんしゃカードに なります。</p>' +
+        '<div class="chips" style="margin-bottom:8px">' + names.map(n =>
+          '<button class="chip sm" data-mename="'+esc(n)+'">'+esc(n)+'</button>').join('') + '</div>' +
+        '<p class="count" style="margin:0 0 6px">この 中に なければ、下に いれて ください。</p>'
+      : '<p class="count" style="margin:0 0 8px">あなたの なまえを おしえて ください。<br>ぼうけんしゃカードが つくられ、ともだちと きろくを わけあえます。</p>') +
+    '<div class="row">' +
+      '<input type="text" id="meName" placeholder="れい：ひなた" maxlength="20" style="flex:2">' +
+      '<button class="mini" id="meStart" style="flex:0 0 auto">はじめる</button></div>' +
+    '<p class="count" style="margin:8px 0 0"><button class="mini" id="meLater">あとで</button> ' +
+      'とうろく しなくても、ずかんは いままで どおり つかえます。</p>' +
+  '</div>';
+}
+/* じぶんの 証（ひとめで わかる ように 上に だす） */
+function selfCardHTML(){
+  const a = account();
+  if(!a) return '';
+  return '<div class="win" style="margin-bottom:14px;border-color:var(--accent)">' +
+      '<div class="row" style="align-items:baseline;gap:8px">' +
+        '<span style="flex:1;color:var(--accent);font-size:17px">▶ '+esc(a.name)+'</span>' +
+        '<span style="flex:0 0 auto;font-size:13px">Lv.'+advLevel(advPlays(a.name).length)+'</span></div>' +
+      '<div class="row" style="align-items:baseline;gap:8px;margin-top:6px">' +
+        '<span style="flex:0 0 auto;font-size:11px;color:var(--muted)">ともだちコード</span>' +
+        '<span style="flex:1;text-align:right;color:var(--accent);letter-spacing:3px;font-size:17px">'+esc(a.code || '')+'</span></div>' +
+      '<div class="btn-row" style="margin-top:10px">' +
+        '<button class="btn small" style="flex:1" id="acctCopy">コードを コピー</button>' +
+        '<button class="btn small" style="flex:1" id="frQrBtn">QRコードを だす</button></div>' +
+      '<div id="frQrBox" style="margin-top:10px"></div>' +
+    '</div>';
+}
 function toolNamesHTML(){
-  const list = state.players.slice().sort((a,b) => winCount(b.name) - winCount(a.name) || a.name.localeCompare(b.name,'ja'));
-  const unknown = unknownPlayers();
+  const people = allPeople();
+  const f = state.friends || {friends:[], incoming:[], outgoing:[]};
 
-  let html = '<p class="count" style="margin:0 0 10px">よく あそぶ 人を とうろく して おくと、きろくの「かった人」や くじ引きで えらぶ だけで よく なります。<br>' +
-    'なまえを なおすと、これまでの きろくも まとめて かわります。<br>' +
-    '<span style="color:var(--accent)">なまえを タップすると ぼうけんしゃカードが みられます。</span></p>' +
-    (account() ? '' :
-      '<div class="note" style="margin-bottom:12px">▼ この画面の いちばん したで「ぼうけんしゃの証」を つくると、' +
-      'ともだちと きろくを わけあえます。</div>') +
+  let html = welcomeHTML() + selfCardHTML();
 
-    '<div class="row" style="margin-bottom:14px">' +
+  if(f.incoming.length){
+    html += '<div class="catlabel" style="color:var(--accent)">▶ なかまの もうしこみが きて います</div>' +
+      f.incoming.map(x =>
+        '<div class="admin-row"><div class="t"><b style="font-size:14px;font-weight:400">'+esc(x.name)+'</b>' +
+        '<span style="font-size:11px;color:var(--muted)">'+esc(x.code||'')+'</span></div>' +
+        '<button class="mini" data-fraccept="'+esc(x.id)+'">なかまに なる</button>' +
+        '<button class="mini warn" data-frremove="'+esc(x.id)+'">ことわる</button></div>').join('');
+  }
+
+  html += '<div class="catlabel" style="margin-top:12px">いっしょに あそぶ 人（'+people.length+'）</div>' +
+    '<p class="count" style="margin:0 0 8px">なまえを タップすると ぼうけんしゃカードが みられます。</p>' +
+    (people.length ? people.map(personRowHTML).join('')
+      : '<div class="note">まだ だれも いません。</div>');
+
+  if(f.outgoing.length){
+    html += '<p class="count" style="margin:10px 0 0">へんじ まち：' +
+      f.outgoing.map(x => esc(x.name)).join('・') + '</p>';
+  }
+
+  html += '<div class="row" style="margin-top:12px">' +
       '<input type="text" id="newPlayer" placeholder="なまえを いれる" style="flex:2">' +
       '<button class="mini" id="addPlayerBtn" style="flex:0 0 auto">ついか</button></div>';
 
-  if(list.length){
-    html += list.map(p =>
-      '<div class="admin-row">' +
-        '<button class="t" data-go2="#/card/'+encodeURIComponent(p.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
-          '<b style="display:block;font-size:14px;font-weight:400">'+esc(p.name)+
-            ((account() && account().name === p.name) ? ' <span class="badge">じぶん</span>' : '') +
-            ' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(advPlays(p.name).length)+' ▶</span></b>' +
-          '<span style="font-size:11px;color:var(--muted)">'+esc(advTitle(adventurer(p.name)))+'・'+
-            (winCount(p.name) ? winCount(p.name)+'かい かって いる' : 'かちの きろくは まだ')+'</span></button>' +
-        '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>' +
-        '<button class="mini warn" data-delplayer="'+esc(p.name)+'">けす</button>' +
-      '</div>').join('');
-  }else{
-    html += '<div class="note">まだ とうろく されて いません。</div>';
-  }
-
-  if(unknown.length){
-    html += '<div class="divider"></div>' +
-      '<h2 class="sec">きろくに ある なまえ</h2>' +
-      '<p class="count">きろくには あるけれど、まだ とうろくして いない なまえです。カードは いま すぐ みられます。</p>' +
-      unknown.map(u =>
-        '<div class="admin-row">' +
-          '<button class="t" data-go2="#/card/'+encodeURIComponent(u.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
-            '<b style="display:block;font-size:14px;font-weight:400">'+esc(u.name)+' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(u.count)+' ▶</span></b>' +
-            '<span style="font-size:11px;color:var(--muted)">'+u.count+'かいの きろく</span></button>' +
-          '<button class="mini" data-addknown="'+esc(u.name)+'">とうろく</button>' +
-        '</div>').join('');
-  }
-  if(sharedOnlyCount()){
-    html += '<div class="note" style="margin-top:12px">みんなで わけあって いる きろくを '+sharedOnlyCount()+'けん うけとって います。' +
-      'スマホを かえても、おなじ なまえなら レベルは つづきます。</div>';
+  if(isOnline()){
+    html += '<div class="row" style="margin-top:8px">' +
+        '<input type="text" id="frCode" placeholder="ともだちコード" maxlength="8" ' +
+          'autocapitalize="characters" autocorrect="off" spellcheck="false" style="flex:2;letter-spacing:2px">' +
+        '<button class="mini" id="frAdd" style="flex:0 0 auto">つなぐ</button></div>' +
+      '<div id="frStatus"></div>';
   }
 
   html += onlineHTML();
@@ -5340,6 +5441,15 @@ function playsToPush(){
 /* さかばと きろくを やりとりする */
 async function syncNet(){
   if(!isOnline()) return {pushed:0, got:0};
+  /* さきに「けした きろく」を つたえる */
+  const del = Array.isArray(state.net.del) ? state.net.del.slice() : [];
+  if(del.length){
+    for(let i = 0; i < del.length; i += 100){
+      await api('/api/plays/delete', {method:'POST', body:{ids: del.slice(i, i + 100)}});
+    }
+    state.net.del = [];
+    saveNet();
+  }
   let pushed = 0;
   const pending = playsToPush();
   if(pending.length){
@@ -5356,8 +5466,14 @@ async function syncNet(){
     const d = await api('/api/plays?since=' + encodeURIComponent(state.net.since || ''));
     const byId = {};
     (state.net.plays || []).forEach(r => { byId[r.id] = r; });
-    (d.plays || []).forEach(r => { byId[r.id] = r; got++; });
-    state.net = {since: d.since || state.net.since, plays: Object.keys(byId).map(k => byId[k])};
+    (d.plays || []).forEach(r => {
+      if(r.x){ delete byId[r.id]; }          /* あいてが けした きろく */
+      else { byId[r.id] = r; }
+      got++;
+    });
+    state.net = {since: d.since || state.net.since,
+                 plays: Object.keys(byId).map(k => byId[k]),
+                 del: state.net.del || []};
     saveNet();
     if(!d.more) break;
   }
@@ -5377,55 +5493,74 @@ async function refreshFriends(){
   const d = await api('/api/friends');
   state.friends = {friends:d.friends || [], incoming:d.incoming || [], outgoing:d.outgoing || []};
 }
-function friendRowHTML(f, kind){
-  const lv = advLevel(advPlays(f.name).length);
-  return '<div class="admin-row">' +
-    '<button class="t" data-go2="#/card/'+encodeURIComponent(f.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
-      '<b style="display:block;font-size:14px;font-weight:400">'+esc(f.name)+
-        (kind === 'ok' ? ' <span style="color:var(--accent);font-size:12px">Lv.'+lv+' ▶</span>' : '') + '</b>' +
-      '<span style="font-size:11px;color:var(--muted)">'+esc(f.code || '')+'</span></button>' +
-    (kind === 'in' ? '<button class="mini" data-fraccept="'+esc(f.id)+'">なかまに なる</button>' : '') +
-    '<button class="mini warn" data-frremove="'+esc(f.id)+'">' + (kind === 'ok' ? 'はずす' : 'ことわる') + '</button>' +
-  '</div>';
-}
-function friendsHTML(){
-  const f = state.friends || {friends:[], incoming:[], outgoing:[]};
-  let html = '<div class="catlabel" style="margin-top:14px">なかま（'+f.friends.length+'人）</div>';
-  html += f.friends.length ? f.friends.map(x => friendRowHTML(x, 'ok')).join('')
-    : '<div class="note" style="margin-bottom:8px">まだ なかまが いません。ともだちコードを おしえあって ください。</div>';
-  if(f.incoming.length){
-    html += '<div class="catlabel" style="margin-top:12px;color:var(--accent)">▶ もうしこみが きて います（'+f.incoming.length+'）</div>' +
-      f.incoming.map(x => friendRowHTML(x, 'in')).join('');
-  }
-  if(f.outgoing.length){
-    html += '<div class="catlabel" style="margin-top:12px">へんじ まち（'+f.outgoing.length+'）</div>' +
-      f.outgoing.map(x => friendRowHTML(x, 'out')).join('');
-  }
-  html += '<div class="row" style="margin-top:12px">' +
-      '<input type="text" id="frCode" placeholder="ともだちコード" maxlength="8" ' +
-        'autocapitalize="characters" autocorrect="off" spellcheck="false" style="flex:2;letter-spacing:2px">' +
-      '<button class="mini" id="frAdd" style="flex:0 0 auto">なかまに なる</button></div>' +
-    '<div id="frStatus"></div>';
-  return html;
-}
-function paintFriends(){
-  const box = document.getElementById('friendsBox');
-  if(!box) return;
-  const keep = (document.getElementById('frCode') || {}).value || '';
-  box.innerHTML = friendsHTML();
-  const inp = document.getElementById('frCode');
-  if(inp) inp.value = keep;
-  bindFriends();
-}
 function frStatus(msg, kind){
   const el = document.getElementById('frStatus');
   if(!el) return;
   const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
   el.innerHTML = msg ? '<p class="count" style="color:'+color+';margin:8px 0 0">'+esc(msg)+'</p>' : '';
 }
+/* ともだちコードを おくって なかまに なる。
+   fromName が あれば、その ゲストの なまえを あいての なまえに そろえる。 */
+async function friendConnect(code, fromName){
+  const d = await api('/api/friend/add', {method:'POST', body:{code:String(code||'').trim().toUpperCase()}});
+  if(fromName && d.name && fromName !== d.name && d.status === 'ok'){
+    renamePlayer(fromName, d.name);          /* これまでの きろくも いっしょに そろえる */
+  }
+  await refreshFriends();
+  if(d.status === 'ok') await syncNet();
+  return d;
+}
+/* なまえを きめて、さかばに とうろく する（できない ときは この スマホだけ） */
+async function becomeAdventurer(name){
+  const n = String(name || '').trim();
+  if(!n) throw new Error('なまえを いれて ください');
+  if(!state.players.some(p => p.name === n)) addPlayer(n);
+  store.write(KEY.welcome, true);
+  if(!apiBase()) return {offline:true, name:n};
+  const d = await api('/api/signup', {method:'POST', body:{name:n}, auth:false});
+  saveAccount({id:d.id, name:d.name, code:d.code, token:d.token});
+  await flushFriendWait();
+  return d;
+}
+/* リンクや QRから もらった ともだちコードを つかう */
+function friendLinkUrl(){
+  const a = account(), base = publicUrl();
+  if(!a || !a.code || !base) return '';
+  return base + '?fr=' + a.code;
+}
+function catchFriendCode(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
+  const code = String(q.get('fr') || '').trim().toUpperCase();
+  if(code) store.write(KEY.frWait, code);
+  if(code){ try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){} }
+}
+async function flushFriendWait(){
+  const code = store.read(KEY.frWait, '');
+  if(!code || !isOnline()) return;
+  store.write(KEY.frWait, '');
+  try{
+    const d = await friendConnect(code);
+    toast(d.name + ' さんに ' + d.message);
+  }catch(e){ /* もう なかま だった ばあいなど */ }
+}
+function bindWelcome(){
+  const start = document.getElementById('meStart');
+  const inp = document.getElementById('meName');
+  const go2 = async name => {
+    try{
+      const d = await becomeAdventurer(name);
+      render();
+      toast(d.offline ? (d.name + ' で はじめました') : ('ようこそ、' + d.name + ' さん'));
+    }catch(e){ toast(e.message); }
+  };
+  if(start) start.onclick = () => go2(inp ? inp.value : '');
+  app.querySelectorAll('[data-mename]').forEach(b => b.onclick = () => go2(b.dataset.mename));
+  const later = document.getElementById('meLater');
+  if(later) later.onclick = () => { store.write(KEY.welcome, true); render(); };
+}
+
 function bindFriends(){
-  const box = document.getElementById('friendsBox');
-  if(!box) return;
   const add = document.getElementById('frAdd');
   if(add) add.onclick = async () => {
     const inp = document.getElementById('frCode');
@@ -5433,31 +5568,51 @@ function bindFriends(){
     if(!code) return frStatus('ともだちコードを いれて ください', 'ng');
     frStatus('おくって います…');
     try{
-      const d = await api('/api/friend/add', {method:'POST', body:{code}});
+      const d = await friendConnect(code);
       if(inp) inp.value = '';
-      await refreshFriends();
-      paintFriends();
-      frStatus(d.name + ' さんに ' + d.message, 'ok');
-      if(d.status === 'ok'){ await syncNet(); render(); }
+      render();
+      toast(d.name + ' さんに ' + d.message);
     }catch(e){ frStatus(e.message, 'ng'); }
   };
-  box.querySelectorAll('[data-fraccept]').forEach(b => b.onclick = async () => {
+  /* ゲストの 行から「つなぐ」 */
+  app.querySelectorAll('[data-frlink]').forEach(b => b.onclick = () => {
+    const who = b.dataset.frlink;
+    askText(who + ' さんの ともだちコードは？', '', async v => {
+      const code = String(v || '').trim().toUpperCase();
+      if(!code) return;
+      try{
+        const d = await friendConnect(code, who);
+        render();
+        toast(d.name + ' さんに ' + d.message);
+      }catch(e){ toast(e.message); }
+    });
+  });
+  app.querySelectorAll('[data-fraccept]').forEach(b => b.onclick = async () => {
     try{
       await api('/api/friend/accept', {method:'POST', body:{id:b.dataset.fraccept}});
       await refreshFriends(); await syncNet(); render();
       toast('なかまに なりました');
-    }catch(e){ frStatus(e.message, 'ng'); }
+    }catch(e){ toast(e.message); }
   });
-  box.querySelectorAll('[data-frremove]').forEach(b => b.onclick = () => {
+  app.querySelectorAll('[data-frremove]').forEach(b => b.onclick = () => {
     ask('この人との つながりを けしますか？', async () => {
       try{
         await api('/api/friend/remove', {method:'POST', body:{id:b.dataset.frremove}});
-        await refreshFriends(); paintFriends();
-      }catch(e){ frStatus(e.message, 'ng'); }
+        await refreshFriends(); render();
+      }catch(e){ toast(e.message); }
+    });
+  });
+  app.querySelectorAll('[data-frbyname]').forEach(b => b.onclick = () => {
+    const f = friendList().find(x => x.name === b.dataset.frbyname);
+    if(!f) return;
+    ask(f.name + ' さんとの つながりを けしますか？\nなまえは のこります。', async () => {
+      try{
+        await api('/api/friend/remove', {method:'POST', body:{id:f.id}});
+        await refreshFriends(); render();
+      }catch(e){ toast(e.message); }
     });
   });
 }
-
 function acctStatus(msg, kind){
   const el = document.getElementById('acctStatus');
   if(!el) return;
@@ -5467,60 +5622,47 @@ function acctStatus(msg, kind){
 function onlineHTML(){
   const base = apiBase();
   const a = account();
-  let html = '<div class="divider"></div><h2 class="sec">ぼうけんしゃの証</h2>' +
-    '<p class="count">さかばの サーバーに とうろく すると、ともだちと きろくを わけあえます。' +
-    'スマホを かえても、ひきつげば レベルは つづきます。<br>' +
-    'とうろく しなくても、ずかんは いままで どおり つかえます。</p>' +
 
-    '';
-
-  if(a && a.token){
-    html += '<div class="win" style="margin-bottom:10px">' +
-        '<p style="margin:0 0 6px;font-size:17px;color:var(--accent)">▶ '+esc(a.name || '')+'</p>' +
-        '<div class="adv-info" style="margin:0">' +
-          '<span>ともだちコード</span><b style="letter-spacing:2px;color:var(--accent)">'+esc(a.code || '')+'</b>' +
-          '<span>ぼうけんしゃID</span><b style="font-size:11px">'+esc(a.id || '')+'</b>' +
-        '</div>' +
-        '<p class="count" style="margin:8px 0 0">ともだちコードは、なかまに なる ときに おしえる ばんごうです。</p>' +
-      '</div>' +
-      '<div class="btn-row" style="margin-bottom:8px">' +
-        '<button class="btn small" style="flex:1" id="acctRename">なまえを かえる</button>' +
-        '<button class="btn small" style="flex:1" id="acctCopy">ともだちコードを コピー</button></div>' +
-      '<div id="friendsBox">' + friendsHTML() + '</div>' +
-      '<div class="divider"></div>' +
-      '<button class="btn primary" id="netSync" style="margin-bottom:6px">さかばと きろくを やりとりする</button>' +
-      '<p class="count" style="margin:0 0 12px">じぶんの きろくを あずけ、なかまの きろくを うけとります。' +
-        (netCount() ? 'いま '+netCount()+'けん うけとって います。' : '') + '</p>' +
-      '<details style="margin-bottom:8px"><summary style="font-size:12px;color:var(--muted)">スマホを かえる・はなれる</summary>' +
+  if(!a){
+    return '<div class="divider"></div>' +
+      '<details><summary style="font-size:13px">さかばの せってい（とうろく・ひきつぎ）</summary>' +
         '<div style="margin-top:10px">' +
-        '<button class="btn small" id="acctTransfer" style="width:100%;margin-bottom:8px">べつの スマホに ひきつぐ</button>' +
-        '<div id="acctTransferBox"></div>' +
-        '<button class="btn small danger" id="acctLogout" style="width:100%;margin-bottom:6px">この スマホから はなれる</button>' +
-        '<p class="count" style="margin:0">はなれる まえに、かならず ひきつぎコードを つくって ください。</p></div>' +
-      '</details>';
-  }else{
-    html += '<div class="win" style="margin-bottom:10px">' +
-        '<label class="lbl" for="acctName">なまえ</label>' +
-        '<input type="text" id="acctName" placeholder="れい：ひなた" maxlength="20">' +
-        '<p class="count" style="margin:6px 0 0">きろくで つかって いる なまえと おなじに すると、これまでの ぼうけんが つながります。</p>' +
-      '</div>' +
-      '<button class="btn primary" id="acctSignup" style="margin-bottom:8px">さかばに とうろく する</button>' +
-      '<details style="margin-bottom:6px"><summary style="font-size:13px">まえの スマホから ひきつぐ</summary>' +
-        '<div class="win" style="margin-top:10px">' +
-          '<label class="lbl" for="acctClaim">ひきつぎコード</label>' +
-          '<input type="text" id="acctClaim" placeholder="れい：JPW6877S" autocapitalize="characters" ' +
-            'autocorrect="off" spellcheck="false" style="letter-spacing:2px">' +
-          '<button class="btn small" id="acctClaimBtn" style="width:100%;margin-top:8px">ひきつぐ</button>' +
+        '<p class="count" style="margin:0 0 8px">さかばに とうろく すると、ともだちと きろくを わけあえます。' +
+          'スマホを かえても、ひきつげば レベルは つづきます。</p>' +
+        '<div class="win" style="margin-bottom:10px">' +
+          '<label class="lbl" for="acctName">なまえ</label>' +
+          '<input type="text" id="acctName" placeholder="れい：ひなた" maxlength="20">' +
+        '</div>' +
+        '<button class="btn small primary" id="acctSignup" style="width:100%;margin-bottom:8px">さかばに とうろく する</button>' +
+        '<label class="lbl" for="acctClaim">まえの スマホから ひきつぐ</label>' +
+        '<div class="row"><input type="text" id="acctClaim" placeholder="ひきつぎコード" ' +
+          'autocapitalize="characters" autocorrect="off" spellcheck="false" style="flex:2;letter-spacing:2px">' +
+          '<button class="mini" id="acctClaimBtn" style="flex:0 0 auto">ひきつぐ</button></div>' +
+        '<div id="acctStatus"></div>' + apiBoxHTML(base) +
         '</div></details>';
   }
-  html += '<div id="acctStatus"></div>' +
-    '<details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted)">さかばの アドレス（ふつうは さわらなくて だいじょうぶ）</summary>' +
+
+  return '<div class="divider"></div>' +
+    '<details><summary style="font-size:13px">さかばの せってい（ひきつぎ・やりとり）</summary>' +
+      '<div style="margin-top:10px">' +
+      '<button class="btn small" id="acctRename" style="width:100%;margin-bottom:8px">なまえを かえる</button>' +
+      '<button class="btn small primary" id="netSync" style="width:100%;margin-bottom:6px">さかばと きろくを やりとりする</button>' +
+      '<p class="count" style="margin:0 0 12px">ふだんは じどうで やりとり します。' +
+        (netCount() ? 'いま '+netCount()+'けん うけとって います。' : '') + '</p>' +
+      '<button class="btn small" id="acctTransfer" style="width:100%;margin-bottom:8px">べつの スマホに ひきつぐ</button>' +
+      '<div id="acctTransferBox"></div>' +
+      '<button class="btn small danger" id="acctLogout" style="width:100%;margin-bottom:6px">この スマホから はなれる</button>' +
+      '<p class="count" style="margin:0 0 8px">はなれる まえに、かならず ひきつぎコードを つくって ください。</p>' +
+      '<div id="acctStatus"></div>' + apiBoxHTML(base) +
+      '</div></details>';
+}
+function apiBoxHTML(base){
+  return '<details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted)">さかばの アドレス（ふつうは さわらなくて だいじょうぶ）</summary>' +
       '<div class="form-group" style="margin-top:10px">' +
         '<input type="text" id="apiBase" value="'+esc(base)+'" placeholder="https://〜.workers.dev" ' +
         'autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
       '<button class="mini" id="acctHealth">さかばが いきて いるか ためす</button>' +
     '</details>';
-  return html;
 }
 function bindOnline(){
   const nameIn = document.getElementById('acctName');
@@ -5632,7 +5774,7 @@ function bindOnline(){
     'この スマホから ぼうけんしゃの証を けします。\nひきつぎコードが ないと もどれません。',
     () => {
       saveAccount(null);
-      state.net = {since:'', plays:[]}; saveNet();
+      state.net = {since:'', plays:[], del:[]}; saveNet();
       state.friends = {friends:[], incoming:[], outgoing:[]};
       render(); toast('はなれました');
     });
@@ -5768,7 +5910,9 @@ function viewAdmin(){
       '<input type="checkbox" id="localOnly" '+(localOnly?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
       '<span style="font-size:13px">この スマホの へんしゅうを ゆうせんする<br>' +
       '<span style="color:var(--muted);font-size:11.5px">ゲームを ついか・へんしゅうする 人（かんりする 人）は ONに して ください。つくりかけの ないようが きえなく なります。</span></span></label>' +
-    onlineHTML() +
+    '<div class="divider"></div><h2 class="sec">ぼうけんしゃの証・なかま</h2>' +
+    '<p class="count">じぶんの ぼうけんしゃの証と なかまは「どうぐ → なかまの なまえ」に あります。</p>' +
+    '<button class="btn small" data-go2="#/tool/names" style="width:100%;margin-bottom:16px">なかまの なまえへ</button>' +
 
     '<div class="divider"></div><h2 class="sec">サイトの ばしょを おしえる</h2>' +
     '<p class="count">この サイトの アドレスと QRコードを だせます。その場で ともだちの スマホで よみとって もらえます。</p>' +
@@ -6007,8 +6151,8 @@ function publicUrl(){
   if(location.protocol === 'file:') return '';
   return location.origin + location.pathname;
 }
-function showQR(url){
-  const box = document.getElementById('qrBox');
+function showQR(url, boxId){
+  const box = document.getElementById(boxId || 'qrBox');
   if(!box) return;
   if(!/^https?:\/\//.test(url)){
     box.innerHTML = '<div class="note">インターネットに こうかいした あとの アドレス（https:// から はじまる もの）を いれて ください。<br>' +
@@ -6240,6 +6384,7 @@ function bind(r){
     const photos = (state.playPhotos || []).slice();
     const u = collectMembers(w);
     const keepSid = ps[i].sid;
+    const beforeKey = playKey(g.id, ps[i]);
     ps[i] = {
       sid: keepSid,
       d: (document.getElementById('recD')||{value:''}).value || ps[i].d || todayStr(),
@@ -6249,6 +6394,9 @@ function bind(r){
       u: u.length ? u : undefined,
       p: photos.length ? photos : undefined
     };
+    /* ないようが かわったら、まえの かたちは もう かぞえない */
+    if(playKey(g.id, ps[i]) !== beforeKey) addGone(beforeKey);
+    ps[i].pushed = 0;                      /* なおした ぶんを あずけなおす */
     g.plays = ps;
     state.recEdit = '';
     state.playPhotos = [];
@@ -6262,9 +6410,11 @@ function bind(r){
     if(!g) return;
     ask('この きろくを けしますか？', () => {
       const ps = playsOf(g).slice();
+      const gone = ps[i];
       ps.splice(i, 1);
       g.plays = ps;
-      saveGames(); render(); toast('きろくを けしました');
+      if(gone) forgetPlay(g.id, gone);
+      saveGames(); render(); autoSync(); toast('きろくを けしました');
     });
   });
 
@@ -6853,7 +7003,11 @@ function bind(r){
     if(!g) return;
     const key = b.dataset.delplay;
     const i = playsOf(g).findIndex(pl => ((pl.d||'')+'|'+(pl.w||'')) === key);
-    if(i >= 0){ g.plays.splice(i,1); saveGames(); render(); toast('けしました'); }
+    if(i >= 0){
+      forgetPlay(g.id, playsOf(g)[i]);
+      g.plays.splice(i,1);
+      saveGames(); render(); autoSync(); toast('けしました');
+    }
   });
 
   app.querySelectorAll('[data-playzoom]').forEach(im => im.onclick = () => {
@@ -7243,7 +7397,14 @@ function bind(r){
     if(!sound.bgmOn) setBgmOn(true);          /* きょくを えらんだら ならす */
     toast(currentTrack().name + ' に しました');
   });
+  bindWelcome();
   bindOnline();
+  const frQr = document.getElementById('frQrBtn');
+  if(frQr) frQr.onclick = () => {
+    const url = friendLinkUrl();
+    if(!url) return toast('こうかいした サイト（https://〜）で つかえます');
+    showQR(url, 'frQrBox');
+  };
   const publishBtn = document.getElementById('publishBtn');
   if(publishBtn) publishBtn.onclick = publishToSite;
   const recPubBtn = document.getElementById('recPubBtn');
@@ -7411,8 +7572,9 @@ function removeGame(id){
   const g = state.games.find(x => x.id === id);
   if(!g) return;
   ask('「'+g.title+'」を けします。\nよろしいですか？', () => {
+    playsOf(g).forEach(pl => forgetPlay(g.id, pl));
     state.games = state.games.filter(x => x.id !== id);
-    saveGames(); toast('けしました'); go('#/admin'); render();
+    saveGames(); toast('けしました'); go('#/admin'); render(); autoSync();
   });
 }
 
@@ -7810,6 +7972,7 @@ document.addEventListener('click', e => {
 initTheme();
 loadAll();
 adoptKaiFromUrl();
+catchFriendCode();
 render();
 syncPublished();
 syncSharedPlays();
@@ -7817,6 +7980,7 @@ syncSharedPlays();
 if(isOnline()){
   (async () => {
     try{
+      await flushFriendWait();
       const r = await syncNet();
       await refreshFriends();
       if(r.got || r.pushed || (state.friends.incoming || []).length) render();
