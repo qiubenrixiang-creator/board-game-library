@@ -447,15 +447,20 @@ h2.sec::before{content:"■ ";font-size:12px}
 }
 .memo-check.on{border-color:var(--accent)}
 .vote-pick-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
   max-height:280px;overflow:auto;margin-bottom:10px;padding:2px;
 }
-@media (max-width:360px){.vote-pick-grid{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:360px){.vote-pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vote-pick-grid.tall{max-height:420px}
 .vote-pick{
-  display:flex;flex-direction:column;gap:4px;padding:5px;
+  display:flex;flex-direction:column;gap:4px;padding:5px;min-width:0;position:relative;
   background:var(--panel);border:3px solid var(--frame);color:var(--text);cursor:pointer;text-align:center;
 }
 .vote-pick.on{border-color:var(--accent);color:var(--accent)}
+.vote-pick.on::after{
+  content:"✓";position:absolute;top:2px;right:2px;width:20px;height:20px;line-height:20px;
+  background:var(--accent);color:var(--panel);font-size:13px;text-align:center;
+}
 .vote-pick:active{transform:translate(1px,1px)}
 .vote-pick-name{
   font-size:10.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -2311,7 +2316,7 @@ function playersText(g){
 }
 function thumbHTML(g, cls){
   const c = 'thumb' + (cls ? ' ' + cls : '');
-  if(g.images && g.images[0]) return '<div class="'+c+'"><img src="'+esc(g.images[0])+'" alt=""></div>';
+  if(g.images && g.images[0]) return '<div class="'+c+'"><img src="'+esc(g.images[0])+'" alt="" loading="lazy"></div>';
   return '<div class="'+c+'"><span class="glyph">'+esc((g.title||'？').trim().charAt(0))+'</span></div>';
 }
 
@@ -3543,12 +3548,8 @@ function logListHTML(){
   return '<p class="count">えらんで いる ゲーム：'+picked.length+
       (q ? '／「'+esc(state.logQuery)+'」で しぼりこみ中（'+list.length+'）' : '') +
       (wishCount ? '<br>☆が ついて いるのは まだ もって いない ゲームです。' : '') + '</p>' +
-    '<div class="chips" style="margin-bottom:14px">' +
-      (list.length ? list.slice(0,60).map(g =>
-        '<button class="chip sm" data-logpick="'+esc(g.id)+'" aria-pressed="'+(picked.indexOf(g.id)>=0)+'">' +
-        (isWish(g) ? '☆' : '') + esc(g.title)+'</button>').join('')
-      : '<span class="count">みつかりません でした。<br>ずかんに ない ゲームは、さきに ずかんへ ついか して ください。</span>') +
-    '</div>';
+    (list.length ? gamePickGridHTML(list.slice(0,60), {attr:'logpick', on:g => picked.indexOf(g.id) >= 0, tall:true, wishMark:true})
+      : '<p class="count" style="margin-bottom:14px">みつかりません でした。<br>ずかんに ない ゲームは、さきに ずかんへ ついか して ください。</p>');
 }
 
 function viewPlayLog(){
@@ -3619,6 +3620,8 @@ function bindLogPicks(box){
     const i = state.logPicked.indexOf(id);
     if(i >= 0) state.logPicked.splice(i,1); else state.logPicked.push(id);
     b.setAttribute('aria-pressed', String(i < 0));
+    b.classList.toggle('on', i < 0);
+    playClick();
     const cnt = box.querySelector('.count');
     if(cnt) cnt.textContent = cnt.textContent.replace(/：\d+/, '：' + state.logPicked.length);
     const btn = document.getElementById('logSaveBtn');
@@ -3635,11 +3638,8 @@ function lendListHTML(){
 
   const picked = state.games.find(g => g.id === state.lendPick);
   return (picked ? '<p class="count" style="margin:0 0 8px">えらんだ ゲーム：<span style="color:var(--accent)">'+esc(picked.title)+'</span></p>' : '') +
-    '<div class="chips" style="margin-bottom:14px;max-height:190px;overflow:auto">' +
-      (list.length ? list.slice(0,60).map(g =>
-        '<button class="chip sm" data-lendpick="'+esc(g.id)+'" aria-pressed="'+(g.id===state.lendPick)+'">'+esc(g.title)+'</button>').join('')
-      : '<span class="count">みつかりません でした。</span>') +
-    '</div>';
+    (list.length ? gamePickGridHTML(list.slice(0,60), {attr:'lendpick', on:g => g.id === state.lendPick})
+      : '<p class="count" style="margin-bottom:14px">みつかりません でした。</p>');
 }
 
 function kaiSelectedHTML(){
@@ -3667,11 +3667,8 @@ function kaiPickHTML(){
   let list = ownedGames();
   if(q) list = list.filter(g => searchIndex(g).includes(q));
   list = list.slice().sort((a,b) => a.title.localeCompare(b.title,'ja'));
-  return '<div class="chips" id="kaiChipBox" style="max-height:300px;overflow:auto">' +
-    (list.length ? list.map(g =>
-      '<button class="chip sm" data-kaipick="'+esc(g.id)+'" aria-pressed="'+kaiHas(g.id)+'">'+esc(g.title)+'</button>').join('')
-      : '<span class="count">みつかりません でした。</span>') +
-  '</div>';
+  return list.length ? gamePickGridHTML(list, {attr:'kaipick', on:g => kaiHas(g.id), id:'kaiChipBox', tall:true})
+    : '<div id="kaiChipBox"><span class="count">みつかりません でした。</span></div>';
 }
 function updateKaiParts(){
   const pk0 = document.getElementById('kaiPicks');
@@ -3700,7 +3697,7 @@ function toggleKaiPick(id){
   updateKaiParts();
 }
 function bindKaiParts(box){
-  box.querySelectorAll('[data-kaipick]').forEach(b => b.onclick = () => toggleKaiPick(b.dataset.kaipick));
+  box.querySelectorAll('[data-kaipick]').forEach(b => b.onclick = () => { toggleKaiPick(b.dataset.kaipick); playClick(); });
   box.querySelectorAll('[data-kaidrop]').forEach(b => b.onclick = () => toggleKaiPick(b.dataset.kaidrop));
   box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('#/game/' + b.dataset.open));
 }
@@ -4491,7 +4488,11 @@ function bindLendPicks(box){
   box.querySelectorAll('[data-lendpick]').forEach(b => b.onclick = () => {
     /* 画面ぜんたいを 作りなおすと 入力中の なまえが きえるので、ここだけ 更新する */
     state.lendPick = (state.lendPick === b.dataset.lendpick) ? '' : b.dataset.lendpick;
+    const grid = b.closest('.vote-pick-grid'), y = grid ? grid.scrollTop : 0;
     updateLendList();
+    const g2 = document.querySelector('#lendResults .vote-pick-grid');
+    if(g2) g2.scrollTop = y;
+    playClick();
   });
 }
 
@@ -5824,6 +5825,20 @@ function toolMemoHTML(){
    こうほを ならべて、みんなで タップして きめる。 */
 function saveVote(){ store.write(KEY.vote, state.vote); }
 
+/* ずかんから ゲームを えらぶ ところ（しゃしん つき・どの どうぐでも おなじ かたち）
+   opt: {attr:'logpick', key:g=>g.id, on:g=>bool, id:'…', tall:true, wishMark:true} */
+function gamePickGridHTML(list, opt){
+  const key = opt.key || (g => g.id);
+  return '<div class="vote-pick-grid'+(opt.tall ? ' tall' : '')+'"'+(opt.id ? ' id="'+opt.id+'"' : '')+'>' +
+    list.map(g => {
+      const on = !!opt.on(g);
+      return '<button type="button" class="vote-pick'+(on ? ' on' : '')+'" data-'+opt.attr+'="'+esc(key(g))+'" aria-pressed="'+on+'">' +
+        thumbHTML(g, 'tile') +
+        '<span class="vote-pick-name">'+(opt.wishMark && isWish(g) ? '☆' : '')+esc(g.title)+'</span>' +
+      '</button>';
+    }).join('') +
+  '</div>';
+}
 /* ずかんから えらぶ ところ（しゃしん つき）。
    ここだけを 入れかえる ので、字を うって いる とちゅうでも キーボードが とじない。 */
 function votePickListHTML(){
@@ -5835,14 +5850,8 @@ function votePickListHTML(){
 
   return (picked.length ?
       '<p class="count" style="margin:0 0 6px">えらんだ ゲーム（'+picked.length+'）：' + esc(picked.join('、')) + '</p>' : '') +
-    '<div class="vote-pick-grid">' +
-      (list.length ? list.map(g =>
-        '<button class="vote-pick'+(picked.indexOf(g.title) >= 0 ? ' on' : '')+'" data-votepick="'+esc(g.title)+'">' +
-          thumbHTML(g, 'tile') +
-          '<span class="vote-pick-name">'+esc(g.title)+'</span>' +
-        '</button>').join('')
-      : '<span class="count">みつかりません でした。</span>') +
-    '</div>';
+    (list.length ? gamePickGridHTML(list, {attr:'votepick', key:g => g.title, on:g => picked.indexOf(g.title) >= 0})
+      : '<span class="count">みつかりません でした。</span>');
 }
 
 function toolVoteHTML(){
@@ -6005,7 +6014,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-c';
+const APP_VERSION = '2026.09.24-d';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
