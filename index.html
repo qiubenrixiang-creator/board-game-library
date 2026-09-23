@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Board Game Library｜きょうは なにで あそぶ？</title>
+<title>BOARD GAME LIBRARY｜きょうは なにで あそぶ？</title>
 <meta name="description" content="にんずうと じかんと きぶんを えらぶだけ。30びょうで きょうの ボードゲームが きまる ずかん。">
 <meta name="theme-color" content="#141C3A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="ボドゲずかん">
+<meta name="apple-mobile-web-app-title" content="BOARD GAME LIBRARY">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
@@ -156,7 +156,7 @@ img{image-rendering:auto}
 @media (max-width:560px){
   .brand .txt-long{display:none}
   .brand .txt-short{display:inline}
-  .brand{font-size:14px;letter-spacing:.04em}
+  .brand{font-size:12px;letter-spacing:.02em;gap:7px;white-space:nowrap}
   .topbar-in{gap:7px;padding:0 12px}
   .icon-btn.snd{min-width:34px;padding:5px 6px}
   .icon-btn{padding:5px 8px}
@@ -344,7 +344,7 @@ img{image-rendering:auto}
 /* ---------- フォーム ---------- */
 label.lbl{display:block;font-size:13px;margin:0 0 6px;color:var(--accent-2)}
 .hint{font-size:11.5px;color:var(--muted);margin-left:6px}
-input[type=text],input[type=number],input[type=search],textarea,select{
+input[type=text],input[type=number],input[type=search],input[type=password],textarea,select{
   width:100%;padding:10px 11px;border:2px solid var(--frame);background:var(--bg-2);
   color:var(--text);outline:none;border-radius:0;-webkit-appearance:none;appearance:none;
 }
@@ -746,7 +746,12 @@ body.big-tool .lede{font-size:26px}
 }
 #memoBadge .badge-ico{width:20px;height:20px;display:block;color:var(--accent-2)}
 #memoBadge[hidden]{display:none}
-#memoBadge.dragging{opacity:.9;box-shadow:0 0 0 3px var(--accent-2)}
+#memoBadge{opacity:.4;transition:opacity .2s}
+#memoBadge.has{opacity:.6}
+#memoBadge:hover,#memoBadge:focus-visible,#memoBadge:active{opacity:1}
+#memoBadge.dragging{opacity:1;box-shadow:0 0 0 3px var(--accent-2)}
+/* おすすめボタンが 下に いる 画面では、メモと タイマーを すこし 上に */
+body.has-gobar #memoBadge:not([style*="top"]), body.has-gobar #timerBadge:not([style*="top"]){bottom:calc(150px + env(safe-area-inset-bottom))}
 #memoBadge.has::after{
   content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;
   background:var(--accent);border:2px solid var(--panel);
@@ -773,9 +778,49 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
   max-width:88vw;text-align:center;
 }
 #toast.show{opacity:1}
-.searchbar{display:flex;gap:8px;margin:0 0 14px}
-.searchbar input{flex:2}
-.searchbar select{flex:1.2}
+.searchbar{display:flex;gap:8px;margin:0 0 10px}
+.searchbar input{flex:1;min-width:0}
+.listopts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
+.listopts .chips{flex:1 1 auto}
+.listopts select{flex:0 1 170px;min-width:130px}
+/* 1ぎょう ひょうじ */
+.crow-list{display:grid;gap:5px}
+.crow{
+  display:flex;align-items:center;gap:8px;width:100%;padding:10px 11px;
+  background:var(--panel);border:2px solid var(--frame);color:var(--text);
+  text-align:left;font-size:14px;cursor:pointer;
+}
+.crow:active{transform:translate(1px,1px)}
+.crow-t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crow-m{flex:0 0 auto;font-size:11.5px;color:var(--muted);white-space:nowrap}
+.crow .badge{font-size:10px;padding:0 4px;margin:0}
+/* あいうえお ジャンプ */
+.kana-jump{
+  position:sticky;top:calc(59px + env(safe-area-inset-top));z-index:20;
+  display:flex;flex-wrap:wrap;gap:4px;padding:6px 0;margin:0 0 8px;
+  background:var(--bg);
+}
+.kana-jump button{
+  min-width:34px;padding:5px 6px;font-size:13px;border:2px solid var(--frame);
+  background:var(--panel);color:var(--text);cursor:pointer;
+}
+.kana-jump button:active{background:var(--text);color:var(--panel)}
+.kana-h{font-size:15px;color:var(--accent-2);margin:14px 0 8px;padding-bottom:3px;border-bottom:2px solid var(--line);scroll-margin-top:110px}
+.kana-h .hint{font-size:11px}
+/* ねむっている たからばこ */
+.treasure{display:flex;gap:10px;align-items:center;margin:0 0 14px;padding:10px;border-color:var(--accent-2)}
+.treasure .thumb{flex:0 0 auto}
+.treasure .tr-body{flex:1;min-width:0}
+.treasure .tr-title{font-size:15px;margin:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* おすすめを みる：したに くっつく 大きな ボタン */
+.go-bar{position:sticky;bottom:calc(72px + env(safe-area-inset-bottom));z-index:30;margin:4px 0 11px;padding-top:6px}
+.btn.hero{
+  background:var(--accent);color:var(--panel);border-color:var(--accent);
+  font-size:18px;padding:16px;letter-spacing:.08em;
+  box-shadow:0 0 0 3px var(--panel),0 0 16px rgba(255,210,60,.45);
+}
+.btn.hero .arrow{animation:blink 1s steps(1) infinite}
+@media (max-width:380px){ .btn.hero{font-size:16px;padding:14px 10px;white-space:nowrap} }
 </style>
 </head>
 <body>
@@ -784,7 +829,7 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
 
 <header class="topbar">
   <div class="topbar-in">
-    <a class="brand" href="#/"><span class="ico" data-icon="chest"></span><span class="txt txt-long">BOARD GAME LIBRARY</span><span class="txt txt-short">ボドゲずかん</span></a>
+    <a class="brand" href="#/"><span class="ico" data-icon="chest"></span><span class="txt txt-long">BOARD GAME LIBRARY</span><span class="txt txt-short">BOARD GAME LIBRARY</span></a>
     <div class="spacer"></div>
     <button class="icon-btn snd" id="bgmBtn" aria-pressed="true">♪</button>
     <button class="icon-btn snd" id="seBtn" aria-pressed="true">SE</button>
@@ -860,6 +905,8 @@ const KEY = {
   bgm:'bgl.bgmEnabled',
   se:'bgl.seEnabled',
   dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか（ふるい しるし） */
+  a2hs:'bgl.a2hsSeen',        /* ホーム画面に ついかの おしらせを みた */
+  pubOk:'bgl.lastPublishOk',  /* さいごに サイトを こうしん できた 日 */
   pubsig:'bgl.publishedSig', /* さいごに サイトと そろえた ときの ずかんの ないようの しるし */
   preAdopt:'bgl.beforeSiteAdopt', /* サイトに そろえる まえの ひかえ */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
@@ -2522,6 +2569,7 @@ function render(){
   }
   /* どうぐの 画面に いる あいだは、よこ むきの ならべかたを つかう */
   document.body.classList.toggle('tool-page', r.name === 'tool' || r.name === 'tools');
+  document.body.classList.toggle('has-gobar', r.name === 'home');
   /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
      いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
   const sameScreen = (render._routeKey === routeKey);
@@ -2740,6 +2788,7 @@ function viewHome(){
     '<h1 class="lede">きょうは なにで あそぶ？</h1>' + kaiBarHTML() + todayBar +
     (newArrivals().length ? '<button class="btn small" id="newArrivalBtn" style="width:100%;margin-bottom:12px">' +
       '▶ 新入荷（'+newArrivals().length+'）を みる</button>' : '') +
+    homeNoticeHTML() + treasureHTML() +
     '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>' +
       (kaiOn() ? 'きょうの たなには '+poolGames().length+'さくひんが ある。' : 'ずかんには '+ownedGames().length+'さくひんが とうろく されている。') + '</p>' +
 
@@ -2773,7 +2822,7 @@ function viewHome(){
 
     (hasFilter(f) ? '<p class="count">えらんだ じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '') +
 
-    '<button class="btn primary" id="searchBtn" style="margin-bottom:11px">▶ おすすめを みる（'+n+'）</button>' +
+    '<div class="go-bar"><button class="btn hero" id="searchBtn"><span class="arrow">▶</span> おすすめを みる（'+n+'）</button></div>' +
     '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
     '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、それに あう ゲームだけから ひきます。</p>' +
   '</section>';
@@ -2810,6 +2859,96 @@ function gameCard(g, hitTags){
     '<div class="tagline">'+tags+'</div></div></button>';
 }
 
+/* ---------------- あいうえお の わけかた ---------------- */
+const KANA_ROWS = [['あ','あいうえおぁぃぅぇぉゔ'],['か','かきくけこがぎぐげご'],['さ','さしすせそざじずぜぞ'],
+  ['た','たちつてとだぢづでどっ'],['な','なにぬねの'],['は','はひふへほばびぶべぼぱぴぷぺぽ'],
+  ['ま','まみむめも'],['や','やゆよゃゅょ'],['ら','らりるれろ'],['わ','わをんゎ']];
+const KANA_ABC = 'A〜Z', KANA_OTHER = 'ほか';
+function toHira(str){ return String(str || '').replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60)); }
+/* ならべる ときの よみ：よみがな → なまえの（カナ）→ なまえ */
+function readKey(g){
+  let s = String(g.reading || '').trim();
+  if(!s){
+    const m = String(g.title || '').match(/[（(]\s*([ぁ-んァ-ヶー・\s]+?)\s*[)）]/);
+    s = (m && !/^[ぁ-んァ-ヶー]/.test(String(g.title || '').trim())) ? m[1] : String(g.title || '');
+  }
+  return toHira(s.trim()).toLowerCase();
+}
+function kanaGroup(g){
+  const ch = readKey(g).charAt(0);
+  for(const row of KANA_ROWS) if(row[1].indexOf(ch) >= 0) return row[0];
+  if(/[a-z0-9]/i.test(ch) || /[ａ-ｚＡ-Ｚ０-９]/.test(ch)) return KANA_ABC;
+  return KANA_OTHER;
+}
+function kanaGroupIndex(g){
+  const k = kanaGroup(g);
+  const i = KANA_ROWS.findIndex(r => r[0] === k);
+  return i >= 0 ? i : (k === KANA_ABC ? 10 : 11);
+}
+function bindKanaJump(root){
+  (root || app).querySelectorAll('[data-kana]').forEach(b => b.onclick = () => {
+    const el = document.getElementById('kana-' + b.dataset.kana);
+    if(!el) return;
+    const bar = document.querySelector('.kana-jump');
+    const top = el.getBoundingClientRect().top + window.scrollY - 62 - (bar ? bar.offsetHeight : 0) - 6;
+    window.scrollTo({top: Math.max(0, top), behavior:'smooth'});
+  });
+}
+function compactRow(g){
+  const marks = (isNewArrival(g) ? '<span class="badge new">新</span>' : '') +
+    (isLent(g) ? '<span class="badge">かしだし</span>' : '') +
+    (reqCount(g.id) ? '<span class="badge req">遊んでみたい</span>' : '');
+  const meta = (state.listMode === 'sleep') ? sleepLabel(g)
+    : playersText(g) + '・' + (Number(g.playTime)||0) + '分' + (g.difficulty ? '・' + stars(g.difficulty) : '');
+  return '<button class="crow" data-open="'+esc(g.id)+'"><span class="crow-t">'+esc(g.title)+'</span>' + marks +
+    '<span class="crow-m">'+meta+'</span></button>';
+}
+
+/* ---------------- ねむっている たからばこ ----------------
+   しばらく あそんで いない ゲームを、たなの おくから ほりおこす。 */
+const SLEEP_DAYS = 60;
+function sleepDays(g){
+  const last = lastPlayed(g);
+  if(!last) return null;          /* まだ いちども あそんで いない */
+  return daysAgo(last);
+}
+function sleepingGames(){
+  return poolGames().filter(g => {
+    if(isLent(g) || isNewArrival(g)) return false;
+    const d = sleepDays(g);
+    return d === null || d >= SLEEP_DAYS;
+  }).sort((a,b) => {
+    const da = sleepDays(a), db = sleepDays(b);
+    /* 1かいでも あそんだ ことが ある ゲームを さきに（なつかしい じゅん）、つぎに まだ あそんで いない もの */
+    if(da === null && db === null) return readKey(a).localeCompare(readKey(b),'ja');
+    if(da === null) return 1;
+    if(db === null) return -1;
+    return db - da;
+  });
+}
+function sleepLabel(g){
+  const d = sleepDays(g);
+  return d === null ? 'まだ いちども あそんで いない' : d + '日 ねむっている';
+}
+function treasureHTML(){
+  const all = sleepingGames();
+  if(ownedGames().length < 5 || !all.length) return '';
+  const napped = all.filter(g => sleepDays(g) !== null);
+  const pool = napped.length ? napped : all;
+  const seed = todayStr().split('-').join('') * 1;
+  const g = pool[(seed + (state.treasureShift || 0)) % pool.length];
+  return '<div class="win treasure">' + thumbHTML(g, 'mini') +
+    '<div class="tr-body">' +
+      '<div class="catlabel" style="margin:0;color:var(--accent-2)">ねむっている たからばこ</div>' +
+      '<div class="tr-title">' + esc(g.title) + '</div>' +
+      '<div class="count" style="margin:0">' + esc(sleepLabel(g)) + '・' + playersText(g) + '・' + (Number(g.playTime)||0) + '分</div>' +
+      '<div class="chips" style="margin-top:6px">' +
+        '<button class="mini" data-open="' + esc(g.id) + '">ひらく</button>' +
+        (pool.length > 1 ? '<button class="mini" id="treasureNext">べつの はこ</button>' : '') +
+        '<button class="mini" id="treasureAll">ぜんぶ（' + all.length + '）</button>' +
+      '</div></div></div>';
+}
+
 /* 一覧は「けんさく欄」と「けっか」を わけて 持つ。
    文字を うっている あいだ 画面ぜんたいを 作りなおすと、
    iPhone の 予測変換（IME）が とちゅうで きえて しまうため、
@@ -2818,13 +2957,14 @@ function listComputed(){
   const f = activeFilters();
   const mode = state.listMode;
   const filtered = mode === 'own' && hasFilter(f);
-  const keepOrder = (mode === 'req' || mode === 'new');
+  const keepOrder = (mode === 'req' || mode === 'new' || mode === 'sleep');
   const res = search(f);
   let list;
   if(mode === 'new')       list = newArrivals();
   else if(mode === 'req')  list = requestedGames();
   else if(mode === 'wish') list = state.games.filter(isWish);
   else if(mode === 'lent') list = ownedGames().filter(isLent);
+  else if(mode === 'sleep') list = sleepingGames();
   else                     list = filtered ? res.perfect.slice() : poolGames();
   list = list.slice();
 
@@ -2842,7 +2982,7 @@ function listComputed(){
       sk === 'replay' ? ((Number(b.replay)||0) - (Number(a.replay)||0)) :
       sk === 'excitement' ? ((Number(b.excitement)||0) - (Number(a.excitement)||0)) :
       sk === 'plays' ? (playCount(b) - playCount(a)) :
-      a.title.localeCompare(b.title,'ja'));
+      (kanaGroupIndex(a) - kanaGroupIndex(b)) || readKey(a).localeCompare(readKey(b),'ja') || a.title.localeCompare(b.title,'ja'));
   }
   return {f, filtered, res, list, q};
 }
@@ -2866,10 +3006,33 @@ function listResultsHTML(){
     return html;
   }
 
-  if(list.length){
-    html += (state.listView === 'grid')
-      ? '<div class="tile-grid">' + list.map(g => gameTile(g)).join('') + '</div>'
-      : '<div class="card-list">' + list.map(g => gameCard(g, f.tags)).join('') + '</div>';
+  const block = arr => (state.listView === 'grid')
+      ? '<div class="tile-grid">' + arr.map(g => gameTile(g)).join('') + '</div>'
+      : (state.listView === 'compact')
+        ? '<div class="crow-list">' + arr.map(g => compactRow(g)).join('') + '</div>'
+        : '<div class="card-list">' + arr.map(g => gameCard(g, f.tags)).join('') + '</div>';
+  if(state.listMode === 'sleep' && list.length){
+    html += '<p class="count" style="margin:-4px 0 12px">' + SLEEP_DAYS + '日いじょう あそんで いない ゲームです。ながく ねむっている じゅんに ならべて います。</p>';
+  }
+  /* なまえ順の ときは「あいうえお」で わけて、とびさき ボタンを だす */
+  const useIndex = list.length >= 15 && state.listSort === 'title' && !(c.filtered && !c.q) &&
+                   ['own','wish','lent'].indexOf(state.listMode) >= 0;
+  if(list.length && useIndex){
+    const groups = [];
+    list.forEach(g => {
+      const k = kanaGroup(g);
+      let last = groups[groups.length - 1];
+      if(!last || last.k !== k){ last = {k, items:[]}; groups.push(last); }
+      last.items.push(g);
+    });
+    html += '<div class="kana-jump">' + groups.map((gr, i) =>
+      '<button type="button" data-kana="'+i+'">'+esc(gr.k)+'</button>').join('') + '</div>' +
+      groups.map((gr, i) =>
+        '<h3 class="kana-h" id="kana-'+i+'">'+esc(gr.k)+' <span class="hint">'+gr.items.length+'</span>' +
+        (gr.k === KANA_OTHER ? '<span class="hint">　よみがなを いれると ただしい ぎょうに ならびます</span>' : '') + '</h3>' +
+        block(gr.items)).join('');
+  }else if(list.length){
+    html += block(list);
   }
   else html += '<div class="note" style="margin-bottom:14px">ぴったりの ゲームは いなかった。ちかい ゲームを だします。</div>';
 
@@ -2891,16 +3054,18 @@ function viewList(){
     '<div class="chips" style="margin:0 0 12px">' +
       [['own','もっている'],['wish','ほしい'],['lent','かしだし中']]
         .concat(newArrivals().length ? [['new','新入荷（'+newArrivals().length+'）']] : [])
-        .concat(requestedGames().length ? [['req','遊んでみたい（'+requestedGames().length+'）']] : []).map(m =>
+        .concat(requestedGames().length ? [['req','遊んでみたい（'+requestedGames().length+'）']] : [])
+        .concat(sleepingGames().length ? [['sleep','ねむっている（'+sleepingGames().length+'）']] : []).map(m =>
         '<button class="chip sm" data-listmode="'+m[0]+'" aria-pressed="'+(state.listMode===m[0])+'">'+m[1]+'</button>').join('') +
     '</div>' +
 
     '<div class="searchbar">' +
       '<input type="search" id="listQ" placeholder="なまえで さがす（かな・漢字 どちらでも）" ' +
-        'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">' +
-      '<button class="mini" id="listViewBtn" style="flex:0 0 auto" aria-label="ならべかたを かえる">' +
-        (state.listView === 'grid' ? '▤ リスト' : '▦ しゃしん') + '</button>' +
-      '<select id="listSort">' +
+        'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></div>' +
+    '<div class="listopts">' +
+      '<div class="chips">' + [['list','カード'],['compact','1ぎょう'],['grid','しゃしん']].map(v =>
+        '<button class="chip sm" data-listview="'+v[0]+'" aria-pressed="'+(state.listView===v[0])+'">'+v[1]+'</button>').join('') + '</div>' +
+      '<select id="listSort" aria-label="ならびじゅん">' +
         ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順',
          'replay:また あそびたい順','excitement:もりあがる順','plays:あそんだ かず順',
          'recent:さいきん あそんだ順','sleeping:あそんで ない順'].map(o => {
@@ -2921,6 +3086,7 @@ function updateListResults(){
   paintIcons(box);
   box.querySelectorAll('[data-go2]').forEach(b => b.onclick = () => go(b.dataset.go2));
   box.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('#/game/' + b.dataset.open));
+  bindKanaJump(box);
   const c = box.querySelector('#clearFilter');
   if(c) c.onclick = () => { state.filters = {time:null, players:null, playersN:6, tags:[]}; saveFilters(); render(); };
 }
@@ -5827,7 +5993,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.23-i';
+const APP_VERSION = '2026.09.23-j';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -6604,6 +6770,56 @@ function fmtVer(v){
   const p = n => String(n).padStart(2, '0');
   return (d.getMonth()+1) + '/' + d.getDate() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
+/* iPhone の Safari で ひらいて いて、この 端末に じぶんの データが ある 人への おしらせ */
+function isIosSafariTab(){
+  const ua = navigator.userAgent || '';
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return ios && !navigator.standalone && !(window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+}
+function hasOwnData(){
+  return !!account() || state.games.some(g => playsOf(g).length) || (state.players || []).length > 0;
+}
+function homeNoticeHTML(){
+  if(!isIosSafariTab() || store.read(KEY.a2hs, false) || !hasOwnData()) return '';
+  return '<div class="note" style="margin-bottom:14px;border-style:solid;border-color:var(--accent-2);color:var(--text)">' +
+    '<b style="color:var(--accent-2)">▶ ホーム画面に ついか すると あんしん</b><br>' +
+    'Safariは、しばらく ひらかない サイトの データ（あそんだ きろく・メモ・なかまの なまえ）を けす ことが あります。<br>' +
+    'したの 共有ボタン（□に↑）→「ホーム画面に追加」で アプリとして つかうと きえにくく なります。<br>' +
+    '<span style="color:var(--muted);font-size:12px">※ ホーム画面の アプリと Safariは べつの ほぞんばしょ です。' +
+    'きろくは「ぼうけんしゃの証」の ひきつぎで うつせます。</span><br>' +
+    '<button class="mini" id="a2hsOk" style="margin-top:8px">わかった</button></div>';
+}
+
+/* サイトこうしんの せってい（トークンを いれなおす ばしょ） */
+function guessSiteOwnerRepo(){
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+  const repo = location.pathname.split('/').filter(Boolean)[0] || '';
+  return {owner: m ? m[1] : '', repo: repo.replace(/\.html$/, '') === 'index' ? '' : repo};
+}
+function siteSetupHTML(){
+  const c = getSiteConfig(), gu = guessSiteOwnerRepo();
+  const ok = store.read(KEY.pubOk, '');
+  return '<details style="margin:12px 0 0"' + (c.token ? '' : ' open') + '><summary style="font-size:14px;color:var(--accent-2)">サイトこうしんの せってい（GitHub）</summary>' +
+    '<div style="margin-top:10px">' +
+    '<p class="count" style="margin:0 0 8px">' +
+      (c.token ? 'トークン：<span style="color:var(--accent)">この端末に ほぞん ずみ</span>' : 'トークン：<span style="color:var(--danger)">まだ ありません</span>') +
+      (ok ? '<br>さいごに こうしん できた日：' + esc(fmtVer(ok)) : '') + '</p>' +
+    '<div class="form-group"><label class="lbl" for="ghOwner">GitHubの ユーザーめい</label>' +
+      '<input type="text" id="ghOwner" value="' + esc(c.owner || gu.owner) + '" autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
+    '<div class="form-group"><label class="lbl" for="ghRepo">おきば（リポジトリ）の なまえ</label>' +
+      '<input type="text" id="ghRepo" value="' + esc(c.repo || gu.repo) + '" autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
+    '<div class="form-group"><label class="lbl" for="ghBranch">ブランチ</label>' +
+      '<input type="text" id="ghBranch" value="' + esc(c.branch || 'main') + '" autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
+    '<div class="form-group"><label class="lbl" for="ghToken">トークン<span class="hint">いれなおす ときだけ</span></label>' +
+      '<input type="password" id="ghToken" value="" placeholder="' + (c.token ? '（ほぞん ずみ・かえる ときだけ いれる）' : 'github_pat_… を はりつけ') + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
+    '<button class="btn small" id="ghSaveBtn" style="width:100%">せっていを ほぞん</button>' +
+    '<p class="count" style="margin:8px 0 0">トークンには きげんが あります。きれると「サイトを こうしんする」が しっぱい します。<br>' +
+      'GitHub → Settings → Developer settings → Personal access tokens で あたらしく つくれます' +
+      '（この おきば だけ・Contents を Read and write・きげんは ながめ が らく）。<br>' +
+      'トークンは この端末の 中だけに ほぞん されます。</p>' +
+    '</div></details>';
+}
+
 function syncBoxHTML(){
   if(location.protocol === 'file:') return '';
   const here = state.games.length;
@@ -6699,7 +6915,7 @@ function viewAdmin(){
       'したの ボタンを おすと ともだちの がめんにも でます。</div>' : '') +
 
     '<button class="btn primary big" id="publishBtn" style="margin-bottom:6px">サイトを こうしんする</button>' +
-    '<div id="pubStatus"></div>' +
+    '<div id="pubStatus"></div>' + siteSetupHTML() +
 
     '<div class="note" style="margin:12px 0;border-color:var(--accent)">' +
       '<b>こうかい されない もの</b><br>' +
@@ -6855,8 +7071,8 @@ async function putSiteFile(path, obj, cfg){
   let sha = null;
   const cur = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), {headers});
   if(cur.status === 200){ sha = (await cur.json()).sha; }
-  else if(cur.status === 401){ throw new Error('あいことば（トークン）が ちがうか、きげんが きれています。'); }
-  else if(cur.status === 403){ throw new Error('この あいことばには かきこむ けんげんが ありません。'); }
+  else if(cur.status === 401){ throw new Error('トークンの きげんが きれたか、まちがって います。GitHubで あたらしい トークンを つくり、したの「サイトこうしんの せってい」に いれなおして ください。'); }
+  else if(cur.status === 403){ throw new Error('この トークンには かきこむ けんげんが ありません。GitHubで トークンの「Contents」を「Read and write」に して ください。'); }
   else if(cur.status !== 404){ throw new Error('サイトが みつかりません。ユーザーめいと おきばの なまえを たしかめて ください。'); }
 
   const payload = {
@@ -6872,6 +7088,8 @@ async function putSiteFile(path, obj, cfg){
     body: JSON.stringify(payload)
   });
   if(!put.ok){
+    if(put.status === 401) throw new Error('トークンの きげんが きれたか、まちがって います。したの「サイトこうしんの せってい」で いれなおして ください。');
+    if(put.status === 403) throw new Error('この トークンには かきこむ けんげんが ありません（Contents を Read and write に）。');
     if(put.status === 404) throw new Error('おきばが みつかりません。ユーザーめい・おきばの なまえ・ブランチを たしかめて ください。');
     if(put.status === 409) throw new Error('ブランチの なまえが ちがうかも しれません（main か master）。');
     throw new Error('こうしん できませんでした（' + put.status + '）。');
@@ -6903,6 +7121,7 @@ async function publishToSite(){
     const pubGames = gamesForPublish();
     await putSiteFile('library.json', {version:ver, tags:state.tags, games:pubGames}, cfg);
     store.write(KEY.pubver, ver);
+    store.write(KEY.pubOk, ver);
     clearDirty();
     siteInfo = {version:ver, games:pubGames, tags:state.tags, at:Date.now()};
     pendingSiteData = null;
@@ -7046,13 +7265,13 @@ function bind(r){
   }
   const listSort = document.getElementById('listSort');
   if(listSort) listSort.onchange = e => { state.listSort = e.target.value; updateListResults(); };
-  const listViewBtn = document.getElementById('listViewBtn');
-  if(listViewBtn) listViewBtn.onclick = () => {
-    state.listView = (state.listView === 'grid') ? 'list' : 'grid';
+  app.querySelectorAll('[data-listview]').forEach(b => b.onclick = () => {
+    state.listView = b.dataset.listview;
     store.write('bgl.listView', state.listView);
-    listViewBtn.textContent = (state.listView === 'grid') ? '▤ リスト' : '▦ しゃしん';
+    app.querySelectorAll('[data-listview]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.listview === state.listView)));
     updateListResults();
-  };
+  });
+  bindKanaJump(app);
 
   const rollBtn = document.getElementById('rollBtn');
   if(rollBtn) rollBtn.onclick = roll;
@@ -7065,6 +7284,12 @@ function bind(r){
     render();
     toast('きょうは ' + state.today + '人');
   };
+  const treasureNext = document.getElementById('treasureNext');
+  if(treasureNext) treasureNext.onclick = () => { state.treasureShift = (state.treasureShift || 0) + 1; render(); };
+  const treasureAll = document.getElementById('treasureAll');
+  if(treasureAll) treasureAll.onclick = () => { state.listMode = 'sleep'; go('#/list'); };
+  const a2hsOk = document.getElementById('a2hsOk');
+  if(a2hsOk) a2hsOk.onclick = () => { store.write(KEY.a2hs, true); render(); };
   const newArrivalBtn = document.getElementById('newArrivalBtn');
   if(newArrivalBtn) newArrivalBtn.onclick = () => { state.listMode = 'new'; go('#/list'); };
   const clearToday = document.getElementById('clearToday');
@@ -8336,8 +8561,15 @@ function bind(r){
   if(shareBtn) shareBtn.onclick = () => {
     const url = document.getElementById('shareUrl').value.trim();
     if(!url) return toast('URLが ありません');
-    if(navigator.share) navigator.share({title:'Board Game Library', url}).catch(()=>{});
+    if(navigator.share) navigator.share({title:'BOARD GAME LIBRARY', url}).catch(()=>{});
     else copyText(url);
+  };
+  const ghSaveBtn = document.getElementById('ghSaveBtn');
+  if(ghSaveBtn) ghSaveBtn.onclick = () => {
+    const cfg = siteConfigFromForm();
+    if(!cfg.owner || !cfg.repo || !cfg.token) return toast('ユーザーめい・おきば・トークンを いれて ください');
+    saveSiteConfig(cfg);
+    render(); toast('ほぞん しました');
   };
   const alignSiteBtn = document.getElementById('alignSiteBtn');
   if(alignSiteBtn) alignSiteBtn.onclick = async () => {
@@ -8909,6 +9141,7 @@ adoptKaiFromUrl();
 catchFriendCode();
 render();
 syncPublished();
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
 /* ログイン して いれば、そっと さかばと やりとり する */
 if(isOnline()){
   (async () => {

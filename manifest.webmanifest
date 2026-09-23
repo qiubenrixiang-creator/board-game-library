@@ -1,6 +1,6 @@
 {
-  "name": "Board Game Library",
-  "short_name": "ボドゲずかん",
+  "name": "BOARD GAME LIBRARY",
+  "short_name": "BOARD GAME LIBRARY",
   "description": "にんずうと じかんと きぶんを えらぶだけ。30びょうで きょうの ボードゲームが きまる ずかん。",
   "start_url": "./",
   "scope": "./",
