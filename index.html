@@ -871,7 +871,9 @@ const KEY = {
   kai:'bgl.kaiShelf',        /* ボードゲーム会に もっていく たな */
   choubo:'bgl.choubo',        /* しゅくやの ちょうぼ（わりかん） */
   talk:'bgl.talkTopics',      /* じぶんで ついかした トークおだい */
-  shared:'bgl.sharedPlays'    /* みんなで わけあう ぼうけんの きろく */
+  shared:'bgl.sharedPlays',   /* みんなで わけあう ぼうけんの きろく */
+  api:'bgl.apiBase',          /* さかばの サーバーの アドレス */
+  acct:'bgl.account'          /* ぼうけんしゃの証（この スマホの もちぬし） */
 };
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
@@ -5257,6 +5259,189 @@ function viewTool(id){
   '</section>';
 }
 
+/* =========================================================
+   さかばの サーバー（オンライン）
+   「ぼうけんしゃの証」＝ サーバーが くれる ぼうけんしゃIDと あいことば。
+   この スマホに しまって おき、ともだちや ほかの スマホと つながる ときに つかう。
+   ========================================================= */
+function apiBase(){ return String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, ''); }
+function saveApiBase(v){ store.write(KEY.api, String(v || '').trim().replace(/\/+$/, '')); }
+function account(){ return store.read(KEY.acct, null); }
+function saveAccount(a){ store.write(KEY.acct, a || null); }
+function isOnline(){ const a = account(); return !!(a && a.token && apiBase()); }
+
+async function api(path, opts){
+  const base = apiBase();
+  if(!base) throw new Error('さかばの アドレスを いれて ください');
+  const o = opts || {};
+  const headers = {};
+  if(o.body) headers['Content-Type'] = 'application/json';
+  const a = account();
+  if(a && a.token && o.auth !== false) headers['Authorization'] = 'Bearer ' + a.token;
+  let res;
+  try{
+    res = await fetch(base + path, {
+      method: o.method || 'GET',
+      headers: headers,
+      body: o.body ? JSON.stringify(o.body) : undefined
+    });
+  }catch(e){
+    throw new Error('さかばに つながりません。アドレスと でんぱを たしかめて ください');
+  }
+  let data = null;
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok || !data || data.ok === false){
+    throw new Error((data && data.error) || ('しっぱい しました（' + res.status + '）'));
+  }
+  return data;
+}
+function acctStatus(msg, kind){
+  const el = document.getElementById('acctStatus');
+  if(!el) return;
+  const color = kind === 'ng' ? 'var(--danger)' : (kind === 'ok' ? 'var(--accent)' : 'var(--muted)');
+  el.innerHTML = msg ? '<p class="count" style="color:'+color+';margin:10px 0 0">'+esc(msg)+'</p>' : '';
+}
+function onlineHTML(){
+  const base = apiBase();
+  const a = account();
+  let html = '<div class="divider"></div><h2 class="sec">ぼうけんしゃの証</h2>' +
+    '<p class="count">さかばの サーバーに とうろく すると、ともだちと きろくを わけあえます。' +
+    'スマホを かえても、ひきつげば レベルは つづきます。<br>' +
+    'とうろく しなくても、ずかんは いままで どおり つかえます。</p>' +
+
+    '<div class="form-group"><label class="lbl" for="apiBase">さかばの アドレス</label>' +
+      '<input type="text" id="apiBase" value="'+esc(base)+'" placeholder="https://〜.workers.dev" ' +
+      'autocapitalize="off" autocorrect="off" spellcheck="false"></div>';
+
+  if(a && a.token){
+    html += '<div class="win" style="margin-bottom:10px">' +
+        '<p style="margin:0 0 6px;font-size:17px;color:var(--accent)">▶ '+esc(a.name || '')+'</p>' +
+        '<div class="adv-info" style="margin:0">' +
+          '<span>ともだちコード</span><b style="letter-spacing:2px;color:var(--accent)">'+esc(a.code || '')+'</b>' +
+          '<span>ぼうけんしゃID</span><b style="font-size:11px">'+esc(a.id || '')+'</b>' +
+        '</div>' +
+        '<p class="count" style="margin:8px 0 0">ともだちコードは、なかまに なる ときに おしえる ばんごうです。</p>' +
+      '</div>' +
+      '<div class="btn-row" style="margin-bottom:8px">' +
+        '<button class="btn small" style="flex:1" id="acctRename">なまえを かえる</button>' +
+        '<button class="btn small" style="flex:1" id="acctCopy">ともだちコードを コピー</button></div>' +
+      '<button class="btn small" id="acctTransfer" style="width:100%;margin-bottom:8px">べつの スマホに ひきつぐ</button>' +
+      '<div id="acctTransferBox"></div>' +
+      '<button class="btn small danger" id="acctLogout" style="width:100%;margin-bottom:6px">この スマホから はなれる</button>' +
+      '<p class="count" style="margin:0 0 6px">はなれる まえに、かならず ひきつぎコードを つくって ください。</p>';
+  }else{
+    html += '<div class="win" style="margin-bottom:10px">' +
+        '<label class="lbl" for="acctName">なまえ</label>' +
+        '<input type="text" id="acctName" placeholder="れい：ひなた" maxlength="20">' +
+        '<p class="count" style="margin:6px 0 0">きろくで つかって いる なまえと おなじに すると、これまでの ぼうけんが つながります。</p>' +
+      '</div>' +
+      '<button class="btn primary" id="acctSignup" style="margin-bottom:8px">さかばに とうろく する</button>' +
+      '<details style="margin-bottom:6px"><summary style="font-size:13px">まえの スマホから ひきつぐ</summary>' +
+        '<div class="win" style="margin-top:10px">' +
+          '<label class="lbl" for="acctClaim">ひきつぎコード</label>' +
+          '<input type="text" id="acctClaim" placeholder="れい：JPW6877S" autocapitalize="characters" ' +
+            'autocorrect="off" spellcheck="false" style="letter-spacing:2px">' +
+          '<button class="btn small" id="acctClaimBtn" style="width:100%;margin-top:8px">ひきつぐ</button>' +
+        '</div></details>';
+  }
+  html += '<div id="acctStatus"></div>' +
+    '<button class="mini" id="acctHealth" style="margin-top:10px">さかばが いきて いるか ためす</button>';
+  return html;
+}
+function bindOnline(){
+  const baseIn = document.getElementById('apiBase');
+  if(!baseIn) return;
+  baseIn.addEventListener('change', () => { saveApiBase(baseIn.value); acctStatus('アドレスを おぼえました'); });
+
+  const health = document.getElementById('acctHealth');
+  if(health) health.onclick = async () => {
+    saveApiBase(baseIn.value);
+    acctStatus('つないで います…');
+    try{
+      const d = await api('/api/health', {auth:false});
+      acctStatus('えいぎょう中です（ぼうけんしゃ '+d.users+'人／きろく '+d.plays+'けん）', 'ok');
+    }catch(e){ acctStatus(e.message, 'ng'); }
+  };
+
+  const signup = document.getElementById('acctSignup');
+  if(signup) signup.onclick = async () => {
+    saveApiBase(baseIn.value);
+    const name = (document.getElementById('acctName') || {value:''}).value.trim();
+    if(!name) return acctStatus('なまえを いれて ください', 'ng');
+    signup.disabled = true;
+    acctStatus('とうろく して います…');
+    try{
+      const d = await api('/api/signup', {method:'POST', body:{name}, auth:false});
+      saveAccount({id:d.id, name:d.name, code:d.code, token:d.token});
+      if(!state.players.some(p => p.name === d.name)){ addPlayer(d.name); }
+      render();
+      toast('さかばに とうろく しました');
+    }catch(e){ acctStatus(e.message, 'ng'); signup.disabled = false; }
+  };
+
+  const claimBtn = document.getElementById('acctClaimBtn');
+  if(claimBtn) claimBtn.onclick = async () => {
+    saveApiBase(baseIn.value);
+    const code = (document.getElementById('acctClaim') || {value:''}).value.trim().toUpperCase();
+    if(!code) return acctStatus('ひきつぎコードを いれて ください', 'ng');
+    claimBtn.disabled = true;
+    acctStatus('ひきついで います…');
+    try{
+      const d = await api('/api/claim', {method:'POST', body:{code}, auth:false});
+      saveAccount({id:d.id, name:d.name, code:d.code, token:d.token});
+      if(!state.players.some(x => x.name === d.name)) addPlayer(d.name);
+      render();
+      toast('おかえりなさい、'+d.name+' さん');
+    }catch(e){ acctStatus(e.message, 'ng'); claimBtn.disabled = false; }
+  };
+
+  const rename = document.getElementById('acctRename');
+  if(rename) rename.onclick = () => {
+    const a = account();
+    askText('あたらしい なまえは？', (a && a.name) || '', async v => {
+      const name = String(v || '').trim();
+      if(!name) return acctStatus('なまえを いれて ください', 'ng');
+      try{
+        const d = await api('/api/rename', {method:'POST', body:{name}});
+        const old = account();
+        saveAccount({id:d.id, name:d.name, code:d.code, token:old.token});
+        if(old && old.name && old.name !== d.name) renamePlayer(old.name, d.name);
+        render();
+        toast('なまえを かえました');
+      }catch(e){ acctStatus(e.message, 'ng'); }
+    });
+  };
+
+  const copyCode = document.getElementById('acctCopy');
+  if(copyCode) copyCode.onclick = () => {
+    const a = account();
+    if(a && a.code) copyText(a.code);
+  };
+
+  const transfer = document.getElementById('acctTransfer');
+  if(transfer) transfer.onclick = async () => {
+    acctStatus('ひきつぎコードを つくって います…');
+    try{
+      const d = await api('/api/transfer', {method:'POST'});
+      const box = document.getElementById('acctTransferBox');
+      if(box){
+        box.innerHTML = '<div class="win" style="margin-bottom:8px;text-align:center">' +
+          '<p class="count" style="margin:0 0 6px">ひきつぎコード（10分だけ つかえます）</p>' +
+          '<p style="margin:0 0 8px;font-size:26px;letter-spacing:4px;color:var(--accent)">'+esc(d.code)+'</p>' +
+          '<button class="mini" id="acctCopyTransfer">コピーする</button></div>';
+        const c = document.getElementById('acctCopyTransfer');
+        if(c) c.onclick = () => copyText(d.code);
+      }
+      acctStatus('あたらしい スマホの「まえの スマホから ひきつぐ」に いれて ください', 'ok');
+    }catch(e){ acctStatus(e.message, 'ng'); }
+  };
+
+  const logout = document.getElementById('acctLogout');
+  if(logout) logout.onclick = () => ask(
+    'この スマホから ぼうけんしゃの証を けします。\nひきつぎコードが ないと もどれません。',
+    () => { saveAccount(null); render(); toast('はなれました'); });
+}
+
 function viewAdmin(){
   const localOnly = store.read(KEY.localOnly, false);
   const cfg = getSiteConfig();
@@ -5387,6 +5572,8 @@ function viewAdmin(){
       '<input type="checkbox" id="localOnly" '+(localOnly?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
       '<span style="font-size:13px">この スマホの へんしゅうを ゆうせんする<br>' +
       '<span style="color:var(--muted);font-size:11.5px">ゲームを ついか・へんしゅうする 人（かんりする 人）は ONに して ください。つくりかけの ないようが きえなく なります。</span></span></label>' +
+    onlineHTML() +
+
     '<div class="divider"></div><h2 class="sec">サイトの ばしょを おしえる</h2>' +
     '<p class="count">この サイトの アドレスと QRコードを だせます。その場で ともだちの スマホで よみとって もらえます。</p>' +
     '<div class="row" style="margin-bottom:10px">' +
@@ -6858,6 +7045,7 @@ function bind(r){
     if(!sound.bgmOn) setBgmOn(true);          /* きょくを えらんだら ならす */
     toast(currentTrack().name + ' に しました');
   });
+  bindOnline();
   const publishBtn = document.getElementById('publishBtn');
   if(publishBtn) publishBtn.onclick = publishToSite;
   const recPubBtn = document.getElementById('recPubBtn');
