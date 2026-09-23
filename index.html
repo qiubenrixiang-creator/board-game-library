@@ -4693,17 +4693,55 @@ function unknownPlayers(){
 }
 /* とうろく した なまえから、きょうの メンバーを えらぶ ぶひん。
    おした 人が 入力らんに くわわり、もう一度 おすと はずれる。 */
-function playerChooserHTML(targetId){
-  if(!rosterNames().length) return '';
+/* よく いっしょに あそぶ 人ほど まえに（かいすう → さいごに あそんだ日 → とうろく じゅん） */
+function rosterByFrequency(){
+  const cnt = {}, last = {};
+  cardPlays().forEach(r => playMembers(r.pl).forEach(n => {
+    cnt[n] = (cnt[n] || 0) + 1;
+    const d = String(r.pl.d || '');
+    if(d > (last[n] || '')) last[n] = d;
+  }));
+  const base = rosterNames();
+  return base.slice().sort((a, b) =>
+    (cnt[b] || 0) - (cnt[a] || 0) || String(last[b] || '').localeCompare(String(last[a] || '')) ||
+    base.indexOf(a) - base.indexOf(b));
+}
+const CHOOSER_SEARCH_MIN = 12;   /* これより おおいと けんさく欄を だす */
+function chooserChip(targetId, n, on){
+  return '<button type="button" class="chip sm" data-choosename="'+esc(targetId)+'|'+esc(n)+'" ' +
+    'data-cname="'+esc(n)+'" aria-pressed="'+on+'">'+esc(n)+'</button>';
+}
+/* えらんだ 人 ／ じぶん・なかま・ゲスト に わけた ボタン（ここだけ 入れかえる） */
+function playerChooserBodyHTML(targetId){
   const now = (state.chosen && state.chosen[targetId]) || [];
-  return '<div style="margin:8px 0 0">' +
+  const me = account();
+  const friends = friendList().map(f => f.name);
+  const rest = rosterByFrequency().filter(n => now.indexOf(n) < 0);
+  const groups = [
+    ['じぶん', rest.filter(n => me && n === me.name)],
+    ['なかま', rest.filter(n => !(me && n === me.name) && friends.indexOf(n) >= 0)],
+    ['ゲスト', rest.filter(n => !(me && n === me.name) && friends.indexOf(n) < 0)]
+  ].filter(gr => gr[1].length);
+  const many = groups.length > 1;
+  return (now.length ?
+      '<div class="catlabel" style="margin:0 0 4px;color:var(--accent)">えらんだ 人</div>' +
+      '<div class="chips" style="margin-bottom:8px">' + now.map(n => chooserChip(targetId, n, true)).join('') + '</div>' : '') +
+    groups.map(gr =>
+      '<div data-cgroup>' + (many ? '<div class="catlabel" style="margin:0 0 4px">'+gr[0]+'</div>' : '') +
+      '<div class="chips" style="margin-bottom:8px">' + gr[1].map(n => chooserChip(targetId, n, false)).join('') + '</div></div>'
+    ).join('');
+}
+function playerChooserHTML(targetId){
+  const all = rosterNames();
+  if(!all.length) return '';
+  const now = (state.chosen && state.chosen[targetId]) || [];
+  return '<div style="margin:8px 0 0" data-chooser="'+esc(targetId)+'">' +
     '<p class="count" style="margin:0 0 6px">きょうの メンバーを えらぶ（' +
       '<span data-choosecount="'+esc(targetId)+'">' + now.length + '人</span>）</p>' +
-    '<div class="chips" style="margin-bottom:6px">' +
-      rosterNames().map(n =>
-        '<button type="button" class="chip sm" data-choosename="'+esc(targetId)+'|'+esc(n)+'" ' +
-        'aria-pressed="'+(now.indexOf(n) >= 0)+'">'+esc(n)+'</button>').join('') +
-    '</div>' +
+    (all.length > CHOOSER_SEARCH_MIN ?
+      '<input type="search" data-choosesearch="'+esc(targetId)+'" placeholder="なまえで さがす" ' +
+        'autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px">' : '') +
+    '<div data-chooserbody="'+esc(targetId)+'">' + playerChooserBodyHTML(targetId) + '</div>' +
     '<div class="chips">' +
       '<button type="button" class="mini" data-fillnames="'+esc(targetId)+'">ぜんいん</button>' +
       '<button type="button" class="mini warn" data-clearchoose="'+esc(targetId)+'">えらびなおす</button>' +
@@ -5693,13 +5731,16 @@ function personRowHTML(p){
   }else{
     btns = '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>';
   }
-  return '<div class="admin-row">' +
+  const open = state.peopleOpen === p.name;
+  return '<div class="admin-row" style="flex-wrap:wrap;padding-top:8px;padding-bottom:8px">' +
     '<button class="t" data-go2="#/card/'+encodeURIComponent(p.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
       '<b style="display:block;font-size:14px;font-weight:400">'+esc(p.name)+' '+badge+
         ' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(p.plays)+' ▶</span></b>' +
       '<span style="font-size:11px;color:var(--muted)">'+(p.plays ? p.plays+'かいの きろく' : 'きろくは まだ')+
         (wantsOf(p.name).length ? '・遊んでみたい '+wantsOf(p.name).length : '')+'</span></button>' +
-    btns + '</div>';
+    (btns ? '<button class="mini" data-peopleopen="'+esc(p.name)+'" aria-expanded="'+open+'" aria-label="そうさを ひらく" style="flex:0 0 auto">'+(open ? '▲' : '▼')+'</button>' : '') +
+    (btns && open ? '<div style="flex:1 0 100%;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">' + btns + '</div>' : '') +
+  '</div>';
 }
 /* さいしょの 1かいだけ だす あんない */
 function welcomeHTML(){
@@ -5752,9 +5793,22 @@ function toolNamesHTML(){
         '<button class="mini warn" data-frremove="'+esc(x.id)+'">ことわる</button></div>').join('');
   }
 
+  const meP = people.filter(p => p.kind === 'me');
+  const frP = people.filter(p => p.kind === 'friend');
+  const guP = people.filter(p => p.kind === 'guest');
+  const tab = (state.peopleTab === 'guest' || (!frP.length && guP.length)) ? 'guest' : 'friend';
+  const shown = tab === 'guest' ? guP : frP;
   html += '<div class="catlabel" style="margin-top:12px">いっしょに あそぶ 人（'+people.length+'）</div>' +
-    '<p class="count" style="margin:0 0 8px">なまえを タップすると ぼうけんしゃカードが みられます。</p>' +
-    (people.length ? people.map(personRowHTML).join('')
+    '<p class="count" style="margin:0 0 8px">なまえを タップすると ぼうけんしゃカードが みられます。' +
+      '「なおす」などは ▼ から。</p>' +
+    (people.length ?
+      meP.map(personRowHTML).join('') +
+      '<div class="chips" style="margin:10px 0 8px">' +
+        '<button class="chip sm" data-peopletab="friend" aria-pressed="'+(tab === 'friend')+'">なかま（'+frP.length+'）</button>' +
+        '<button class="chip sm" data-peopletab="guest" aria-pressed="'+(tab === 'guest')+'">ゲスト（'+guP.length+'）</button>' +
+      '</div>' +
+      (shown.length ? shown.map(personRowHTML).join('')
+        : '<div class="note">' + (tab === 'friend' ? 'まだ なかまは いません。ともだちコードで つなげます。' : 'ゲストは いません。') + '</div>')
       : '<div class="note">まだ だれも いません。</div>');
 
   if(f.outgoing.length){
@@ -6014,7 +6068,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-d';
+const APP_VERSION = '2026.09.24-e';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7749,16 +7803,32 @@ function bind(r){
       inp.value = list.join(' ');
       saveNames(inp.value);
     }
-    /* ボタンの ひょうじも あわせる */
-    app.querySelectorAll('[data-choosename]').forEach(x => {
-      const pp = String(x.dataset.choosename).split('|');
-      if(pp[0] === targetId) x.setAttribute('aria-pressed', String(list.indexOf(pp[1]) >= 0));
+    /* ボタンの ならびも あわせる（えらんだ 人を うえに） */
+    app.querySelectorAll('[data-chooserbody]').forEach(body => {
+      if(body.dataset.chooserbody !== targetId) return;
+      body.innerHTML = playerChooserBodyHTML(targetId);
+      bindChooseNames(body);
+      filterChooser(targetId);
     });
     const label = app.querySelector('[data-choosecount="' + targetId + '"]');
     if(label) label.textContent = list.length + '人';
   };
-
-  app.querySelectorAll('[data-choosename]').forEach(b => b.onclick = () => {
+  /* けんさく：いれた 文字を ふくむ なまえ だけ のこす（えらんだ 人は いつも みせる） */
+  const filterChooser = (targetId) => {
+    const inp = app.querySelector('[data-choosesearch="' + targetId + '"]');
+    const body = app.querySelector('[data-chooserbody="' + targetId + '"]');
+    if(!body) return;
+    const q = normalizeText(inp ? inp.value : '');
+    const now = (state.chosen && state.chosen[targetId]) || [];
+    body.querySelectorAll('[data-cname]').forEach(x => {
+      const n = x.dataset.cname;
+      x.style.display = (!q || now.indexOf(n) >= 0 || normalizeText(n).includes(q)) ? '' : 'none';
+    });
+    body.querySelectorAll('[data-cgroup]').forEach(gr => {
+      gr.style.display = [...gr.querySelectorAll('[data-cname]')].some(x => x.style.display !== 'none') ? '' : 'none';
+    });
+  };
+  const bindChooseNames = (root) => root.querySelectorAll('[data-choosename]').forEach(b => b.onclick = () => {
     const parts = String(b.dataset.choosename).split('|');
     const tid = parts[0], name = parts[1];
     state.chosen[tid] = state.chosen[tid] || [];
@@ -7766,6 +7836,15 @@ function bind(r){
     if(i >= 0) state.chosen[tid].splice(i, 1);
     else state.chosen[tid].push(name);
     applyChosen(tid);
+    playClick();
+  });
+  bindChooseNames(app);
+  app.querySelectorAll('[data-choosesearch]').forEach(inp => {
+    let composing = false;
+    const run = () => filterChooser(inp.dataset.choosesearch);
+    inp.addEventListener('compositionstart', () => { composing = true; });
+    inp.addEventListener('compositionend', () => { composing = false; run(); });
+    inp.addEventListener('input', () => { if(!composing) run(); });
   });
 
   app.querySelectorAll('[data-fillnames]').forEach(b => b.onclick = () => {
@@ -8028,6 +8107,12 @@ function bind(r){
     if(inp) inp.value = '';
     render(); toast(n + ' を とうろく しました');
   };
+  app.querySelectorAll('[data-peopletab]').forEach(b => b.onclick = () => {
+    state.peopleTab = b.dataset.peopletab; state.peopleOpen = ''; render();
+  });
+  app.querySelectorAll('[data-peopleopen]').forEach(b => b.onclick = () => {
+    state.peopleOpen = (state.peopleOpen === b.dataset.peopleopen) ? '' : b.dataset.peopleopen; render();
+  });
   app.querySelectorAll('[data-addknown]').forEach(b => b.onclick = () => {
     if(addPlayer(b.dataset.addknown)){ render(); toast(b.dataset.addknown + ' を とうろく しました'); }
   });
