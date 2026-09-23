@@ -6002,7 +6002,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-a';
+const APP_VERSION = '2026.09.24-b';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -6064,12 +6064,36 @@ function playsToPush(){
    なかまが ずかんの せつめいを かいて おくり、かんりにんが みくらべて とりこむ。
    とりこんだ ものは「サイトを こうしんする」で みんなに とどく。 */
 const HELP_FIELDS = [
-  {id:'summary',        name:'ひとことで いうと', rows:3},
-  {id:'quickRule',      name:'30びょうルール',     rows:6},
-  {id:'recommendation', name:'おすすめ ポイント',  rows:5},
-  {id:'detailRule',     name:'くわしい ルール',    rows:10}
+  {id:'summary',        name:'ひとことで いうと', rows:3,  kind:'text', need:true},
+  {id:'quickRule',      name:'30びょうルール',     rows:6,  kind:'text', need:true},
+  {id:'recommendation', name:'おすすめ ポイント',  rows:5,  kind:'text', need:true},
+  {id:'detailRule',     name:'くわしい ルール',    rows:10, kind:'text', need:true},
+  {id:'stats',          name:'にんずう・じかん など', kind:'stats'},
+  {id:'tags',           name:'タグ',               kind:'tags'},
+  {id:'image',          name:'がぞう・しゃしん',   kind:'image'},
+  {id:'video',          name:'どうが',             kind:'video'},
+  {id:'reading',        name:'よみがな',           rows:1,  kind:'text'}
 ];
-function helpFieldName(id){ const f = HELP_FIELDS.find(x => x.id === id); return f ? f.name : id; }
+const HELP_EXTRA_NAMES = {photo:'スマホの しゃしん', image:'がぞうの URL'};
+function helpFieldName(id){
+  if(HELP_EXTRA_NAMES[id]) return HELP_EXTRA_NAMES[id];
+  const f = HELP_FIELDS.find(x => x.id === id); return f ? f.name : id;
+}
+/* その こうもくが まだ からっぽ か（チップに「まだ」を だす） */
+function helpFieldEmpty(g, f){
+  if(f.kind === 'text') return !String(g[f.id] || '').trim();
+  if(f.kind === 'image') return !(g.images || []).length;
+  if(f.kind === 'video') return !videosOf(g).length;
+  return false;
+}
+const STAT_KEYS = [
+  {k:'playersMin', name:'にんずう（すくない）', unit:'人', min:1, max:30},
+  {k:'playersMax', name:'にんずう（おおい）',   unit:'人', min:1, max:30},
+  {k:'playTime',   name:'じかん',               unit:'分', min:1, max:600},
+  {k:'age',        name:'たいしょう年齢',       unit:'さい〜', min:1, max:99},
+  {k:'difficulty', name:'むずかしさ',           unit:'', min:1, max:5}
+];
+function parseJsonSafe(t){ try{ return JSON.parse(t); }catch(e){ return null; } }
 async function refreshHelp(){
   if(!isOnline()) return false;
   const [a, d] = await Promise.all([api('/api/admin'), api('/api/suggest')]);
@@ -6096,7 +6120,7 @@ function maybeRefreshHelp(key){
 }
 /* せつめいが たりない ゲーム（なにが たりないか も かえす） */
 function missingFields(g){
-  return HELP_FIELDS.filter(f => !String(g[f.id] || '').trim()).map(f => f.id);
+  return HELP_FIELDS.filter(f => f.need && !String(g[f.id] || '').trim()).map(f => f.id);
 }
 function helpTargets(){
   return ownedGames().map(g => ({g, miss: missingFields(g)}))
@@ -6125,10 +6149,10 @@ function helpBoxHTML(g){
   const miss = missingFields(g);
   return '<div class="note" style="margin:0 0 14px">' +
     (miss.length ? 'この ゲームは「'+miss.map(helpFieldName).join('」「')+'」が まだ ありません。<br>' : '') +
-    'あそんだ ことが あれば、せつめいを かいて ずかんづくりを てつだえます。' +
-    '<button class="btn small" data-go2="#/suggest/'+esc(g.id)+'" style="width:100%;margin-top:8px">✎ せつめいを かいて おくる</button></div>';
+    'せつめい・にんずう・タグ・がぞう・どうが を おくって、ずかんづくりを てつだえます。' +
+    '<button class="btn small" data-go2="#/suggest/'+esc(g.id)+'" style="width:100%;margin-top:8px">✎ ずかんづくりを てつだう</button></div>';
 }
-const HELP_STATUS = {open:'かんりにんの かくにん まち', done:'ずかんに とりこまれました', rejected:'こんかいは みおくり'};
+const HELP_STATUS = {open:'かんりにんの かくにん まち', done:'ずかんに とりこまれました', rejected:'こんかいは みおくり', seen:'かんりにんが みました'};
 function toolHelpHTML(){
   if(!isOnline()){
     return '<p class="count" style="margin:0 0 10px">ずかんづくりを てつだうには、「なかまの なまえ」で ぼうけんしゃの証を つくって ください。</p>' +
@@ -6136,7 +6160,7 @@ function toolHelpHTML(){
   }
   const h = state.help;
   const targets = helpTargets();
-  let html = '<p class="count" style="margin:0 0 10px">ずかんの せつめいを かいて おくると、かんりにんが みくらべて ずかんに とりこみます。' +
+  let html = '<p class="count" style="margin:0 0 10px">ずかんの せつめい・にんずう・タグ・がぞう・どうが を おくると、かんりにんが みくらべて ずかんに とりこみます。' +
     'あそんだ 人の ことばは、いちばん つたわる せつめいです。</p>';
   if(h.meAdmin){
     html += '<button class="btn primary" data-go2="#/review" style="width:100%;margin-bottom:14px">とどいた せつめいを みる（'+h.inbox.length+'）</button>';
@@ -6162,57 +6186,191 @@ function viewSuggest(gid){
   if(render._routeKey !== 'suggest/' + gid){
     const miss = missingFields(g);
     state.suggField = miss.length ? miss[0] : 'summary';
+    state.suggDraft = {};
+    state.suggTags = (g.tags || []).filter(t => t !== 'データみきにゅう');
+    state.suggPhoto = null;
   }
   const f = HELP_FIELDS.find(x => x.id === state.suggField) || HELP_FIELDS[0];
-  const cur = String(g[f.id] || '');
-  return '<section class="page">' +
+  const head = '<section class="page">' +
     '<button class="mini" data-go2="#/game/'+esc(g.id)+'" style="margin-bottom:14px">◀ '+esc(g.title)+'へ もどる</button>' +
-    '<h1 class="lede">せつめいを かく</h1>' +
-    '<p class="sub">'+esc(g.title)+' の せつめいを かいて、かんりにんに おくります。</p>' +
+    '<h1 class="lede">ずかんづくりを てつだう</h1>' +
+    '<p class="sub">'+esc(g.title)+' の ないようを かいて、かんりにんに おくります。</p>' +
     '<div class="chips" style="margin-bottom:12px">' + HELP_FIELDS.map(x =>
       '<button class="chip sm" data-sugfield="'+x.id+'" aria-pressed="'+(x.id===f.id)+'">'+x.name+
-        (String(g[x.id]||'').trim() ? '' : ' ・まだ')+'</button>').join('') + '</div>' +
+        (helpFieldEmpty(g, x) ? ' ・まだ' : '')+'</button>').join('') + '</div>';
+  const send = '<button class="btn primary" id="sugSend" data-sugg="'+esc(g.id)+'" style="width:100%">かんりにんに おくる</button>' +
+    '</section>';
+  const d = state.suggDraft || {};
+  if(f.kind === 'stats'){
+    return head +
+      '<p class="count" style="margin:0 0 10px">ちがって いる ところだけ なおして ください。かえた ところだけ おくられます。</p>' +
+      STAT_KEYS.map(sk => {
+        const v = (d.stats && d.stats[sk.k] !== undefined) ? d.stats[sk.k] : (g[sk.k] || '');
+        return '<div class="row" style="align-items:center;margin-bottom:8px">' +
+          '<label class="lbl" for="sug-'+sk.k+'" style="flex:1;margin:0">'+sk.name+'</label>' +
+          '<input type="number" id="sug-'+sk.k+'" data-statk="'+sk.k+'" min="'+sk.min+'" max="'+sk.max+'" inputmode="numeric" value="'+esc(v)+'" style="flex:0 0 90px">' +
+          '<span style="flex:0 0 52px;font-size:12px;color:var(--muted)">'+(sk.k === 'difficulty' ? '（1〜5）' : sk.unit)+'</span></div>';
+      }).join('') + '<div style="height:6px"></div>' + send;
+  }
+  if(f.kind === 'tags'){
+    const sel = state.suggTags || [];
+    const names = state.tags.map(t => t.name).filter(n => n !== 'データみきにゅう');
+    return head +
+      '<p class="count" style="margin:0 0 10px">この ゲームに あう タグを えらんで ください。いま ついて いる ものは ▶ に なって います。</p>' +
+      '<div class="chips" style="margin-bottom:14px">' + names.map(n =>
+        '<button class="chip sm" data-sugtag="'+esc(n)+'" aria-pressed="'+(sel.indexOf(n) >= 0)+'">'+esc(n)+'</button>').join('') + '</div>' +
+      send;
+  }
+  if(f.kind === 'image'){
+    const imgs = g.images || [];
+    return head +
+      (imgs.length ? '<div class="catlabel">いまの がぞう</div><div class="imgs-preview" style="margin-bottom:12px">' +
+        imgs.map(u => '<div class="ip"><img src="'+esc(u)+'" alt=""></div>').join('') + '</div>' : '') +
+      '<label class="lbl" for="sugImgUrl">がぞうの URL<span class="hint">ずかんに のせられる</span></label>' +
+      '<input type="text" id="sugImgUrl" value="'+esc(d.imgUrl || '')+'" placeholder="https://… （はこの しゃしん など）" autocapitalize="off" autocorrect="off" spellcheck="false">' +
+      '<div id="sugImgPrev" style="margin:8px 0 14px"></div>' +
+      '<label class="lbl">スマホの しゃしん<span class="hint">かんりにんが みる だけ</span></label>' +
+      '<label class="filebtn">＋ しゃしんを えらぶ<input type="file" id="sugPhotoFile" accept="image/*"></label>' +
+      (state.suggPhoto ? '<div style="margin:8px 0"><img src="'+esc(state.suggPhoto)+'" alt="" style="max-width:100%;max-height:220px;border:2px solid var(--frame)">' +
+        '<br><button class="mini warn" id="sugPhotoClear" style="margin-top:6px">しゃしんを はずす</button></div>' : '') +
+      '<textarea id="sugPhotoNote" rows="2" style="margin-top:8px" placeholder="しゃしんの せつめい（にんい）">'+esc(d.photoNote || '')+'</textarea>' +
+      '<p class="count" style="margin:6px 0 12px">ずかんに のるのは <b>URLの がぞう</b> だけです。' +
+        'スマホの しゃしんは、かんりにんが みて さんこうに する ための もので、ずかんには のりません。</p>' +
+      send;
+  }
+  if(f.kind === 'video'){
+    const vids = videosOf(g);
+    return head +
+      (vids.length ? '<div class="catlabel">いまの どうが（'+vids.length+'本）</div>' +
+        vids.map(u => '<p class="count" style="margin:0 0 4px;word-break:break-all">・'+esc(u)+'</p>').join('') + '<div style="height:8px"></div>' : '') +
+      '<label class="lbl" for="sugVideo">どうがの URL<span class="hint">YouTube</span></label>' +
+      '<input type="text" id="sugVideo" value="'+esc(d.video || '')+'" placeholder="https://www.youtube.com/watch?v=..." autocapitalize="off" autocorrect="off" spellcheck="false">' +
+      '<p class="count" style="margin:6px 0 12px">ルール せつめいや プレイの ようすが わかる どうがが おすすめです。</p>' +
+      send;
+  }
+  const cur = String(g[f.id] || '');
+  const draft = (d.text && d.text[f.id] !== undefined) ? d.text[f.id] : cur;
+  return head +
     (cur ? '<details style="margin-bottom:10px"><summary style="font-size:13px">いまの 「'+esc(f.name)+'」を みる</summary>' +
         '<div class="win" style="margin-top:8px;white-space:pre-wrap;font-size:13px">'+esc(cur)+'</div></details>' : '') +
     '<label class="lbl" for="sugText">'+esc(f.name)+'</label>' +
-    '<textarea id="sugText" rows="'+f.rows+'" style="min-height:'+(f.rows*22)+'px" placeholder="'+
+    '<textarea id="sugText" rows="'+f.rows+'" style="min-height:'+(Math.max(2, f.rows)*22)+'px" placeholder="'+
       (f.id === 'summary' ? 'れい：数字を ことばで つたえて、みんなで ならべる きょうりょく ゲーム。' :
-       f.id === 'quickRule' ? 'れい：1. カードを 1まいずつ くばる\\n2. …' : '')+'">'+esc(cur)+'</textarea>' +
+       f.id === 'quickRule' ? 'れい：1. カードを 1まいずつ くばる\\n2. …' :
+       f.id === 'reading' ? 'れい：ほうせきのきらめき すぷれんだー' : '')+'">'+esc(draft)+'</textarea>' +
     '<p class="count" style="margin:6px 0 12px">いまの ぶんしょうを なおしても、あたらしく かいても だいじょうぶです。</p>' +
-    '<button class="btn primary" id="sugSend" data-sugg="'+esc(g.id)+'" style="width:100%">かんりにんに おくる</button>' +
-  '</section>';
+    send;
 }
 function viewReview(){
   const h = state.help;
   let html = '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
-    '<h1 class="lede">とどいた せつめい</h1>';
+    '<h1 class="lede">とどいた ないよう</h1>';
   if(!h.meAdmin){
     return html + '<div class="note">かんりにんだけが みられます。</div></section>';
   }
-  html += '<p class="sub">いまの ぶんしょうと くらべて、よければ「とりこむ」を おして ください。<br>' +
+  html += '<p class="sub">いまの ないようと くらべて、よければ「とりこむ」を おして ください。<br>' +
     'とりこんだら、かんりの「サイトを こうしんする」で みんなに とどきます。</p>';
   if(isDirty()) html += '<div class="note" style="margin-bottom:12px;border-color:var(--accent)">▶ とりこんだ ぶんが まだ サイトに でて いません。' +
     '<button class="btn small" data-go2="#/admin" style="width:100%;margin-top:8px">かんりで サイトを こうしんする</button></div>';
   if(!h.inbox.length) return html + '<div class="note">いまは とどいて いる せつめいは ありません。</div></section>';
   html += h.inbox.map(x => {
     const g = state.games.find(y => y.id === x.g);
-    const cur = g ? String(g[x.field] || '') : '';
-    return '<div class="win" style="margin-bottom:12px">' +
+    const top = '<div class="win" style="margin-bottom:12px">' +
       '<p style="margin:0 0 4px;color:var(--accent)">'+esc(g ? g.title : (x.t || '？'))+'</p>' +
-      '<p class="count" style="margin:0 0 8px">'+esc(helpFieldName(x.field))+'・'+esc(x.name)+' さんから・'+esc(dateLabel(String(x.at).slice(0,10)))+'</p>' +
+      '<p class="count" style="margin:0 0 8px">'+esc(helpFieldName(x.field))+'・'+esc(x.name)+' さんから・'+esc(dateLabel(String(x.at).slice(0,10)))+'</p>';
+    const noGame = g ? '' : '<p class="count" style="color:var(--danger);margin:0 0 8px">この ゲームは ずかんに ありません。</p>';
+    const btns = (acceptLabel) => '<div class="btn-row">' +
+        '<button class="btn small" style="flex:1" data-sugreject="'+esc(x.id)+'">みおくる</button>' +
+        (g ? '<button class="btn small primary" style="flex:1" data-sugaccept="'+esc(x.id)+'">'+(acceptLabel || 'とりこむ')+'</button>' : '') +
+      '</div></div>';
+    if(x.field === 'stats'){
+      const o = parseJsonSafe(x.text) || {};
+      return top + '<div class="catlabel">とどいた かず</div>' +
+        STAT_KEYS.filter(sk => o[sk.k] !== undefined).map(sk =>
+          '<p style="margin:0 0 4px;font-size:14px">'+esc(sk.name)+'：<span style="color:var(--muted)">'+esc(g ? (g[sk.k] || 'なし') : '？')+'</span> → ' +
+          '<b style="color:var(--accent-2)">'+esc(o[sk.k])+'</b>'+esc(sk.k === 'difficulty' ? '' : sk.unit)+'</p>').join('') +
+        '<div style="height:8px"></div>' + noGame + btns();
+    }
+    if(x.field === 'tags'){
+      const o = parseJsonSafe(x.text) || {add:[], remove:[]};
+      return top +
+        ((o.add || []).length ? '<p style="margin:0 0 4px;font-size:14px">つける：<b style="color:var(--accent-2)">'+esc(o.add.join('・'))+'</b></p>' : '') +
+        ((o.remove || []).length ? '<p style="margin:0 0 4px;font-size:14px">はずす：<b style="color:var(--danger)">'+esc(o.remove.join('・'))+'</b></p>' : '') +
+        '<p class="count" style="margin:0 0 8px">いまの タグ：'+esc(g ? (g.tags || []).join('・') || 'なし' : '？')+'</p>' + noGame + btns();
+    }
+    if(x.field === 'image'){
+      return top +
+        '<img src="'+esc(x.text)+'" alt="" style="max-width:100%;max-height:260px;display:block;border:2px solid var(--accent-2);margin-bottom:6px">' +
+        '<p class="count" style="margin:0 0 8px;word-break:break-all">'+esc(x.text)+'</p>' +
+        (g ? '<label class="row" style="align-items:center;gap:8px;margin:0 0 10px;font-size:13px">' +
+          '<input type="checkbox" data-sugbox="'+esc(x.id)+'" '+((g.images || []).length ? '' : 'checked')+' style="flex:0 0 auto;width:18px;height:18px">' +
+          '<span>はこ画像（1まいめ）に する</span></label>' : '') + noGame + btns();
+    }
+    if(x.field === 'video'){
+      const vid = youtubeId(x.text);
+      return top +
+        (vid ? '<img src="https://i.ytimg.com/vi/'+esc(vid)+'/hqdefault.jpg" alt="" style="max-width:100%;display:block;border:2px solid var(--accent-2);margin-bottom:6px">' : '') +
+        '<p class="count" style="margin:0 0 8px;word-break:break-all"><a href="'+esc(x.text)+'" target="_blank" rel="noopener" style="color:var(--accent-2)">'+esc(x.text)+'</a></p>' +
+        (vid ? '' : '<p class="count" style="color:var(--danger);margin:0 0 8px">YouTubeの アドレスでは ないようです。</p>') + noGame + btns();
+    }
+    if(x.field === 'photo'){
+      const o = parseJsonSafe(x.text) || {};
+      return top +
+        '<img src="'+esc(o.u || '')+'" alt="" style="max-width:100%;max-height:320px;display:block;border:2px solid var(--accent-2);margin-bottom:6px">' +
+        (o.n ? '<p style="margin:0 0 6px;font-size:14px;white-space:pre-wrap">'+esc(o.n)+'</p>' : '') +
+        '<p class="count" style="margin:0 0 8px">スマホの しゃしんは ずかんには のせられません（みる だけ）。' +
+          'のせたい ときは、おなじような がぞうの URLを「がぞう」で いれて ください。<br>' +
+          'みおわったら しゃしんは サーバーから けされます。</p>' +
+        '<div class="btn-row">' +
+          '<button class="btn small" style="flex:1" data-sugreject="'+esc(x.id)+'">みおくる</button>' +
+          '<button class="btn small primary" style="flex:1" data-sugseen="'+esc(x.id)+'">みました</button>' +
+        '</div></div>';
+    }
+    const cur = g ? String(g[x.field] || '') : '';
+    return top +
       '<div class="catlabel">とどいた ぶんしょう</div>' +
       '<div style="white-space:pre-wrap;font-size:14px;border:2px solid var(--accent-2);padding:8px;margin-bottom:8px">'+esc(x.text)+'</div>' +
       (cur ? '<details style="margin-bottom:8px"><summary style="font-size:12px;color:var(--muted)">いまの ぶんしょうと くらべる</summary>' +
           '<div style="white-space:pre-wrap;font-size:13px;color:var(--muted);border:2px solid var(--frame);padding:8px;margin-top:6px">'+esc(cur)+'</div></details>'
         : '<p class="count" style="margin:0 0 8px">いまは まだ かかれて いません。</p>') +
-      (g ? '' : '<p class="count" style="color:var(--danger);margin:0 0 8px">この ゲームは ずかんに ありません。</p>') +
-      '<div class="btn-row">' +
-        '<button class="btn small" style="flex:1" data-sugreject="'+esc(x.id)+'">みおくる</button>' +
-        (g ? '<button class="btn small primary" style="flex:1" data-sugaccept="'+esc(x.id)+'">とりこむ</button>' : '') +
-      '</div></div>';
+      noGame + btns();
   }).join('');
   return html + '</section>';
+}
+/* とどいた ないようを ゲームに いれる */
+function applySuggestion(g, x, opt){
+  opt = opt || {};
+  if(x.field === 'stats'){
+    const o = parseJsonSafe(x.text) || {};
+    STAT_KEYS.forEach(sk => { if(o[sk.k] !== undefined) g[sk.k] = Number(o[sk.k]); });
+    if(Number(g.playersMin) > Number(g.playersMax)){ const t = g.playersMin; g.playersMin = g.playersMax; g.playersMax = t; }
+    return;
+  }
+  if(x.field === 'tags'){
+    const o = parseJsonSafe(x.text) || {};
+    let tags = (g.tags || []).filter(t => (o.remove || []).indexOf(t) < 0);
+    (o.add || []).forEach(t => {
+      if(tags.indexOf(t) < 0) tags.push(t);
+      if(!state.tags.some(y => y.name === t)){ state.tags.push({name:t, category:'その他'}); saveTags(); }
+    });
+    g.tags = tags;
+    return;
+  }
+  if(x.field === 'image'){
+    const imgs = (g.images || []).filter(u => u !== x.text);
+    if(opt.asBox) imgs.unshift(x.text); else imgs.push(x.text);
+    g.images = imgs;
+    return;
+  }
+  if(x.field === 'video'){
+    const vids = videosOf(g);
+    if(!vids.some(v => youtubeId(v) === youtubeId(x.text))) vids.push(x.text);
+    g.videos = vids; delete g.video;
+    return;
+  }
+  g[x.field] = x.text;
+  if(x.field === 'summary') g.tags = (g.tags || []).filter(t => t !== 'データみきにゅう');
 }
 function helpAdminHTML(){
   if(!isOnline()) return '';
@@ -8473,19 +8631,97 @@ function bind(r){
   };
 
   /* --- ずかんづくり --- */
+  /* タブを かえても、かきかけを わすれない */
+  const keepSuggDraft = () => {
+    const d = state.suggDraft = state.suggDraft || {};
+    const t = document.getElementById('sugText');
+    if(t){ d.text = d.text || {}; d.text[state.suggField] = t.value; }
+    const st = app.querySelectorAll('[data-statk]');
+    if(st.length){ d.stats = {}; st.forEach(i => { d.stats[i.dataset.statk] = i.value; }); }
+    const iu = document.getElementById('sugImgUrl'); if(iu) d.imgUrl = iu.value;
+    const pn = document.getElementById('sugPhotoNote'); if(pn) d.photoNote = pn.value;
+    const sv = document.getElementById('sugVideo'); if(sv) d.video = sv.value;
+  };
   app.querySelectorAll('[data-sugfield]').forEach(b => b.onclick = () => {
+    keepSuggDraft();
     state.suggField = b.dataset.sugfield; render();
   });
+  app.querySelectorAll('[data-sugtag]').forEach(b => b.onclick = () => {
+    const n = b.dataset.sugtag, sel = state.suggTags = state.suggTags || [];
+    const i = sel.indexOf(n);
+    if(i >= 0) sel.splice(i, 1); else sel.push(n);
+    b.setAttribute('aria-pressed', String(i < 0));
+  });
+  const sugImgUrl = document.getElementById('sugImgUrl');
+  const paintImgPrev = () => {
+    const box = document.getElementById('sugImgPrev');
+    if(!box || !sugImgUrl) return;
+    const u = sugImgUrl.value.trim();
+    box.innerHTML = /^https?:\/\//i.test(u) ? '<img src="'+esc(u)+'" alt="" style="max-width:100%;max-height:200px;border:2px solid var(--frame)" ' +
+      'onerror="this.replaceWith(Object.assign(document.createElement(\'p\'),{className:\'count\',textContent:\'この URLの がぞうは ひらけませんでした\'}))">' : '';
+  };
+  if(sugImgUrl){ sugImgUrl.addEventListener('change', paintImgPrev); sugImgUrl.addEventListener('blur', paintImgPrev); paintImgPrev(); }
+  const sugPhotoFile = document.getElementById('sugPhotoFile');
+  if(sugPhotoFile) sugPhotoFile.onchange = async () => {
+    const file = sugPhotoFile.files && sugPhotoFile.files[0];
+    if(!file) return;
+    try{ keepSuggDraft(); state.suggPhoto = await readImage(file, 1000, 0.72); render(); }
+    catch(e){ toast('しゃしんを よみこめませんでした'); }
+  };
+  const sugPhotoClear = document.getElementById('sugPhotoClear');
+  if(sugPhotoClear) sugPhotoClear.onclick = () => { keepSuggDraft(); state.suggPhoto = null; render(); };
+
   const sugSend = document.getElementById('sugSend');
   if(sugSend) sugSend.onclick = async () => {
     const gid = sugSend.dataset.sugg;
     const g = state.games.find(x => x.id === gid);
-    const text = (document.getElementById('sugText') || {value:''}).value.trim();
-    if(!text) return toast('ぶんしょうを いれて ください');
-    if(g && text === String(g[state.suggField] || '').trim()) return toast('いまと おなじ ぶんしょうです');
+    if(!g) return;
+    const f = HELP_FIELDS.find(x => x.id === state.suggField) || HELP_FIELDS[0];
+    const post = (field, text) => api('/api/suggest', {method:'POST', body:{g:gid, t:g.title, field, text}});
+    const jobs = [];
+    if(f.kind === 'text'){
+      const text = (document.getElementById('sugText') || {value:''}).value.trim();
+      if(!text) return toast('ぶんしょうを いれて ください');
+      if(text === String(g[f.id] || '').trim()) return toast('いまと おなじ ぶんしょうです');
+      jobs.push(() => post(f.id, text));
+    }else if(f.kind === 'stats'){
+      const o = {};
+      app.querySelectorAll('[data-statk]').forEach(i => {
+        const v = i.value.trim(); if(v === '') return;
+        const n = Math.round(Number(v)), sk = STAT_KEYS.find(x => x.k === i.dataset.statk);
+        if(isFinite(n) && n >= sk.min && n <= sk.max && n !== Number(g[sk.k] || 0)) o[sk.k] = n;
+      });
+      const pmin = o.playersMin !== undefined ? o.playersMin : Number(g.playersMin || 0);
+      const pmax = o.playersMax !== undefined ? o.playersMax : Number(g.playersMax || 0);
+      if(pmin && pmax && pmin > pmax) return toast('にんずうの すくない ほうが おおく なって います');
+      if(!Object.keys(o).length) return toast('かえた ところが ありません');
+      jobs.push(() => post('stats', JSON.stringify(o)));
+    }else if(f.kind === 'tags'){
+      const now = (g.tags || []).filter(t => t !== 'データみきにゅう'), sel = state.suggTags || [];
+      const add = sel.filter(t => now.indexOf(t) < 0), remove = now.filter(t => sel.indexOf(t) < 0);
+      if(!add.length && !remove.length) return toast('かえた ところが ありません');
+      jobs.push(() => post('tags', JSON.stringify({add, remove})));
+    }else if(f.kind === 'image'){
+      const u = (document.getElementById('sugImgUrl') || {value:''}).value.trim();
+      const note = (document.getElementById('sugPhotoNote') || {value:''}).value.trim();
+      if(u && !/^https?:\/\/\S+$/i.test(u)) return toast('がぞうの URLは https:// から いれて ください');
+      if(u && (g.images || []).indexOf(u) >= 0) return toast('その がぞうは もう ずかんに あります');
+      if(!u && !state.suggPhoto) return toast('URLを いれるか、しゃしんを えらんで ください');
+      if(u) jobs.push(() => post('image', u));
+      if(state.suggPhoto){
+        const pic = state.suggPhoto;
+        jobs.push(async () => { const url = await uploadOnePhoto('sugg', pic); return post('photo', JSON.stringify({u:url, n:note})); });
+      }
+    }else if(f.kind === 'video'){
+      const u = (document.getElementById('sugVideo') || {value:''}).value.trim();
+      if(!youtubeId(u) || !/^https?:\/\//i.test(u)) return toast('YouTubeの アドレスを いれて ください');
+      if(videosOf(g).some(v => youtubeId(v) === youtubeId(u))) return toast('その どうがは もう ずかんに あります');
+      jobs.push(() => post('video', u));
+    }
     sugSend.disabled = true;
     try{
-      await api('/api/suggest', {method:'POST', body:{g:gid, t:g ? g.title : '', field:state.suggField, text}});
+      for(const j of jobs) await j();
+      state.suggPhoto = null; state.suggDraft = {};
       await refreshHelp();
       toast('おくりました。ありがとう！');
       go('#/tool/help');
@@ -8502,15 +8738,20 @@ function bind(r){
     const g = x && state.games.find(y => y.id === x.g);
     if(!x || !g) return;
     b.disabled = true;
+    const boxChk = app.querySelector('[data-sugbox="'+x.id+'"]');
     try{
       await api('/api/suggest/close', {method:'POST', body:{id:x.id, status:'done'}});
-      g[x.field] = x.text;
-      if(x.field === 'summary') g.tags = (g.tags || []).filter(t => t !== 'データみきにゅう');
+      applySuggestion(g, x, {asBox: !!(boxChk && boxChk.checked)});
       saveGames();
       await refreshHelp();
       render();
       toast(g.title + ' に とりこみました');
     }catch(e){ toast(e.message); b.disabled = false; }
+  });
+  app.querySelectorAll('[data-sugseen]').forEach(b => b.onclick = async () => {
+    b.disabled = true;
+    try{ await api('/api/suggest/close', {method:'POST', body:{id:b.dataset.sugseen, status:'seen'}}); await refreshHelp(); render(); toast('みました'); }
+    catch(e){ toast(e.message); b.disabled = false; }
   });
   app.querySelectorAll('[data-sugreject]').forEach(b => b.onclick = () => {
     ask('この せつめいを みおくりますか？\nおくった 人には「こんかいは みおくり」と でます。', async () => {
