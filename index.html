@@ -4057,7 +4057,7 @@ function chouboCalc(){
 }
 function toolChouboHTML(){
   const c = state.choubo;
-  const regs = state.players.map(p => p.name);
+  const regs = rosterNames();
   const r = chouboCalc();
   const payerOpts = r.members.length ? r.members : regs;
   return '<p class="count" style="margin:0 0 10px">かいじょう代や おやつ代を いれると、だれが だれに いくら はらえば いいかを けいさん します。</p>' +
@@ -4210,7 +4210,7 @@ function talkNext(){
   }
   const i = state.talk.order.shift();
   state.talk.cur = pool[i] || pool[0];
-  const mem = chosenToday().length ? chosenToday() : state.players.map(p => p.name);
+  const mem = chosenToday().length ? chosenToday() : rosterNames();
   state.talk.who = mem.length ? mem[Math.floor(Math.random() * mem.length)] : '';
 }
 function toolTalkHTML(){
@@ -4253,7 +4253,7 @@ function bindTalk(){
   if(nx) nx.onclick = () => { talkNext(); repaintTalk(); };
   const wh = document.getElementById('talkWho');
   if(wh) wh.onclick = () => {
-    const mem = (chosenToday().length ? chosenToday() : state.players.map(p => p.name)).filter(n => n !== state.talk.who);
+    const mem = (chosenToday().length ? chosenToday() : rosterNames()).filter(n => n !== state.talk.who);
     if(mem.length) state.talk.who = mem[Math.floor(Math.random() * mem.length)];
     repaintTalk();
   };
@@ -4321,6 +4321,16 @@ function bindLendPicks(box){
    よく あそぶ 人を とうろく して おくと、
    きろくや くじ引きで えらぶ だけで よく なる。 */
 function savePlayers(){ store.write(KEY.players, state.players); }
+/* どうぐで えらべる なまえ：じぶん → とうろく した なまえ → なかま（ともだち） */
+function rosterNames(){
+  const out = [];
+  const add = n => { n = String(n || '').trim(); if(n && out.indexOf(n) < 0) out.push(n); };
+  const a = (typeof account === 'function') ? account() : null;
+  if(a) add(a.name);
+  state.players.forEach(p => add(p.name));
+  if(typeof friendList === 'function') friendList().forEach(f => add(f.name));
+  return out;
+}
 
 function addPlayer(name){
   const n = String(name || '').trim();
@@ -4428,7 +4438,7 @@ function fromFriendsCount(){
 function allAdventurers(){
   const m = {};
   cardPlays().forEach(r => playMembers(r.pl).forEach(n => { m[n] = (m[n] || 0) + 1; }));
-  state.players.forEach(p => { if(!(p.name in m)) m[p.name] = 0; });
+  rosterNames().forEach(n => { if(!(n in m)) m[n] = 0; });
   return Object.keys(m).map(n => ({name:n, plays:m[n]}))
     .sort((a,b) => b.plays - a.plays || a.name.localeCompare(b.name,'ja'));
 }
@@ -4439,7 +4449,7 @@ function splitNames(text){
 /* きろくの「いっしょに あそんだ 人」を えらぶ ぶひん */
 function withPickerHTML(){
   const sel = state.withSel || [];
-  const regs = state.players.map(p => p.name);
+  const regs = rosterNames();
   const others = sel.filter(n => regs.indexOf(n) < 0);
   return '<div style="margin:0 0 10px">' +
     '<p class="count" style="margin:0 0 6px">いっしょに あそんだ 人（<span id="withCount">'+sel.length+'人</span>）' +
@@ -4469,19 +4479,19 @@ function bindWithPicker(){
   });
   const all = document.getElementById('withAll');
   if(all) all.onclick = () => {
-    state.players.forEach(p => { if(state.withSel.indexOf(p.name) < 0) state.withSel.push(p.name); });
+    rosterNames().forEach(n => { if(state.withSel.indexOf(n) < 0) state.withSel.push(n); });
     paintWithPicker();
   };
   const none = document.getElementById('withNone');
   if(none) none.onclick = () => {
-    const regs = state.players.map(p => p.name);
+    const regs = rosterNames();
     state.withSel = state.withSel.filter(n => regs.indexOf(n) < 0);
     paintWithPicker();
   };
 }
 /* ほぞん する ときの メンバー（えらんだ 人＋ほかの 人＋かった人） */
 function collectMembers(winner){
-  const regs = state.players.map(p => p.name);
+  const regs = rosterNames();
   const list = (state.withSel || []).filter(n => regs.indexOf(n) >= 0);
   const oth = document.getElementById('withOther');
   splitNames(oth ? oth.value : '').forEach(n => { if(list.indexOf(n) < 0) list.push(n); });
@@ -4498,22 +4508,22 @@ function chosenToday(){
 
 /* きろくに でて くるが、まだ とうろく して いない なまえ */
 function unknownPlayers(){
-  const known = state.players.map(p => p.name);
+  const known = rosterNames();
   return allAdventurers().filter(a => known.indexOf(a.name) < 0)
     .map(a => ({name:a.name, count:a.plays}));
 }
 /* とうろく した なまえから、きょうの メンバーを えらぶ ぶひん。
    おした 人が 入力らんに くわわり、もう一度 おすと はずれる。 */
 function playerChooserHTML(targetId){
-  if(!state.players.length) return '';
+  if(!rosterNames().length) return '';
   const now = (state.chosen && state.chosen[targetId]) || [];
   return '<div style="margin:8px 0 0">' +
     '<p class="count" style="margin:0 0 6px">きょうの メンバーを えらぶ（' +
       '<span data-choosecount="'+esc(targetId)+'">' + now.length + '人</span>）</p>' +
     '<div class="chips" style="margin-bottom:6px">' +
-      state.players.map(p =>
-        '<button type="button" class="chip sm" data-choosename="'+esc(targetId)+'|'+esc(p.name)+'" ' +
-        'aria-pressed="'+(now.indexOf(p.name) >= 0)+'">'+esc(p.name)+'</button>').join('') +
+      rosterNames().map(n =>
+        '<button type="button" class="chip sm" data-choosename="'+esc(targetId)+'|'+esc(n)+'" ' +
+        'aria-pressed="'+(now.indexOf(n) >= 0)+'">'+esc(n)+'</button>').join('') +
     '</div>' +
     '<div class="chips">' +
       '<button type="button" class="mini" data-fillnames="'+esc(targetId)+'">ぜんいん</button>' +
@@ -4523,13 +4533,13 @@ function playerChooserHTML(targetId){
 
 /* なまえを えらぶ ボタン（きろくの 入力らんの したに だす） */
 function playerPickHTML(targetId){
-  if(!state.players.length) return '';
+  if(!rosterNames().length) return '';
   /* どこかの どうぐで えらんだ メンバーが いれば、その人たちを さきに ならべる */
   const picked = [];
   Object.keys(state.chosen || {}).forEach(k => {
     (state.chosen[k] || []).forEach(n => { if(picked.indexOf(n) < 0) picked.push(n); });
   });
-  const rest = state.players.map(p => p.name).filter(n => picked.indexOf(n) < 0);
+  const rest = rosterNames().filter(n => picked.indexOf(n) < 0);
   const order = picked.concat(rest);
 
   return '<div class="chips" style="margin:-4px 0 8px">' +
@@ -5515,7 +5525,7 @@ function personRowHTML(p){
 /* さいしょの 1かいだけ だす あんない */
 function welcomeHTML(){
   if(account() || store.read(KEY.welcome, false)) return '';
-  const names = state.players.map(p => p.name);
+  const names = rosterNames();
   return '<div class="win" style="margin-bottom:14px;border-color:var(--accent)">' +
     '<p style="margin:0 0 8px;font-size:16px;color:var(--accent)">▶ さかばへ ようこそ</p>' +
     (names.length
@@ -5817,7 +5827,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.23-h';
+const APP_VERSION = '2026.09.23-i';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7354,7 +7364,7 @@ function bind(r){
 
   app.querySelectorAll('[data-fillnames]').forEach(b => b.onclick = () => {
     const tid = b.dataset.fillnames;
-    state.chosen[tid] = state.players.map(p => p.name);
+    state.chosen[tid] = rosterNames();
     applyChosen(tid);
   });
 
