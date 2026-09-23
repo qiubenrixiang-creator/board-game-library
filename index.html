@@ -5003,6 +5003,9 @@ function toolNamesHTML(){
   let html = '<p class="count" style="margin:0 0 10px">よく あそぶ 人を とうろく して おくと、きろくの「かった人」や くじ引きで えらぶ だけで よく なります。<br>' +
     'なまえを なおすと、これまでの きろくも まとめて かわります。<br>' +
     '<span style="color:var(--accent)">なまえを タップすると ぼうけんしゃカードが みられます。</span></p>' +
+    (account() ? '' :
+      '<div class="note" style="margin-bottom:12px">▼ この画面の いちばん したで「ぼうけんしゃの証」を つくると、' +
+      'ともだちと きろくを わけあえます。</div>') +
 
     '<div class="row" style="margin-bottom:14px">' +
       '<input type="text" id="newPlayer" placeholder="なまえを いれる" style="flex:2">' +
@@ -5012,7 +5015,9 @@ function toolNamesHTML(){
     html += list.map(p =>
       '<div class="admin-row">' +
         '<button class="t" data-go2="#/card/'+encodeURIComponent(p.name)+'" style="all:unset;flex:1;min-width:0;cursor:pointer">' +
-          '<b style="display:block;font-size:14px;font-weight:400">'+esc(p.name)+' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(advPlays(p.name).length)+' ▶</span></b>' +
+          '<b style="display:block;font-size:14px;font-weight:400">'+esc(p.name)+
+            ((account() && account().name === p.name) ? ' <span class="badge">じぶん</span>' : '') +
+            ' <span style="color:var(--accent);font-size:12px">Lv.'+advLevel(advPlays(p.name).length)+' ▶</span></b>' +
           '<span style="font-size:11px;color:var(--muted)">'+esc(advTitle(adventurer(p.name)))+'・'+
             (winCount(p.name) ? winCount(p.name)+'かい かって いる' : 'かちの きろくは まだ')+'</span></button>' +
         '<button class="mini" data-renameplayer="'+esc(p.name)+'">なおす</button>' +
@@ -5039,6 +5044,7 @@ function toolNamesHTML(){
       'スマホを かえても、おなじ なまえなら レベルは つづきます。</div>';
   }
 
+  html += onlineHTML();
   return html;
 }
 
@@ -5264,7 +5270,14 @@ function viewTool(id){
    「ぼうけんしゃの証」＝ サーバーが くれる ぼうけんしゃIDと あいことば。
    この スマホに しまって おき、ともだちや ほかの スマホと つながる ときに つかう。
    ========================================================= */
-function apiBase(){ return String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, ''); }
+/* さかばの サーバーの アドレス。
+   ここに かいて おくと、ともだちは なにも いれずに とうろく できる。
+   サーバーを ひっこし した ときは この1行を かきかえる。 */
+const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
+function apiBase(){
+  const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
+  return saved || API_BASE_DEFAULT;
+}
 function saveApiBase(v){ store.write(KEY.api, String(v || '').trim().replace(/\/+$/, '')); }
 function account(){ return store.read(KEY.acct, null); }
 function saveAccount(a){ store.write(KEY.acct, a || null); }
@@ -5309,9 +5322,7 @@ function onlineHTML(){
     'スマホを かえても、ひきつげば レベルは つづきます。<br>' +
     'とうろく しなくても、ずかんは いままで どおり つかえます。</p>' +
 
-    '<div class="form-group"><label class="lbl" for="apiBase">さかばの アドレス</label>' +
-      '<input type="text" id="apiBase" value="'+esc(base)+'" placeholder="https://〜.workers.dev" ' +
-      'autocapitalize="off" autocorrect="off" spellcheck="false"></div>';
+    '';
 
   if(a && a.token){
     html += '<div class="win" style="margin-bottom:10px">' +
@@ -5345,17 +5356,24 @@ function onlineHTML(){
         '</div></details>';
   }
   html += '<div id="acctStatus"></div>' +
-    '<button class="mini" id="acctHealth" style="margin-top:10px">さかばが いきて いるか ためす</button>';
+    '<details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted)">さかばの アドレス（ふつうは さわらなくて だいじょうぶ）</summary>' +
+      '<div class="form-group" style="margin-top:10px">' +
+        '<input type="text" id="apiBase" value="'+esc(base)+'" placeholder="https://〜.workers.dev" ' +
+        'autocapitalize="off" autocorrect="off" spellcheck="false"></div>' +
+      '<button class="mini" id="acctHealth">さかばが いきて いるか ためす</button>' +
+    '</details>';
   return html;
 }
 function bindOnline(){
+  const nameIn = document.getElementById('acctName');
   const baseIn = document.getElementById('apiBase');
-  if(!baseIn) return;
-  baseIn.addEventListener('change', () => { saveApiBase(baseIn.value); acctStatus('アドレスを おぼえました'); });
+  if(!baseIn && !nameIn && !document.getElementById('acctRename')) return;
+  const useBase = () => { if(baseIn && baseIn.value.trim()) saveApiBase(baseIn.value); };
+  if(baseIn) baseIn.addEventListener('change', () => { saveApiBase(baseIn.value); acctStatus('アドレスを おぼえました'); });
 
   const health = document.getElementById('acctHealth');
   if(health) health.onclick = async () => {
-    saveApiBase(baseIn.value);
+    useBase();
     acctStatus('つないで います…');
     try{
       const d = await api('/api/health', {auth:false});
@@ -5365,7 +5383,7 @@ function bindOnline(){
 
   const signup = document.getElementById('acctSignup');
   if(signup) signup.onclick = async () => {
-    saveApiBase(baseIn.value);
+    useBase();
     const name = (document.getElementById('acctName') || {value:''}).value.trim();
     if(!name) return acctStatus('なまえを いれて ください', 'ng');
     signup.disabled = true;
@@ -5381,7 +5399,7 @@ function bindOnline(){
 
   const claimBtn = document.getElementById('acctClaimBtn');
   if(claimBtn) claimBtn.onclick = async () => {
-    saveApiBase(baseIn.value);
+    useBase();
     const code = (document.getElementById('acctClaim') || {value:''}).value.trim().toUpperCase();
     if(!code) return acctStatus('ひきつぎコードを いれて ください', 'ng');
     claimBtn.disabled = true;
