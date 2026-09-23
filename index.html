@@ -3946,7 +3946,7 @@ function viewCard(param){
       wantsCardHTML(name) +
     '</div>' +
     (!a.plays ? '<div class="note" style="margin-top:12px">まだ きろくが ありません。「きょう あそんだ」で いっしょに あそんだ 人に えらぶと、カードが そだちます。</div>' : '') +
-    '<p class="count" style="margin:10px 0 0">きろくの うちわけ：この スマホ '+a.mine+'けん／なかまから とどいた きろく '+(a.plays - a.mine)+'けん</p>' +
+    '<p class="count" style="margin:10px 0 0">きろくの うちわけ：この スマホ '+a.mine+'けん／なかまや ほかの スマホから とどいた きろく '+(a.plays - a.mine)+'けん</p>' +
     '<div class="btn-row" style="margin-top:14px">' +
       '<button class="btn small" style="flex:1" data-go2="#/playlog">きろくを つける</button>' +
       '<button class="btn small" style="flex:1" id="advCopy">カードを コピー</button></div>' +
@@ -4354,13 +4354,16 @@ function cardPlays(){
     const key = playKey(r.g, pl);
     if(seen[key] || isGone(key)) return;     /* おなじ きろく・けした きろくは かぞえない */
     seen[key] = 1;
-    out.push({g:netGame(r), pl:pl, mine:false});
+    out.push({g:netGame(r), pl:pl, mine:false, owner:r.owner});
   };
   (Array.isArray(state.net.plays) ? state.net.plays : []).forEach(add);
   return out;
 }
 /* なかまから とどいて いる きろくの かず */
-function fromFriendsCount(){ return cardPlays().filter(r => !r.mine).length; }
+function fromFriendsCount(){
+  const me = account();
+  return cardPlays().filter(r => !r.mine && !(me && r.owner === me.id)).length;
+}
 /* きろくに でて くる ぼうけんしゃ ぜんいん */
 function allAdventurers(){
   const m = {};
@@ -5753,6 +5756,8 @@ function viewTool(id){
    ここに かいて おくと、ともだちは なにも いれずに とうろく できる。
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
+/* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
+const APP_VERSION = '2026.09.23-g';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -6117,12 +6122,13 @@ async function syncNet(){
     saveGames();
   }
   let got = 0, guard = 0;
+  const removed = {};
   while(guard++ < 10){
     const d = await api('/api/plays?since=' + encodeURIComponent(state.net.since || ''));
     const byId = {};
     (state.net.plays || []).forEach(r => { byId[r.id] = r; });
     (d.plays || []).forEach(r => {
-      if(r.x){ delete byId[r.id]; }          /* あいてが けした きろく */
+      if(r.x){ delete byId[r.id]; removed[r.id] = 1; }   /* どこかで けされた きろく */
       else { byId[r.id] = r; }
       got++;
     });
@@ -6132,7 +6138,53 @@ async function syncNet(){
     saveNet();
     if(!d.more) break;
   }
-  return {pushed, got, photos};
+  const dropped = dropLocalBySid(removed);
+  const imported = importOwnNetPlays();
+  return {pushed, got: got + dropped + imported, photos};
+}
+/* ほかの スマホで けされた じぶんの きろくを、この スマホからも けす */
+function dropLocalBySid(removed){
+  if(!Object.keys(removed).length) return 0;
+  let n = 0;
+  state.games.forEach(g => {
+    const ps = playsOf(g);
+    const keep = ps.filter(pl => !(pl.sid && removed[pl.sid]));
+    if(keep.length !== ps.length){
+      ps.filter(pl => pl.sid && removed[pl.sid]).forEach(pl => addGone(playKey(g.id, pl)));
+      n += ps.length - keep.length; g.plays = keep;
+    }
+  });
+  if(n) saveGames();
+  return n;
+}
+/* ほかの スマホで つけた じぶんの きろくを、この スマホの きろくに とりこむ。
+   おなじ ぼうけんしゃの証なら、どの スマホでも おなじ きろくに なる。
+   かんそうは その スマホだけの ものなので はいって こない。 */
+function importOwnNetPlays(){
+  const me = account();
+  if(!me) return 0;
+  const local = {};
+  state.games.forEach(g => playsOf(g).forEach(pl => {
+    if(pl.sid) local[pl.sid] = 1;
+    local['k|' + playKey(g.id, pl)] = 1;
+  }));
+  let n = 0;
+  (state.net.plays || []).forEach(r => {
+    if(r.owner !== me.id || local[r.id]) return;
+    const g = state.games.find(x => x.id === r.g);
+    if(!g) return;                                   /* ずかんに ない ゲームは そのまま */
+    const pl = netToPlay(r);
+    const key = playKey(g.id, pl);
+    if(isGone(key) || local['k|' + key]) return;
+    pl.sid = r.id; pl.pushed = 1;
+    pl.share = r.s === 'me' ? 'me' : 'friends';
+    if(Array.isArray(r.pic) && r.pic.length) pl.p = r.pic.slice();
+    g.plays = playsOf(g).concat([pl]);
+    local[r.id] = 1; local['k|' + key] = 1;
+    n++;
+  });
+  if(n) saveGames();
+  return n;
 }
 /* きろくを つけた あとに、そっと さかばへ あずける。
    つながらなくても きろくは この スマホに のこる。 */
@@ -6572,6 +6624,7 @@ function viewAdmin(){
 
     '<div class="divider"></div><h2 class="sec">おとの せってい</h2>' +
     '<p class="count" style="margin:0 0 8px">BGM（ぜんきょく）と ジョブの こうかおん：<span style="color:var(--accent)">イワシロ音楽素材</span>（https://iwashiro-sounds.work/）</p>' +
+    '<p class="count" style="margin:0 0 8px">アプリの バージョン：<span style="color:var(--accent)">'+APP_VERSION+'</span></p>' +
     '<p class="count">がめん右上の ♪ と SE でも きりかえ られます。せっていは この スマホに ほぞん されます。</p>' +
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:10px">' +
       '<input type="checkbox" id="bgmChk" '+(sound.bgmOn?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
