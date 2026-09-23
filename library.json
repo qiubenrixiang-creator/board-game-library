@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-23T11:21:00.656Z",
+  "version": "2026-09-23T11:22:01.784Z",
   "tags": [
     {
       "name": "初心者",
@@ -100,13 +100,317 @@
     {
       "name": "★おきにいり",
       "category": "その他"
+    },
+    {
+      "name": "未プレイ",
+      "category": "その他"
+    },
+    {
+      "name": "ドキドキ",
+      "category": "ジャンル"
     }
   ],
   "games": [
     {
+      "id": "gmu9tmigew87gt",
+      "title": "SPACE MACHO 〜ダイスと共にあらんことを〜",
+      "reading": "すぺーすまっちょ 〜だいすとともにあらんことを〜",
+      "videos": [],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/picture_ffbf2057-824e-44ac-b36b-ad6a295b3d29.jpg",
+        "https://d2pe1b7tquzekz.cloudfront.net/board-game/ca0ce137-e5d7-4359-b221-63eff986aadb.jpeg"
+      ],
+      "playersMin": 2,
+      "playersMax": 12,
+      "playTime": 10,
+      "age": 0,
+      "difficulty": 1,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "軽量級",
+        "初心者",
+        "対戦",
+        "協力",
+        "ダイス",
+        "盛り上がる",
+        "未プレイ"
+      ],
+      "summary": "リアルタイム脳筋ダイスバトル ここに誕生！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmu9thxw7bzyur",
+      "title": "ウォンテッド★ウォンバット",
+      "reading": "うぉんてっどうぉんばっと",
+      "videos": [
+        "https://youtu.be/ISAR8AkX9EA?si=j6stcqcZcegHmdUJ",
+        "https://youtube.com/watch?v=0NV1oYP-Sb8&si=7VWUS-njCM7k56DN"
+      ],
+      "wish": false,
+      "images": [
+        "https://m.media-amazon.com/images/I/51nkzSljPmL._AC_UF894,1000_QL80_.jpg",
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/picture_34e2c36e-dfe9-4d57-8dca-fa832ed5f069.jpeg"
+      ],
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "初心者",
+        "軽量級",
+        "記憶",
+        "対戦",
+        "盛り上がる",
+        "未プレイ"
+      ],
+      "summary": "穴から次々と出てくる30体のウォンバットその冴えた「直感」で捕まえましょう！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmu9td5jmp8q0s",
+      "title": "もぐらポーカー",
+      "reading": "もぐらぽーかー",
+      "videos": [
+        "https://youtube.com/watch?v=NBGw21mzw-A&si=1-__TiJlz5C1SQgh"
+      ],
+      "wish": false,
+      "images": [
+        "https://m.media-amazon.com/images/I/71-va6TdwsL.jpg",
+        "https://m.media-amazon.com/images/I/61d3ctpGCRL._AC_UF894,1000_QL80_.jpg"
+      ],
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "初心者",
+        "軽量級",
+        "対戦",
+        "未プレイ"
+      ],
+      "summary": "目指せ、幻のファイブカード! 新感覚のドローするポーカー",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmu9t930whpjtw",
+      "title": "もしも勇者がいるのなら",
+      "reading": "もしもゆうしゃがいるのなら",
+      "videos": [
+        "https://youtube.com/watch?v=xo4sOJZKYKg&si=vmiT_kPV_-EAU4ZQ"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_ffe613a0-f541-4895-b13e-1f6ef3bf920c.png",
+        "https://img.gamemarket.jp/20241026_055010_IMG_3638.JPG"
+      ],
+      "playersMin": 1,
+      "playersMax": 7,
+      "playTime": 10,
+      "age": 13,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "軽量級",
+        "対戦",
+        "未プレイ"
+      ],
+      "summary": "何度でも遊びたくなる！新感覚SATUGAI系カードゲーム！？",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmu9t357uwiqz4",
+      "title": "マスカレイドトリックパーティー",
+      "reading": "ますかれいどとりっくぱーてぃー",
+      "videos": [
+        "https://youtu.be/UblP3c_ewEk?si=jGljY1UwbQxmwwvZ",
+        "https://youtube.com/shorts/KtfK24SobUc?si=UGLF7k4FLRVX5ecw"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_8de4f80c-8457-486e-a031-834272b801f4.png"
+      ],
+      "playersMin": 3,
+      "playersMax": 5,
+      "playTime": 15,
+      "age": 10,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "トリックテイキング",
+        "リアルタイム",
+        "対戦",
+        "軽量級",
+        "未プレイ"
+      ],
+      "summary": "今宵は、仮面舞踏会。秘めた想い、君に届け。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmu89j79qvtubl",
+      "title": "マジックキーズ 魔法の鍵",
+      "reading": "まじっくきーず まほうのかぎ",
+      "videos": [
+        "https://youtube.com/watch?v=O-az55tvtMg&si=GStHvN4I7NKvFGlk"
+      ],
+      "wish": false,
+      "images": [
+        "https://pbs.twimg.com/media/HSOYNrObUAAsS0C?format=webp&name=medium"
+      ],
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "初心者",
+        "家族向け"
+      ],
+      "summary": "どうか開いて宝箱！魔法のカギを探し当てて！必要なのは、魔力と知力と勇気！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmtx12v2nkb8og",
+      "title": "くらやみかくれんぼ",
+      "reading": "くらやみかくれんぼ",
+      "videos": [
+        "https://youtube.com/shorts/Gg9cJbROBI0?si=My9u2LuFyLfQjNs4"
+      ],
+      "wish": false,
+      "images": [
+        "https://images.ctfassets.net/xfvgazuefhm0/1rGIxYG9N4oTbllv7GOeIR/6056efc5e1bab3ab23c0624c1ebe84bd/keepitdark-package_obi_2000%C3%83_2000.jpg",
+        "https://prcdn.freetls.fastly.net/release_image/25254/55/25254-55-14d49776dfa6d1744804a990d292ecdb-2320x1684.png?width=1950&height=1350&quality=85%2C65&format=jpeg&auto=webp&fit=bounds&bg-color=fff"
+      ],
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 20,
+      "age": 14,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "tags": [
+        "軽量級",
+        "対戦",
+        "未プレイ",
+        "ドキドキ"
+      ],
+      "summary": "暗闇から封印の小瓶を探し出して、禁断の儀式を終わらせよう！",
+      "quickRule": "1.怪異チームはぬいぐるみと封印の小瓶、\n  マーカーを部屋に配置する\n2.探索者チームは懐中電灯で部屋を照らし、\n  封印の小瓶を探す。\n3.封印の小瓶を見つける前にぬいぐるみを照ら  \n  してしまった場合、その時点で探索者チーム    \n  の負け\n4.封印の小瓶を見つけた後に、ぬいぐるみを発      \n  見できた場合は、探索者チームの勝ち",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmtx0vknixh4g6",
+      "title": "ピクテル",
+      "reading": "ぴくてる",
+      "videos": [
+        "https://youtube.com/watch?v=VopduK36Ub0&si=Esgk0qL1dbecDx-b",
+        "https://youtube.com/shorts/vc5kkXhfk2U?si=3XDpmL4NB8mCftO7"
+      ],
+      "wish": false,
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2021/04/2e0e1472650cbe8132dd1b379c7bbe72-575x575.jpg",
+        "https://m.media-amazon.com/images/I/71BlsTKyqzL.jpg"
+      ],
+      "playersMin": 3,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 2,
+      "strategy": 3,
+      "excitement": 3,
+      "luck": 3,
+      "tags": [
+        "初心者",
+        "軽量級",
+        "協力",
+        "パーティー",
+        "リアルタイム",
+        "盛り上がる",
+        "未プレイ"
+      ],
+      "summary": "ピクトグラムでお題を伝えよう！　透明なカードを組み合わせて遊ぶ想像力ゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
+      "id": "gmtuvc2n3eabmx",
+      "title": "TOSSIT",
+      "reading": "とすいっと",
+      "videos": [
+        "https://youtube.com/watch?v=Ig_M4aNGkjc&si=MbV6WtpL5xHlgdS3"
+      ],
+      "wish": false,
+      "images": [
+        "https://m.media-amazon.com/images/I/71i093TqGWL._AC_UF1000,1000_QL80_.jpg"
+      ],
+      "playersMin": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 3,
+      "strategy": 4,
+      "excitement": 5,
+      "luck": 3,
+      "tags": [
+        "初心者",
+        "軽量級",
+        "対戦",
+        "アクション",
+        "パーティー",
+        "盛り上がる"
+      ],
+      "summary": "新感覚シリコンダーツ！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
+    },
+    {
       "id": "g001",
       "title": "3秒トライ！",
       "reading": "さんびょうとらい",
+      "videos": [
+        "https://m.youtube.com/watch?v=hx7jMulhJ2Y&pp=ygUNM-enkuODiOODqeOCpA%3D%3D&ra=m",
+        "https://m.youtube.com/shorts/az3XVDOD12o?ra=m"
+      ],
+      "wish": false,
       "images": [
         "https://www.itten-games.com/wp/wp-content/uploads/2021/11/FB-3_3S.jpg"
       ],
@@ -161,6 +465,8 @@
       "id": "g003",
       "title": "ito クラシック",
       "reading": "いと くらしっく",
+      "videos": [],
+      "wish": false,
       "images": [
         "https://arclightgames.jp/wp-content/uploads/2024/02/ito-classic_box_L_square-575x575.jpg",
         "https://arclightgames.jp/wp-content/uploads/2024/02/ito_compo3-575x575.jpg",
@@ -174,6 +480,7 @@
       "strategy": 3,
       "excitement": 4,
       "luck": 4,
+      "replay": 3,
       "tags": [
         "初心者",
         "協力",
@@ -189,6 +496,11 @@
       "id": "g004",
       "title": "KLASK(クラスク)",
       "reading": "くらすく",
+      "videos": [
+        "https://m.youtube.com/watch?v=DgA3r-AAN9I&pp=ygUM44Kv44Op44K544Kv&ra=m",
+        "https://m.youtube.com/shorts/4wqXjY3oj2w?ra=m"
+      ],
+      "wish": false,
       "images": [
         "https://sugorokuya.jp/rails/active_storage/representations/proxy/eyJfcmFpbHMiOnsiZGF0YSI6MjM1MDYsInB1ciI6ImJsb2JfaWQifX0=--d97e110da0c0e01bc1891d51fb61f68a0fb242b2/eyJfcmFpbHMiOnsiZGF0YSI6eyJmb3JtYXQiOiJ3ZWJwIiwicmVzaXplX3RvX2xpbWl0IjpbNTAwLDUwMF0sInNhdmVyIjp7InF1YWxpdHkiOjUwLCJzaGFycF95dXYiOnRydWV9fSwicHVyIjoidmFyaWF0aW9uIn19--1128949799fb2fe65fff5727923fbbb93eb8d883/220227.webp",
         "https://baseec-img-mng.akamaized.net/images/item/origin/74354af0461da0cf315416de9670fd89.jpg?imformat=generic"
@@ -204,7 +516,8 @@
       "tags": [
         "対戦",
         "アクション",
-        "盛り上がる"
+        "盛り上がる",
+        "初心者"
       ],
       "summary": "世界で人気なお手軽テーブルホッケー！",
       "quickRule": "",
@@ -214,75 +527,119 @@
     {
       "id": "g005",
       "title": "lineup(ラインナップ)",
-      "images": [],
-      "summary": "",
+      "reading": "らいんなっぷ",
+      "images": [
+        "https://prcdn.freetls.fastly.net/release_image/151467/3/151467-3-865447bb12adb4b59b847f06b0ecebee-968x750.jpg?format=jpeg&auto=webp&fit=bounds&width=720&height=480"
+      ],
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 15,
+      "age": 8,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "tags": [
+        "家族向け",
+        "頭脳戦"
+      ],
+      "summary": "答えの数字を予想して、カードを正しい順番にならべるゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
-      "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
-      "tags": [
-        "データみきにゅう"
-      ],
-      "reading": "らいんなっぷ"
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g006",
       "title": "Poi(ポイ)",
-      "images": [],
-      "summary": "",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "ぽい",
+      "videos": [
+        "https://m.youtube.com/watch?v=8mLbJ4SenbQ&pp=ygUWUE9JIOODnOODvOODieOCsuODvOODoA%3D%3D&ra=m"
+      ],
+      "wish": false,
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2021/08/ac550fb1564feaaca5c8c25ad51805f0-575x575.jpg",
+        "https://arclightgames.jp/wp-content/uploads/2021/12/3b474bfb4bf94923624f7796322a9866.png"
+      ],
       "playersMin": 2,
       "playersMax": 6,
       "playTime": 30,
       "age": 8,
       "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
       "tags": [
-        "データみきにゅう"
+        "協力",
+        "軽量級",
+        "家族向け"
       ],
-      "reading": "ぽい"
+      "summary": "ゴミの分別を考える協力クイズゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g007",
       "title": "UNO FLIP!",
-      "images": [],
-      "summary": "裏返るとルールが変わるUNO。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "うのふりっぷ",
+      "videos": [
+        "https://youtube.com/watch?v=T6Hma9x9zUc&si=WnqK5xQb3Xh3PLqu",
+        "https://youtube.com/watch?v=pyla0rfY5Ck&si=lW7V6MQbBN1Dhtd-"
+      ],
+      "wish": false,
+      "images": [
+        "https://mattel.co.jp/wp-content/uploads/2022/07/GDR44-9867_%E6%97%A5%E6%9C%AC%E8%AA%9EPKG_%E6%AD%A3%E9%9D%A2.jpg",
+        "https://www.gentosha-edu.co.jp/files/files2/GDR44_W_19_020.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 10,
-      "playTime": 30,
+      "playTime": 15,
       "age": 7,
       "difficulty": 1,
+      "strategy": 3,
+      "excitement": 4,
+      "luck": 3,
+      "replay": 0,
       "tags": [
         "初心者",
         "家族向け",
-        "運要素"
+        "盛り上がる",
+        "対戦",
+        "軽量級",
+        "パーティー"
       ],
-      "reading": "うのふりっぷ"
+      "summary": "一見普通のUNOだけど、裏返したら激しい戦いに?!",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g008",
       "title": "あいうえバトル",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://imagedelivery.net/QondspN4HIUvB_R16-ddAQ/61a34bff7d278d299b0a70a2/a764753e78b87e5ae5b8.jpg/fit=cover,w=805,h=575"
+      ],
+      "summary": "だんだんと明かされる文字。あの言葉はいったい何!?",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 15,
       "age": 8,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
-      ]
+        "初心者",
+        "盛り上がる",
+        "対戦"
+      ],
+      "reading": "あいうえばとる",
+      "videos": [
+        "https://youtu.be/Yx2VDWOo4Uc?si=GAPIDzNqsgBYy1ma"
+      ],
+      "wish": false
     },
     {
       "id": "g009",
@@ -324,20 +681,26 @@
     {
       "id": "g011",
       "title": "赤ずきんは眠らない",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2015/11/ace219f131478186976d9918eef1214b-575x575.jpg"
+      ],
+      "summary": "罠にかける？食べられちゃう？簡単ルールの心理戦！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
-      "playersMin": 2,
+      "playersMin": 3,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playTime": 20,
+      "age": 6,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
+        "ブラフ"
       ],
-      "reading": "あかずきんはねむらない"
+      "reading": "あかずきんはねむらない",
+      "videos": [
+        "https://youtu.be/K7vDBc-2lco?si=QbgH-72mgVPSmBSi"
+      ],
+      "wish": false
     },
     {
       "id": "g012",
@@ -379,59 +742,56 @@
       ]
     },
     {
-      "id": "g014",
-      "title": "アンコンシャス・マインド",
-      "images": [],
-      "summary": "心理学の黎明期を舞台にした重量級ワーカープレイスメント。",
+      "id": "g015",
+      "title": "いかだの5人",
+      "images": [
+        "https://oinkgames.com/images/flatview/rafter-five_ja_front.png",
+        "https://oinkgames.com/images/description/rafter-five/image99.png",
+        "https://oinkgames.com/images/description/rafter-five/image01.png"
+      ],
+      "summary": "不思議な釣り合いで、崩れなかったり、崩れたりするのが面白い、頭脳派バランスゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 1,
-      "playersMax": 4,
-      "playTime": 120,
-      "age": 14,
-      "difficulty": 5,
-      "tags": [
-        "重量級",
-        "ワーカープレイスメント",
-        "頭脳戦",
-        "静か"
-      ]
-    },
-    {
-      "id": "g015",
-      "title": "いかだの5人",
-      "images": [],
-      "summary": "",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
-      "playersMin": 2,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playTime": 20,
+      "age": 7,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
+        "初心者",
+        "パーティー",
+        "頭脳戦"
       ],
-      "reading": "いかだのごにん"
+      "reading": "いかだのごにん",
+      "videos": [
+        "https://youtu.be/6P2iecmmgu4?si=sNdyVCRW8gKj8NTH"
+      ],
+      "wish": false
     },
     {
       "id": "g016",
       "title": "いぬポーカー",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://m.media-amazon.com/images/I/7113gHkUooL.jpg",
+        "https://img.gamemarket.jp/20240926_180811_inupoker_bnr_chirasi.png"
+      ],
+      "summary": "あつめて、まわして、めざせ、トップワン！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
-      ]
+        "対戦",
+        "運要素"
+      ],
+      "reading": "いぬぽーかー",
+      "videos": [],
+      "wish": false
     },
     {
       "id": "g017",
@@ -476,19 +836,28 @@
     {
       "id": "g019",
       "title": "インパクト",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://m.media-amazon.com/images/I/61vuIJ1qA6L._AC_UF894,1000_QL80_.jpg"
+      ],
+      "summary": "“その1投が運命を変える！” 手汗必至のダイスサバイバルゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 15,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 1,
       "tags": [
-        "データみきにゅう"
-      ]
+        "対戦",
+        "運要素",
+        "アクション"
+      ],
+      "reading": "いんぱくと",
+      "videos": [
+        "https://youtu.be/tuvw9vk7vlk?si=4VXCLiBJ2eOjv2Fd"
+      ],
+      "wish": false
     },
     {
       "id": "g020",
@@ -513,19 +882,29 @@
     {
       "id": "g021",
       "title": "ウナギかヘビか",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://oinkgames.com/images/flatview/wriggle-roulette_ja_front.png",
+        "https://oinkgames.com/images/description/wriggle-roulette/image99.png",
+        "https://oinkgames.com/images/description/wriggle-roulette/image01.png"
+      ],
+      "summary": "運命(うなぎ)を掴み取れ",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 8,
+      "playTime": 20,
       "age": 8,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
-      ]
+        "盛り上がる",
+        "運要素"
+      ],
+      "reading": "うなぎかへびか",
+      "videos": [
+        "https://youtube.com/watch?v=dDBUUSTYxm0&si=ND1A_3QQXSyHCEcS"
+      ],
+      "wish": false
     },
     {
       "id": "g022",
@@ -607,22 +986,36 @@
     {
       "id": "g026",
       "title": "おばけキャッチ",
-      "images": [],
-      "summary": "条件に合う駒を誰よりも早くつかむ反射神経ゲーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "",
+      "videos": [
+        "https://m.youtube.com/shorts/q2m0eBKD0Ak",
+        "https://m.youtube.com/shorts/3BWl-0lYWxc"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_91.jpg",
+        "https://saikoro-table.com/wp-content/uploads/2019/03/obake-catch_003.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 8,
       "playTime": 20,
       "age": 8,
       "difficulty": 1,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
       "tags": [
         "初心者",
         "家族向け",
         "盛り上がる",
-        "アクション"
-      ]
+        "アクション",
+        "軽量級",
+        "対戦"
+      ],
+      "summary": "条件に合う駒を誰よりも早くつかむ反射神経ゲーム。",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g027",
@@ -714,19 +1107,28 @@
     {
       "id": "g031",
       "title": "カイト",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://m.media-amazon.com/images/I/51Xx6rGuF1L._AC_UF894,1000_QL80_.jpg"
+      ],
+      "summary": "色に合う砂時計ひっくり返せ！ハラハラドキドキ協力ゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
+      "playTime": 10,
+      "age": 10,
+      "difficulty": 3,
       "tags": [
-        "データみきにゅう"
-      ]
+        "協力",
+        "リアルタイム"
+      ],
+      "reading": "かいと",
+      "videos": [
+        "https://youtube.com/watch?v=-n9zqYW3t00&si=mW8MBqAdUMkdtPK6",
+        "https://youtu.be/4gwfsYg94Vw"
+      ],
+      "wish": false
     },
     {
       "id": "g032",
@@ -759,20 +1161,29 @@
     {
       "id": "g033",
       "title": "我流功夫極めロード",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_2340_2.jpg"
+      ],
+      "summary": "試されるのは中二力！僕が考えた最高にかっこいい必殺技を叫ぶゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
-      "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMin": 3,
+      "playersMax": 8,
+      "playTime": 20,
       "age": 8,
       "difficulty": 2,
       "tags": [
-        "データみきにゅう"
+        "盛り上がる",
+        "対戦",
+        "軽量級",
+        "ワードゲーム"
       ],
-      "reading": "がりゅうくんふーきわめろーど"
+      "reading": "がりゅうくんふーきわめろーど",
+      "videos": [
+        "https://youtube.com/watch?v=lm5_d0Y4ptM&si=IRwAPZuzBqnl8cnw"
+      ],
+      "wish": false
     },
     {
       "id": "g034",
@@ -796,19 +1207,32 @@
     {
       "id": "g035",
       "title": "がんめんマン",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://oinkgames.com/images/flatview/mr-face_ja_front.png",
+        "https://oinkgames.com/images/description/mr-face/image05.png",
+        "https://oinkgames.com/images/description/mr-face/image99.png"
+      ],
+      "summary": "セリフに合う”顔”を作るゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
-      "playersMin": 2,
+      "playersMin": 3,
       "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
+      "playTime": 20,
+      "age": 9,
+      "difficulty": 1,
       "tags": [
-        "データみきにゅう"
-      ]
+        "初心者",
+        "盛り上がる",
+        "パーティー",
+        "対戦",
+        "軽量級"
+      ],
+      "reading": "がんめんまん",
+      "videos": [
+        "https://youtu.be/hrBOaFGDUbc?si=CWxF4Rgul6OldO6Z"
+      ],
+      "wish": false
     },
     {
       "id": "g037",
@@ -851,36 +1275,61 @@
     {
       "id": "g039",
       "title": "キューバーズ",
-      "images": [],
-      "summary": "",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "きゅーばーず",
+      "videos": [
+        "https://youtu.be/UUPNUdWJFHI?si=x4e4a316u20-f1Hg"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=630,cw=1200,ch=630,da=l,ds=s,q=84,cc=FFFFFF)/item_1726199c-68c9-4861-9e42-947d9927c1a2.jpeg"
+      ],
       "playersMin": 2,
-      "playersMax": 6,
+      "playersMax": 5,
       "playTime": 30,
       "age": 8,
       "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
       "tags": [
-        "データみきにゅう"
-      ]
+        "頭脳戦",
+        "対戦",
+        "軽量級",
+        "ドラフト"
+      ],
+      "summary": "鳥をコレクションし、点数を競うゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": ""
     },
     {
       "id": "g040",
       "title": "キュリオス",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2020/04/208977eeed4a90c8e5d817b76bed8b7e-575x575.jpg",
+        "https://jellyjellycafe.com/wp-content/uploads/2020/06/S__38739981.jpg"
+      ],
+      "summary": "財宝と栄光をその手に！ ワーカープレイスメント×推理ボードゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 15,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 3,
       "tags": [
-        "データみきにゅう"
-      ]
+        "ドラフト",
+        "対戦",
+        "頭脳戦",
+        "中級者",
+        "ワーカープレイスメント"
+      ],
+      "reading": "きゅりおす",
+      "videos": [
+        "https://youtu.be/7-xqO-bTG4M?si=AMKmquEGw_c0Ufx3"
+      ],
+      "wish": false
     },
     {
       "id": "g041",
@@ -944,54 +1393,80 @@
     {
       "id": "g044",
       "title": "九九ジャン",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://engagingtoys.jp/wp-content/uploads/2022/10/ret_2209210213-e1666580016554.jpg",
+        "https://engagingtoys.jp/wp-content/uploads/2022/10/ret_2209210123-e1666580394216.jpg"
+      ],
+      "summary": "掛け算と麻雀の要素を取り入れた知的ボードゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 6,
+      "difficulty": 1,
       "tags": [
-        "データみきにゅう"
+        "初心者",
+        "対戦",
+        "頭脳戦",
+        "軽量級",
+        "記憶"
       ],
-      "reading": "くくじゃん"
+      "reading": "くくじゃん",
+      "videos": [
+        "https://youtu.be/n4MM9kI8JF4?si=JFIjdgmYiJz0YgMX",
+        "https://youtube.com/watch?v=QnO2gsyT6G0&si=d9KUwKCG3oOvyjKl"
+      ],
+      "wish": false
     },
     {
       "id": "g045",
       "title": "クジラオルカ",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://oinkgames.com/images/flatview/whale-to-look_ja_front.png"
+      ],
+      "summary": "大海原で繰り広げられる「推理」と「賭け」のゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
+      "playersMax": 5,
       "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
-      "tags": [
-        "データみきにゅう"
-      ]
+      "age": 9,
+      "difficulty": 3,
+      "tags": [],
+      "reading": "くじらおるか",
+      "videos": [
+        "https://youtu.be/mqYxrYgMgvI?si=7Pyf2ZAbs8_x3Jm8"
+      ],
+      "wish": false
     },
     {
       "id": "g046",
       "title": "クラスター",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://item-shopping.c.yimg.jp/i/n/kenbill_3770003625605"
+      ],
+      "summary": "説明時間１分!? 誰もが楽しめるマグネット配置ゲーム",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
-      "age": 8,
-      "difficulty": 2,
+      "playersMax": 4,
+      "playTime": 15,
+      "age": 14,
+      "difficulty": 1,
       "tags": [
-        "データみきにゅう"
-      ]
+        "初心者",
+        "盛り上がる",
+        "アクション"
+      ],
+      "reading": "くらすたー",
+      "videos": [
+        "https://youtu.be/qHPyYYQJc5E?si=Ye9vJkznFhi_mpMj"
+      ],
+      "wish": false
     },
     {
       "id": "g047",
@@ -1050,24 +1525,36 @@
     {
       "id": "g050",
       "title": "ごきぶりポーカー",
-      "images": [],
+      "reading": "",
+      "videos": [
+        "https://m.youtube.com/shorts/npAHaM6OH28?ra=m",
+        "https://m.youtube.com/watch?v=JmOS1EAuxIA&pp=ygUY44K044Kt44OW44Oq44G944O844GL44O8&ra=m"
+      ],
+      "wish": false,
+      "images": [
+        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/item_114.jpg",
+        "https://img1.kakaku.k-img.com/images/maga/icv/sp1200/9519/thumbnail_l.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 6,
       "playTime": 20,
       "age": 8,
       "difficulty": 1,
+      "strategy": 3,
+      "excitement": 4,
+      "luck": 3,
       "tags": [
         "初心者",
         "対戦",
-        "運要素",
         "盛り上がる",
         "家族向け",
-        "軽量級"
+        "軽量級",
+        "ブラフ"
       ],
       "summary": "「これはカエルだよ」の一言を、信じるか疑うかだけのブラフ合戦。",
       "quickRule": "1. 手札から1枚を裏向きで誰かに渡し、生き物の名前を宣言する\n2. 渡された人は「当たり」か「はずれ」を答える\n3. 外した方がそのカードを引き取る\n4. 同じ生き物を4枚集めてしまった人の負け",
-      "recommendation": "・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀",
-      "detailRule": "8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。"
+      "detailRule": "8種類の生き物カードが各8枚あります。手番の人は手札から1枚を裏向きで相手に渡し、生き物の名前を宣言します。渡された人は宣言が本当かどうかを答えるか、カードを見てから別の人へ回すこともできます（宣言は変えられます）。判定を間違えた人はそのカードを表向きで自分の前に置きます。同じ生き物を4枚並べてしまった人、または手札がなくなって手番を始められない人がその時点で負けとなり、残り全員の勝ちです。",
+      "recommendation": "・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀"
     },
     {
       "id": "g051",
