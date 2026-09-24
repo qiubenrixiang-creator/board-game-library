@@ -681,6 +681,19 @@ h2.sec::before{content:"■ ";font-size:12px}
 .tool-ico-s{width:20px;height:20px;display:inline-block;vertical-align:-3px;color:var(--accent)}
 .tool-name{font-size:14px}
 .tool-desc{font-size:10.5px;color:var(--muted)}
+/* ばめんごとの ちいさな どうぐ（3れつ） */
+.tool-sec{margin:14px 0 6px}
+/* 3こずつ ならべ、はんぱな 行は よこに のばして すきまを つくらない */
+.tool-grid.sm{display:flex;flex-wrap:wrap;gap:8px}
+.tool-card.sm{flex:1 1 calc(33.333% - 8px);padding:10px 4px 9px;gap:5px;min-width:0}
+.tool-card.sm .tool-ico{width:30px;height:30px}
+.tool-card.sm .tool-name{font-size:12px;line-height:1.35}
+.tool-wide{
+  display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;
+  background:var(--panel);border:3px solid var(--accent-2);box-shadow:var(--shadow);color:var(--text);cursor:pointer;font:inherit;
+}
+.tool-wide .tool-ico{width:32px;height:32px;flex:0 0 auto;color:var(--accent-2)}
+.tool-wide:active{transform:translate(2px,2px);box-shadow:none}
 .tool-big{font-size:44px;color:var(--accent);margin:4px 0 14px;letter-spacing:.04em}
 
 /* 「大きく つかう」…上下の メニューを かくし、文字を 大きく する */
@@ -723,6 +736,7 @@ body.big-tool .lede{font-size:26px}
 
   /* どうぐの えらび画面は よこに 4つ */
   body.tool-page .tool-grid{grid-template-columns:repeat(4,1fr)}
+  body.tool-page .tool-card.sm{flex-basis:calc(20% - 8px)}
 
   body.big-tool .tool-full .section{max-width:1000px;margin-left:auto;margin-right:auto}
 }
@@ -5446,25 +5460,39 @@ const TOOLS = [
   {id:'dict',    name:'ことばじてん', icon:'book',  desc:'ボドゲの ことばを しらべる'}
 ];
 
+/* どうぐを ばめんごとに わけて ならべる */
+const TOOL_GROUPS = [
+  {name:'あそぶ まえ',          ids:['team','turn','lot','amida','vote']},
+  {name:'あそんで いる あいだ',  ids:['timer','dice','score','counter','memo']},
+  {name:'あそんだ あと',        ids:['log','choubo']},
+  {name:'たのしむ・まなぶ',      ids:['talk','jukebox','dict']}
+];
+function toolCardHTML(t){
+  return '<button class="tool-card sm" data-go2="#/tool/'+esc(t.id)+'" aria-label="'+esc(t.name+'：'+t.desc)+'">' +
+    '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
+    '<span class="tool-name">'+esc(t.name)+'</span></button>';
+}
 function viewTools(){
+  const me = account();
+  const mine = me ? adventurer(me.name) : null;
+  const alert = isOnline() && ((state.friends && (state.friends.incoming || []).length) || (state.noteInbox || []).length);
+  const used = [];
+  const grouped = TOOL_GROUPS.map(gr => {
+    const list = gr.ids.map(id => TOOLS.find(t => t.id === id)).filter(t => t && !t.hidden);
+    list.forEach(t => used.push(t.id));
+    return list.length ? '<div class="catlabel tool-sec">'+esc(gr.name)+'</div><div class="tool-grid sm">' + list.map(toolCardHTML).join('') + '</div>' : '';
+  }).join('');
+  const rest = TOOLS.filter(t => !t.hidden && t.id !== 'names' && used.indexOf(t.id) < 0);
   return '<section class="page">' +
     '<h1 class="lede">どうぐ</h1>' +
-    '<p class="sub">あそんで いる あいだに つかう どうぐです。<br>えらぶと その どうぐだけの 画面に なります。</p>' +
-
-    '<div class="tool-grid">' +
-      TOOLS.filter(t => !t.hidden).map(t => t.url
-        ? '<a class="tool-card" href="'+esc(t.url)+'" target="_blank" rel="noopener" style="text-decoration:none">' +
-            '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
-            '<span class="tool-name">'+esc(t.name)+' ↗</span>' +
-            '<span class="tool-desc">'+esc(t.desc)+'</span>' +
-          '</a>'
-        : '<button class="tool-card" data-go2="#/tool/'+esc(t.id)+'">' +
-          '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
-          '<span class="tool-name">'+esc(t.name)+'</span>' +
-          '<span class="tool-desc">'+esc(t.desc)+'</span>' +
-        '</button>').join('') +
-    '</div>' +
-
+    '<button class="tool-wide" data-go2="#/tool/names">' +
+      '<span class="tool-ico" data-icon="people2"></span>' +
+      '<span style="flex:1;min-width:0;text-align:left">' +
+        '<span class="tool-name" style="display:block">なかまの なまえ' + (alert ? ' <span style="color:var(--danger)">●</span>' : '') + '</span>' +
+        '<span class="tool-desc">' + (me ? esc(me.name) + '　Lv.' + advLevel(mine.plays) + '・ぼうけんしゃの証・ともだち' : 'なまえの とうろく・ぼうけんしゃの証・ともだち') + '</span>' +
+      '</span><span style="color:var(--muted)">▶</span></button>' +
+    grouped +
+    (rest.length ? '<div class="catlabel tool-sec">そのほか</div><div class="tool-grid sm">' + rest.map(toolCardHTML).join('') + '</div>' : '') +
     (timerLeft ? '<div class="note" style="margin-top:14px">タイマーが うごいて います：' +
       '<span style="color:var(--accent)">'+timerText(timerLeft)+'</span></div>' : '') +
 
@@ -6701,7 +6729,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-l';
+const APP_VERSION = '2026.09.24-m';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
