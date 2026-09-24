@@ -5442,7 +5442,7 @@ const TOOLS = [
   {id:'jukebox', name:'ジュークボックス', icon:'jukebox', desc:'BGMを えらぶ・きく'},
   {id:'choubo',  name:'しゅくやの ちょうぼ', icon:'coin', desc:'わりかんを する'},
   {id:'talk',    name:'さかばの うわさばなし', icon:'talk', desc:'トークの おだい'},
-  {id:'help',    name:'ずかんづくり', icon:'quill', desc:'せつめいを かいて おくる'},
+  {id:'help',    name:'ずかんづくり', icon:'quill', desc:'せつめいを かいて おくる', hidden:true},   /* かんり から ひらく */
   {id:'dict',    name:'ことばじてん', icon:'book',  desc:'ボドゲの ことばを しらべる'}
 ];
 
@@ -5452,7 +5452,7 @@ function viewTools(){
     '<p class="sub">あそんで いる あいだに つかう どうぐです。<br>えらぶと その どうぐだけの 画面に なります。</p>' +
 
     '<div class="tool-grid">' +
-      TOOLS.map(t => t.url
+      TOOLS.filter(t => !t.hidden).map(t => t.url
         ? '<a class="tool-card" href="'+esc(t.url)+'" target="_blank" rel="noopener" style="text-decoration:none">' +
             '<span class="tool-ico" data-icon="'+esc(t.icon)+'"></span>' +
             '<span class="tool-name">'+esc(t.name)+' ↗</span>' +
@@ -6677,7 +6677,8 @@ function viewTool(id){
   const big = !!state.toolBig;
   return '<section class="page' + (big ? ' tool-full' : '') + '">' +
     '<div class="row" style="align-items:center;gap:8px;margin-bottom:12px">' +
-      '<button class="mini" data-go2="#/tools" style="flex:0 0 auto">◀ どうぐ</button>' +
+      (t.hidden ? '<button class="mini" data-go2="#/admin" style="flex:0 0 auto">◀ かんり</button>'
+                : '<button class="mini" data-go2="#/tools" style="flex:0 0 auto">◀ どうぐ</button>') +
       '<span style="flex:1"></span>' +
       '<button class="mini" id="toolBigBtn" style="flex:0 0 auto">' +
         '<span class="tool-ico-s" data-icon="expand"></span> ' + (big ? 'もとに もどす' : '大きく つかう') + '</button>' +
@@ -6700,7 +6701,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-j';
+const APP_VERSION = '2026.09.24-k';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -8019,14 +8020,16 @@ function applySuggestion(g, x, opt){
   if(x.field === 'summary') g.tags = (g.tags || []).filter(t => t !== 'データみきにゅう');
 }
 function helpAdminHTML(){
-  if(!isOnline()) return '';
   const h = state.help;
   let html = '<div class="divider"></div><h2 class="sec">ずかんづくりの てつだい</h2>';
-  if(h.meAdmin){
+  const open = '<button class="btn small" data-go2="#/tool/help" style="width:100%;margin-bottom:16px">ずかんづくりを ひらく（せつめい・がぞう・どうが を おくる）</button>';
+  if(!isOnline()){
+    html += '<p class="count">なかまが ずかんの せつめいなどを おくれる しくみです。</p>' + open;
+  }else if(h.meAdmin){
     html += '<p class="count">なかまが かいた せつめいが とどきます。あなたが かんりにんです。</p>' +
-      '<button class="btn small" data-go2="#/review" style="width:100%;margin-bottom:16px">とどいた せつめいを みる（'+h.inbox.length+'）</button>';
+      '<button class="btn small" data-go2="#/review" style="width:100%;margin-bottom:8px">とどいた せつめいを みる（'+h.inbox.length+'）</button>' + open;
   }else if(h.admin){
-    html += '<p class="count">かんりにんは '+esc(h.admin.name)+' さんです。せつめいは「どうぐ → ずかんづくり」から おくれます。</p>';
+    html += '<p class="count">かんりにんは '+esc(h.admin.name)+' さんです。せつめいや がぞうを おくって ずかんづくりを てつだえます。</p>' + open;
   }else{
     html += '<p class="count">なかまが かいた せつめいを うけとる「かんりにん」を きめます。<br>' +
       'かんりにんは 1人だけで、あとから ほかの 人は なれません。ずかんを もって いる 人が なって ください。</p>' +
