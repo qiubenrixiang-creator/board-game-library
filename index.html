@@ -6701,7 +6701,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-k';
+const APP_VERSION = '2026.09.24-l';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7680,10 +7680,22 @@ function bindDict(root){
     q.ans = b.dataset.dictans;
     const right = q.ans === q.qs[q.i];
     if(right){ q.score++; setKnown(q.qs[q.i], true); playHitSe && playHitSe(); } else { playMissSe && playMissSe(); }
+    const y = window.scrollY;
     updateDictList(); paintDictMeter();
+    window.scrollTo(0, y);            /* こたえた ときは いまの いちの まま */
   });
   const nx = root.querySelector('#dictQuizNext');
-  if(nx) nx.onclick = () => { const q = state.dictQuiz; q.i++; q.ans = null; if(q.i < q.qs.length) q.choices = dictChoices(q.qs[q.i]); updateDictList(); window.scrollTo({top:0, behavior:'smooth'}); };
+  if(nx) nx.onclick = () => {
+    const q = state.dictQuiz; q.i++; q.ans = null;
+    if(q.i < q.qs.length) q.choices = dictChoices(q.qs[q.i]);
+    const y = window.scrollY;
+    updateDictList();
+    window.scrollTo(0, y);
+    /* もんだいが 画面の 上に かくれた ときだけ、もんだいの はじめが みえる ところまで すこし もどす */
+    const box = document.getElementById('dictList');
+    const top = box ? box.getBoundingClientRect().top : 0;
+    if(top < 64) window.scrollTo(0, window.scrollY + top - 70);
+  };
   const qe = root.querySelector('#dictQuizEnd'); if(qe) qe.onclick = () => { state.dictQuiz = null; render(); };
   const qq = root.querySelector('#dictQuizQuit'); if(qq) qq.onclick = () => { state.dictQuiz = null; render(); };
   const qa = root.querySelector('#dictQuizAgain'); if(qa) qa.onclick = () => { startDictQuiz(); updateDictList(); };
