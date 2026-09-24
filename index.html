@@ -459,7 +459,7 @@ h2.sec::before{content:"■ ";font-size:12px}
 .note-photo{all:unset;display:block;width:100%;cursor:pointer;border:3px solid var(--frame);background:#000;position:relative}
 .note-photo img{display:block;width:100%;max-height:360px;object-fit:contain;min-height:60px}
 .note-photo-hint{position:absolute;left:6px;bottom:6px;font-size:11px;padding:2px 6px;background:rgba(0,0,0,.6);color:#fff}
-.ne-back{background:#06080f}
+#noteEd.ne-back{background:#06080f}
 .ne-stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;overflow:auto;min-height:0}
 #neCanvas{display:block;background:#000;touch-action:none}
 .ne-tools{flex:0 0 auto;padding:8px 10px 6px;display:grid;gap:8px}
@@ -745,7 +745,7 @@ body.big-tool .lede{font-size:26px}
 
 /* かくにん ウィンドウ（iPhone の そっけない ひょうじの かわり） */
 .dialog-back{
-  position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:22px;
+  position:fixed;inset:0;z-index:140;display:grid;place-items:center;padding:22px;
   background:rgba(0,0,0,.65);
 }
 .dialog-back[hidden]{display:none}
@@ -812,7 +812,7 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
 #toast{
   position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
   background:var(--panel);color:var(--text);border:3px solid var(--frame);box-shadow:var(--shadow);
-  padding:10px 16px;font-size:13px;z-index:100;opacity:0;pointer-events:none;transition:opacity .15s;
+  padding:10px 16px;font-size:13px;z-index:150;opacity:0;pointer-events:none;transition:opacity .15s;
   max-width:88vw;text-align:center;
 }
 #toast.show{opacity:1}
@@ -6201,10 +6201,11 @@ function noteEditorEl(){
     '</div>' +
     '<div class="ne-stage" id="neStage"><canvas id="neCanvas"></canvas></div>' +
     '<div class="ne-tools">' +
-      '<div class="ne-row">' + NE_COLORS.map(c => '<button class="ne-color" data-necolor="' + c[0] + '" style="background:' + c[0] + '" aria-label="' + c[1] + '"></button>').join('') + '</div>' +
+      '<div class="ne-row">' + NE_COLORS.map(c => '<button class="ne-color" data-necolor="' + c[0] + '" style="background:' + c[0] + '" aria-label="' + c[1] + '"></button>').join('') +
+        '<button class="ne-btn" id="neEraser">けしゴム</button></div>' +
       '<div class="ne-row">' +
         '<button class="ne-btn" data-nesize="s">ほそ</button><button class="ne-btn" data-nesize="m">ふつう</button><button class="ne-btn" data-nesize="l">ふと</button>' +
-        '<button class="ne-btn" id="neUndo">↶ もどす</button><button class="ne-btn" id="neClear">かきこみを けす</button>' +
+        '<button class="ne-btn" id="neUndo">↶ ひとつ もどす</button><button class="ne-btn" id="neClear">かきこみを ぜんぶ けす</button>' +
       '</div>' +
       '<div class="ne-row">' +
         '<button class="ne-btn" id="nePrev">◀</button>' +
@@ -6217,9 +6218,13 @@ function noteEditorEl(){
   el.querySelector('#nePrev').onclick = () => gotoNotePhoto(NE.idx - 1);
   el.querySelector('#neNext').onclick = () => gotoNotePhoto(NE.idx + 1);
   el.querySelector('#neUndo').onclick = () => { if(NE.strokes.length){ NE.strokes.pop(); NE.dirty = true; drawNoteCanvas(); } };
-  el.querySelector('#neClear').onclick = () => { if(NE.strokes.length){ NE.strokes = []; NE.dirty = true; drawNoteCanvas(); } };
+  el.querySelector('#neClear').onclick = () => {
+    if(!NE.strokes.length) return;
+    ask('かきこみを ぜんぶ けしますか？\n（しゃしんは そのまま のこります）', () => { NE.strokes = []; NE.dirty = true; drawNoteCanvas(); });
+  };
+  el.querySelector('#neEraser').onclick = () => { NE.eraser = !NE.eraser; NE.mode = 'pen'; paintNoteTools(); };
   el.querySelector('#neMode').onclick = () => { NE.mode = NE.mode === 'pen' ? 'look' : 'pen'; paintNoteTools(); };
-  el.querySelectorAll('[data-necolor]').forEach(b => b.onclick = () => { NE.color = b.dataset.necolor; NE.mode = 'pen'; paintNoteTools(); });
+  el.querySelectorAll('[data-necolor]').forEach(b => b.onclick = () => { NE.color = b.dataset.necolor; NE.eraser = false; NE.mode = 'pen'; paintNoteTools(); });
   el.querySelectorAll('[data-nesize]').forEach(b => b.onclick = () => { NE.size = b.dataset.nesize; NE.mode = 'pen'; paintNoteTools(); });
   const cv = el.querySelector('#neCanvas');
   const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
@@ -6227,7 +6232,9 @@ function noteEditorEl(){
     if(NE.mode !== 'pen' || !NE.img) return;
     e.preventDefault();
     cv.setPointerCapture(e.pointerId);
-    NE.cur = {c:NE.color, w:NE_SIZES[NE.size] || NE_SIZES.m, p:[pos(e)]};
+    NE.cur = NE.eraser
+      ? {e:1, c:'#000', w:(NE_SIZES[NE.size] || NE_SIZES.m) * 3, p:[pos(e)]}   /* けしゴムは ふとめ */
+      : {c:NE.color, w:NE_SIZES[NE.size] || NE_SIZES.m, p:[pos(e)]};
     NE.strokes.push(NE.cur); NE.dirty = true;
     drawNoteCanvas();
   });
@@ -6244,7 +6251,8 @@ function noteEditorEl(){
 }
 function paintNoteTools(){
   const el = noteEditorEl();
-  el.querySelectorAll('[data-necolor]').forEach(b => b.classList.toggle('on', b.dataset.necolor === NE.color && NE.mode === 'pen'));
+  el.querySelectorAll('[data-necolor]').forEach(b => b.classList.toggle('on', b.dataset.necolor === NE.color && NE.mode === 'pen' && !NE.eraser));
+  el.querySelector('#neEraser').classList.toggle('on', !!NE.eraser && NE.mode === 'pen');
   el.querySelectorAll('[data-nesize]').forEach(b => b.classList.toggle('on', b.dataset.nesize === NE.size && NE.mode === 'pen'));
   el.querySelector('#neMode').textContent = NE.mode === 'pen' ? '✎ かく（🔍 みる に する）' : '🔍 みる（✎ かく に する）';
   el.querySelector('#neCanvas').style.touchAction = NE.mode === 'pen' ? 'none' : 'pinch-zoom';
@@ -6263,15 +6271,21 @@ function fitNoteCanvas(){
   cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
   drawNoteCanvas();
 }
-function paintStrokes(ctx, strokes, w, h){
+function paintStrokes(target, strokes, w, h){
+  if(!strokes.length) return;
+  const layer = document.createElement('canvas');
+  layer.width = w; layer.height = h;
+  const ctx = layer.getContext('2d');
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   strokes.forEach(s => {
+    ctx.globalCompositeOperation = s.e ? 'destination-out' : 'source-over';
     ctx.strokeStyle = s.c; ctx.lineWidth = Math.max(1, s.w * w);
     ctx.beginPath();
     s.p.forEach((pt, i) => { const x = pt[0] * w, y = pt[1] * h; if(i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
     if(s.p.length === 1){ ctx.lineTo(s.p[0][0] * w + 0.1, s.p[0][1] * h + 0.1); }
     ctx.stroke();
   });
+  target.drawImage(layer, 0, 0);
 }
 function drawNoteCanvas(){
   const cv = noteEditorEl().querySelector('#neCanvas');
@@ -6289,7 +6303,7 @@ async function saveNoteDrawing(){
   ctx.drawImage(NE.img, 0, 0);
   paintStrokes(ctx, NE.strokes, cv.width, cv.height);
   NE.rec.strokes = NE.strokes;
-  NE.rec.drawn = NE.strokes.length ? cv.toDataURL('image/jpeg', 0.85) : '';
+  NE.rec.drawn = NE.strokes.some(s => !s.e) ? cv.toDataURL('image/jpeg', 0.85) : '';
   await NoteDB.put('photos', NE.rec);
   notePhotoCache[NE.rec.id] = NE.rec.drawn || NE.rec.orig;
   NE.dirty = false;
@@ -6300,7 +6314,8 @@ async function gotoNotePhoto(i){
   NE.idx = i;
   NE.rec = await NoteDB.get('photos', NE.pids[i]);
   if(!NE.rec) return;
-  NE.strokes = (NE.rec.strokes || []).map(s => ({c:s.c, w:s.w, p:s.p.slice()}));
+  NE.strokes = (NE.rec.strokes || []).map(s => ({e:s.e, c:s.c, w:s.w, p:s.p.slice()}));
+  NE.eraser = false;
   NE.dirty = false;
   NE.img = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = NE.rec.orig; });
   paintNoteTools();
@@ -6635,7 +6650,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-h';
+const APP_VERSION = '2026.09.24-i';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
