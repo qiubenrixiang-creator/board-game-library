@@ -483,6 +483,37 @@ h2.sec::before{content:"■ ";font-size:12px}
 .dict-d{grid-column:1 / 3;font-size:12.5px;color:var(--muted);line-height:1.6}
 .dict-arrow{grid-column:2;grid-row:1;color:var(--muted);font-size:12px}
 .dict-body{padding:0 12px 12px;border-top:2px solid var(--line);padding-top:10px}
+.dict-known{font-size:10.5px;color:var(--accent);border:1px solid var(--accent);padding:0 4px;margin-left:6px;vertical-align:2px}
+.dict-hasdg{font-size:10px;color:var(--accent-2);border:1px solid var(--accent-2);padding:0 3px;margin-left:6px;vertical-align:2px}
+.dict-meter{height:10px;border:2px solid var(--frame);background:var(--bg)}
+.dict-meter span{display:block;height:100%;background:var(--accent);transition:width .3s}
+.dict-choice.ok{border-color:var(--accent);color:var(--accent)}
+.dict-choice.ng{border-color:var(--danger);color:var(--danger)}
+.dict-choice:disabled{opacity:1}
+.dg-wrap{margin:4px 0 12px;padding:8px 6px;border:2px dashed var(--line);background:rgba(0,0,0,.12)}
+.dg{display:block;width:100%;max-width:420px;height:auto;margin:0 auto}
+.dg text{font-family:inherit;font-size:11px;fill:var(--text)}
+.dg .dg-s{fill:var(--muted);font-size:11.5px}
+.dg .dg-b{fill:var(--text);font-size:12px}
+.dg .dg-accT{fill:var(--accent);font-size:11.5px}
+.dg .dg-on{fill:#fff;font-size:15px}
+.dg .dg-acc{fill:var(--accent)}
+.dg .dg-ln{stroke:var(--accent);stroke-width:2.5;fill:none}
+.dg .dg-x{stroke:#fff;stroke-width:2;opacity:.75}
+.dg .dg-card{stroke:rgba(0,0,0,.35);stroke-width:1.5}
+.dg .dg-card.hl{stroke:var(--accent);stroke-width:4}
+.dg .dg-card.dim{opacity:.55}
+.dg .dg-box{fill:var(--panel);stroke:var(--frame);stroke-width:2}
+.dg .dg-tile{fill:#5d8f4e;stroke:var(--frame);stroke-width:2}
+.dg .dg-tile.hl{stroke:var(--accent);stroke-width:4}
+.dg .dg-bar{fill:var(--accent-2)}
+.dg .dg-paper{fill:#f4f0e6;stroke:var(--frame);stroke-width:2}
+.term{border-bottom:2px dotted var(--accent-2);cursor:pointer;color:inherit}
+.term:active{background:rgba(255,255,255,.12)}
+.term-tag{cursor:pointer;border-color:var(--accent-2);color:var(--accent-2)}
+.term-pop-back{position:fixed;inset:0;z-index:125;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:0 10px calc(10px + env(safe-area-inset-bottom))}
+.term-pop-back[hidden]{display:none}
+.term-pop{width:100%;max-width:520px;max-height:80vh;overflow:auto;background:var(--panel);border:3px solid var(--accent);box-shadow:var(--shadow);padding:14px}
 .dict-ex{border-left:3px solid var(--accent-2);padding:4px 10px;font-size:13px;line-height:1.7;background:rgba(0,0,0,.12)}
 .vote-pick{
   display:flex;flex-direction:column;gap:4px;padding:5px;min-width:0;position:relative;
@@ -949,6 +980,7 @@ const KEY = {
   dirty:'bgl.localEdited',  /* この端末で ついか・へんしゅう したか（ふるい しるし） */
   a2hs:'bgl.a2hsSeen',        /* ホーム画面に ついかの おしらせを みた */
   pubOk:'bgl.lastPublishOk',  /* さいごに サイトを こうしん できた 日 */
+  dictKnown:'bgl.dictKnown',  /* おぼえた ことば */
   pubsig:'bgl.publishedSig', /* さいごに サイトと そろえた ときの ずかんの ないようの しるし */
   preAdopt:'bgl.beforeSiteAdopt', /* サイトに そろえる まえの ひかえ */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
@@ -3178,6 +3210,7 @@ function randomResultHTML(g){
 
 function viewDetail(id){
   const g = state.games.find(x => x.id === id);
+  const termSeen = {};   /* おなじ ことばは さいしょの 1かい だけ しるしを つける */
   if(!g) return '<section class="page"><div class="empty"><span class="mark" data-icon="search"></span>その ゲームは みつからなかった…' +
     '<div style="margin-top:16px"><button class="btn small" data-go2="#/list">ずかんへ もどる</button></div></div></section>';
 
@@ -3199,9 +3232,9 @@ function viewDetail(id){
     (isNewArrival(g) ? '<p class="count" style="margin:-6px 0 12px">'+esc(dateLabel(g.addedAt))+' に ずかんへ くわわりました。</p>' : '') +
     gallery + favBoxHTML(g) + reqBoxHTML(g) + noteLinkHTML(g) + helpBoxHTML(g) +
 
-    '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+esc(g.summary||'（みきにゅう）')+'</p></div>' +
-    (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+esc(g.quickRule)+'</div></div>' : '') +
-    (g.recommendation ? '<div class="section"><h2>おすすめ ポイント</h2><div class="body">'+esc(g.recommendation)+'</div></div>' : '') +
+    '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+linkTerms(esc(g.summary||'（みきにゅう）'), termSeen)+'</p></div>' +
+    (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+linkTerms(esc(g.quickRule), termSeen)+'</div></div>' : '') +
+    (g.recommendation ? '<div class="section"><h2>おすすめ ポイント</h2><div class="body">'+linkTerms(esc(g.recommendation), termSeen)+'</div></div>' : '') +
 
     '<div class="section"><h2>ステータス</h2><dl class="kv">' +
       '<dt>にんずう</dt><dd>'+playersText(g)+'</dd>' +
@@ -3209,10 +3242,12 @@ function viewDetail(id){
       '<dt>たいしょう年齢</dt><dd>'+(g.age ? esc(g.age)+'さい〜' : '—')+'</dd>' +
       '<dt>むずかしさ</dt><dd>'+stars(g.difficulty)+'</dd>' + optional.join('') +
       (playCount(g) ? '<dt>あそんだ かず</dt><dd>'+playCount(g)+'かい（さいご '+esc(dateLabel(lastPlayed(g)))+'）</dd>' : '') +
-      '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+((g.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')||'—')+'</div></dd>' +
+      '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+((g.tags||[]).map(t => termForTag(t)
+        ? '<span class="tag term-tag" data-term="'+termForTag(t)+'" role="button" tabindex="0">'+esc(t)+' ？</span>'
+        : '<span class="tag">'+esc(t)+'</span>').join('')||'—')+'</div></dd>' +
     '</dl></div>' +
 
-    (g.detailRule ? '<div class="section"><h2>くわしい ルール</h2><div class="body">'+esc(g.detailRule)+'</div></div>' : '') +
+    (g.detailRule ? '<div class="section"><h2>くわしい ルール</h2><div class="body">'+linkTerms(esc(g.detailRule), termSeen)+'</div></div>' : '') +
 
     videoHTML(g) +
 
@@ -3988,12 +4023,14 @@ function titleKey(statId, tier){ return statId + ':' + tier; }
 function titleByKey(k){
   const m = /^([a-z]+):([0-3])$/.exec(String(k || ''));
   if(!m) return '';
+  if(m[1] === 'dict') return (DICT_TITLES[Number(m[2])] || {}).name || '';
   const st = ADV_STATS.find(x => x.id === m[1]);
   return st ? st.titles[Number(m[2])] : '';
 }
 function titleHowText(k){
   const m = /^([a-z]+):([0-3])$/.exec(String(k || ''));
   if(!m) return '';
+  if(m[1] === 'dict') return 'ことばじてんで ことばを ' + (Number(m[2]) === 2 ? 'ぜんぶ' : dictTitleNeed(Number(m[2])) + 'こ') + ' おぼえる';
   const st = ADV_STATS.find(x => x.id === m[1]);
   const t = TITLE_TIERS[Number(m[2])];
   if(!st || !t) return '';
@@ -4060,8 +4097,9 @@ function titleListHTML(a, name){
   const nowKey = a.plays ? titleKey(advTopStat(a).id, titleTier(lv)) : '';
   const shownKey = (pf && pf.title && earned.some(x => x.k === pf.title)) ? pf.title : nowKey;
   const got = k => earned.find(x => x.k === k) || (k === nowKey ? {k, at:''} : null);
-  const total = ADV_STATS.length * TITLE_TIERS.length;
-  const gotCount = ADV_STATS.reduce((n, st) => n + st.titles.filter((_, i) => got(titleKey(st.id, i))).length, 0);
+  const total = ADV_STATS.length * TITLE_TIERS.length + DICT_TITLES.length;
+  const gotCount = ADV_STATS.reduce((n, st) => n + st.titles.filter((_, i) => got(titleKey(st.id, i))).length, 0) +
+    DICT_TITLES.filter((_, i) => earned.some(x => x.k === 'dict:' + i)).length;
   return '<details style="margin:0 0 12px"'+(state.titleListOpen ? ' open' : '')+' id="titleList">' +
     '<summary style="font-size:12px;color:var(--muted)">しょうごうの いちらん（'+gotCount+' / '+total+'）</summary>' +
     '<p class="count" style="margin:6px 0 8px">いちばん たかい ステータスと レベルで しょうごうが てに はいります。<br>' +
@@ -4079,6 +4117,18 @@ function titleListHTML(a, name){
               (g && g.at ? '　'+esc(dateLabel(g.at))+' ゲット' : (g ? '　いま' : '')) + '</span></div>';
         }).join('') +
       '</div>').join('') +
+    '<div style="margin:0 0 10px">' +
+      '<div class="catlabel" style="margin:0 0 2px">ことば</div>' +
+      '<p class="count" style="margin:0 0 4px;font-size:11px">てに いれかた：どうぐ →「ことばじてん」で ことばを おぼえる</p>' +
+      DICT_TITLES.map((t, i) => {
+        const g = earned.find(x => x.k === 'dict:' + i);
+        const mark = ('dict:' + i) === shownKey ? '▶' : (g ? '✓' : '・');
+        return '<div class="row" style="gap:6px;font-size:12.5px;line-height:1.7;align-items:baseline">' +
+          '<span style="flex:1;min-width:0;color:'+(g ? 'var(--accent)' : 'var(--muted)')+'">'+mark+' '+esc(g ? t.name : '？？？')+'</span>' +
+          '<span style="flex:0 0 auto;font-size:11px;color:var(--muted)">'+(i === 2 ? 'ぜんぶ' : dictTitleNeed(i)+'こ')+
+            (g && g.at ? '　'+esc(dateLabel(g.at))+' ゲット' : '')+'</span></div>';
+      }).join('') +
+    '</div>' +
     '<p class="count" style="margin:4px 0 0">まだ あそんで いない ときは「たびだちまえの わかもの」です。</p>' +
   '</details>';
 }
@@ -6650,7 +6700,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-i';
+const APP_VERSION = '2026.09.24-j';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7038,8 +7088,475 @@ const DICT = [
    d:'ボードゲームを遊ぶために集まる会。',
    m:'友だち同士で集まるもののほか、誰でも参加できる「オープン会」もあります。いろいろな人がゲームを持ち寄るので、知らないゲームに出会えるのが楽しいところです。',
    e:'「週末のボドゲ会に、このゲームを持っていこう」',
-   r:['table','inst','tsumige']}
+   r:['table','inst','tsumige']},
+
+  /* ===== ついか：あそぶ まえ・じゅんび ===== */
+  {id:'first', w:'初手', y:'しょて', a:['1手目'], c:'prep', s:false,
+   d:'ゲームで最初に行う行動。',
+   m:'「初手で何をするか」は、慣れた人同士でよく話題になります。ゲームによっては「初手はこれが強い」という定番があり、それを知っていると序盤で迷いにくくなります。',
+   e:'「初手は、まずお金を取るのが定番」',
+   r:['turn','start','firstadv']},
+  {id:'order', w:'手番順', y:'てばんじゅん', a:['手番の順番','時計回り'], c:'prep', s:false,
+   d:'手番が回ってくる順番。',
+   m:'多くのゲームはスタートプレイヤーから時計回り（左どなりへ）に進みます。ゲームによっては、得点が低い人から先に手番をする、などのように途中で順番が入れ替わるものもあります。',
+   e:'「次のラウンドは、点数が低い人から手番です」',
+   r:['turn','start','firstadv'], dg:'turn'},
+  {id:'draw', w:'ドロー', y:'どろー', a:['引く','カードを引く'], c:'prep', s:false,
+   d:'山札からカードを引くこと。',
+   m:'「1枚ドローする」「2ドロー」のように使います。引いたカードは手札に入れるのがふつうです。',
+   e:'「手番の最初に1枚ドローします」',
+   r:['deck','hand','hiki']},
+  {id:'handlimit', w:'手札上限', y:'てふだじょうげん', a:['手札の上限'], c:'prep', s:false,
+   d:'手札として持てるカードの、いちばん多い枚数。',
+   m:'上限を超えたときは、手番の終わりなどに多い分を捨てるルールが多いです。「カードを持ちすぎて、せっかくの良いカードを捨てることになった」ということも起こります。',
+   e:'「手札上限は7枚。8枚目からは捨ててください」',
+   r:['hand','discard','handmgmt']},
+  {id:'rulebook', w:'ルールブック', y:'るーるぶっく', a:['説明書','ルール説明書'], c:'prep', s:false,
+   d:'ゲームの遊び方が書かれた説明書。',
+   m:'初めて読むときは、まず「ゲームの目的」と「終了条件」を読むと全体がつかみやすいです。細かい例外は、遊びながら必要になったときに確認すれば大丈夫です。',
+   e:'「分からなくなったら、ルールブックを見て確認しよう」',
+   r:['inst','errata','end']},
+  {id:'errata', w:'エラッタ', y:'えらった', a:['正誤表','ルール修正'], c:'prep', s:false,
+   d:'ルールやカードの間違いを、公式に直したもの。',
+   m:'発売後に見つかった誤り（誤訳や数字の間違いなど）を、メーカーや販売元がウェブサイトなどで発表します。遊ぶ前に「エラッタが出ていないか」を確認しておくと安心です。',
+   e:'「このカードの効果は、エラッタで変わっています」',
+   r:['rulebook','house']},
+  {id:'best', w:'ベスト人数', y:'べすとにんずう', a:['おすすめ人数'], c:'prep', s:false,
+   d:'そのゲームが、いちばん楽しいと言われる人数。',
+   m:'箱に「2〜5人」と書いてあっても、人数によって遊び心地が変わります。「4人がベスト」「2人だとちょっと物足りない」のように語られます。海外の大きなボードゲームサイト（BoardGameGeek）でも、遊んだ人たちの投票が見られます。',
+   e:'「このゲームはベスト人数が4人なんだって」',
+   r:['playtime','downtime']},
+  {id:'playtime', w:'プレイ時間', y:'ぷれいじかん', a:['遊ぶ時間'], c:'prep', s:false,
+   d:'箱に書いてある、1回遊ぶのにかかる時間の目安。',
+   m:'慣れた人が遊んだときの時間であることが多く、初めてのときはインストや考える時間がかかるので、書いてある時間より長くなることがよくあります。',
+   e:'「箱には30分とあるけど、初めてなら1時間みておこう」',
+   r:['weight','inst','best']},
+
+  /* ===== ついか：ゲームの しゅるい ===== */
+  {id:'semicoop', w:'半協力', y:'はんきょうりょく', a:['半協力ゲーム'], c:'kind', s:false,
+   d:'全員で協力しないとみんな負けてしまうけれど、勝てるのは1人だけ、というゲーム。',
+   m:'協力ゲームと対戦ゲームの間のような形です。「みんなで助け合う」か「自分が抜け出す」かのバランスがおもしろく、同時に悩ましいところです。',
+   e:'「半協力だから、協力しすぎると他の人に勝たれちゃう」',
+   r:['coop','versus','hidden']},
+  {id:'memory', w:'記憶ゲーム', y:'きおくげーむ', a:['記憶','メモリー'], c:'kind', s:false,
+   d:'覚えておく力を使うゲーム。',
+   m:'トランプの「神経衰弱」のように、見たものを覚えておき、あとで思い出して当てます。子どもが大人に勝てることも多く、家族で遊びやすいジャンルです。',
+   e:'「さっき出たカード、どこにあったっけ…」',
+   r:['party','dice'], t:['記憶']},
+  {id:'action', w:'アクションゲーム', y:'あくしょんげーむ', a:['アクション','器用さゲーム'], c:'kind', s:false,
+   d:'手先の器用さや素早さを使うゲーム。',
+   m:'積み木を崩さずに積む、コマを指ではじく、などの遊びです。ルールがとても分かりやすく、見ている人も盛り上がれます。なお、ワーカープレイスメントなどで出てくる「アクション」は「行動」という意味なので、使われ方に注意してください。',
+   e:'「そーっと、そーっと…あっ、崩れた！」',
+   r:['party','realtime'], t:['アクション']},
+  {id:'goout', w:'ゴーアウト', y:'ごーあうと', a:['ゴーアウト系','あがり'], c:'kind', s:false,
+   d:'手札を先になくした人が「あがり」になる、カードゲームの形。',
+   m:'トランプの「大富豪」や「UNO」がこの仲間です。手札を早く減らすために、どの順番でカードを出すかを考えます。',
+   e:'「最後の1枚を出して、あがり！」',
+   r:['hand','handmgmt','trick']},
+  {id:'nazo', w:'謎解きゲーム', y:'なぞときげーむ', a:['謎解き','脱出ゲーム'], c:'kind', s:false,
+   d:'箱やカードに隠された謎を解いていくゲーム。',
+   m:'「部屋から脱出する」などの物語にそって、手がかりを集めて答えを見つけます。一度解くと答えが分かってしまうので、基本的に1回しか遊べないものが多く、ネタバレには特に注意が必要です。手がかりの写真や気づいたことは、どうぐの「メモ → ノート」に残せます。',
+   e:'「この数字、さっきのカードの絵と関係ありそう！」',
+   r:['spoiler','deduction','coop'], k:['謎解き','なぞとき','脱出']},
+
+  /* ===== ついか：ゲームの しくみ ===== */
+  {id:'suit', w:'スート', y:'すーと', a:['マーク','色'], c:'mech', s:false,
+   d:'カードの種類を表すマークや色。',
+   m:'トランプなら♠♥♦♣の4つがスートです。ボードゲームでは、赤・青・黄のような色で分けられていることもよくあります。トリックテイキングでは、スートがとても大事になります。',
+   e:'「このゲームのスートは5色あります」',
+   r:['trick','mustfollow','trump'], dg:'suit'},
+  {id:'bid', w:'ビッド', y:'びっど', a:['ビッディング','宣言'], c:'mech', s:false,
+   d:'「いくら払う」「何回勝つ」などを宣言すること。',
+   m:'競りでは、出す値段を言うことをビッドと言います。トリックテイキングでは、自分がそのラウンドで取れるトリックの数を予想して宣言することを指し、ぴったり当てると得点になるゲームもあります。',
+   e:'「このラウンドは2トリック取る、とビッドします」',
+   r:['auction','trick']},
+  {id:'batting', w:'バッティング', y:'ばってぃんぐ', a:['かぶり'], c:'mech', s:false,
+   d:'ほかの人と同じものを選んでしまい、ぶつかること。多くは両方が失敗になる。',
+   m:'全員が同時に選んで一斉に見せるゲームでよく使われます。人気の選択肢ほど他の人とかぶりやすいので、「あえてずらす」読み合いが生まれます。',
+   e:'代表例：ずかんの中なら ハゲタカのえじき（同じ数字を出した人同士は無効）',
+   r:['simul','auction'], k:['バッティング'], dg:'batting'},
+  {id:'rollwrite', w:'ロール＆ライト', y:'ろーるあんどらいと', a:['ロールアンドライト','フリップ＆ライト','紙ペンゲーム'], c:'mech', s:false,
+   d:'サイコロを振って、出た目を使って自分の用紙に書き込んでいくゲーム。',
+   m:'全員が同じ出目を使うことが多いので、人数が増えても待ち時間が少ないのが特徴です。サイコロの代わりにカードをめくるものは「フリップ＆ライト」と呼ばれます。「ヤッツィー」もこの仲間です。',
+   e:'「出た目の6を、ここのマスに書き込もう」',
+   r:['dice','simul','luck']},
+  {id:'salad', w:'ポイントサラダ', y:'ぽいんとさらだ', a:[], c:'mech', s:false,
+   d:'点数の取り方がたくさんあり、何をしても少しずつ点数になるゲームのこと。',
+   m:'いろいろな得点方法がサラダのように混ざっている、というたとえです。どの行動でも点が入るので初心者でも点は取れますが、「何がいちばん得か」を見きわめるのが難しくなります。『ポイントサラダ』という名前のゲーム（野菜を集めるセットコレクションのゲーム）もあります。',
+   e:'「ポイントサラダ系だから、とりあえず何をしても点になるよ」',
+   r:['vp','scoring','engine']},
+  {id:'ap', w:'アクションポイント', y:'あくしょんぽいんと', a:['AP','アクション数'], c:'mech', s:false,
+   d:'手番ごとに決まった回数（ポイント）の行動を、好きな組み合わせで使える仕組み。',
+   m:'たとえば「手番に4回まで行動できる」なら、「移動を2回とカードを1回」のように自由に割り振れます。協力ゲーム『パンデミック』では、手番に4回の行動ができます。',
+   e:'「残り1アクション、どこに使おう？」',
+   r:['turn','resource','coop']},
+  {id:'resource', w:'リソース管理', y:'りそーすかんり', a:['リソースマネジメント','資源','リソース'], c:'mech', s:false,
+   d:'木・石・お金などの資源（リソース）を、足りなくならないようにやりくりすること。',
+   m:'欲しいものを作るには資源が必要ですが、集められる量には限りがあります。「今使うか、貯めておくか」を考えるのがおもしろさです。ワーカープレイスメントやエンジンビルドのゲームによく出てきます。',
+   e:'「石が1つ足りない…次の手番で集めよう」',
+   r:['worker','engine','ap']},
+
+  /* ===== ついか：かいわで よく きく ===== */
+  {id:'firstadv', w:'先手有利', y:'せんてゆうり', a:['先手','後手'], c:'talk', s:false,
+   d:'先に手番をする人のほうが有利なこと。',
+   m:'良いものを先に取れるなど、先に動くほうが得になるゲームがあります。そのため「後の人ほどお金を多くもらって始める」のように、ルールで調整されていることがよくあります。',
+   e:'「先手有利だから、2番手以降はコインが1枚多い」',
+   r:['start','order','first']},
+  {id:'runaway', w:'ランナウェイリーダー', y:'らんなうぇいりーだー', a:['独走'], c:'talk', s:false,
+   d:'先頭の人がどんどん有利になり、ほかの人が追いつけなくなる状態。',
+   m:'「勝っている人ほど強くなる」仕組みのゲームで起こりやすく、最後まで勝負が分からないほうが楽しい、という理由で気にされることが多いです。トップ叩きができるゲームでは起こりにくくなります。',
+   e:'「序盤でリードされて、そのまま独走された…」',
+   r:['bash','engine','kingmaker']},
+  {id:'shoken', w:'初見', y:'しょけん', a:['初見殺し','初プレイ'], c:'talk', s:false,
+   d:'そのゲームを初めて遊ぶこと。',
+   m:'インストの前に「初見です」と伝えると、説明する人が合わせてくれます。知らないと引っかかってしまう仕掛けのことを「初見殺し」と言います。',
+   e:'「このゲーム初見なので、ゆっくり教えてください」',
+   r:['inst','rulebook']},
+  {id:'spoiler', w:'ネタバレ', y:'ねたばれ', a:[], c:'talk', s:false,
+   d:'答えや展開を先に知ってしまうこと。先に教えてしまうこと。',
+   m:'謎解きゲーム・推理ゲーム・レガシーゲームは、答えや展開を知っていると楽しさが大きく減ってしまいます。遊んだ内容を話すときは「ネタバレしてもいい？」と聞いてからにしましょう。',
+   e:'「あの謎の答えはネタバレになるから、言わないでおくね」',
+   r:['nazo','legacy','deduction']},
+  {id:'bash', w:'トップ叩き（包囲網）', y:'とっぷたたき ほういもう', a:['トップ叩き','包囲網'], c:'talk', s:false,
+   d:'いちばん勝っている人を、ほかの人たちで邪魔して止めようとすること。',
+   m:'インタラクションのあるゲームでは自然に起こる、大事な戦い方の一つです。ただ、やりすぎると勝負が1人の行動で決まってしまうこと（キングメーカー）にもつながります。',
+   e:'「今トップの人を、みんなで止めよう！」',
+   r:['interaction','runaway','kingmaker']},
+  {id:'hiki', w:'ヒキ', y:'ひき', a:['引き','引き運','ヒキが強い'], c:'talk', s:false,
+   d:'カードの引きやダイスの目などの運のこと。',
+   m:'「ヒキが強い」は、欲しいカードやよい目がちょうどよく出ること。「ヒキが悪い」はその反対です。運要素のあるゲームでよく聞く言葉です。',
+   e:'「最後に6を出すなんて、ヒキが強すぎる！」',
+   r:['luck','draw','dice']},
+  {id:'mawaru', w:'回る（ぶん回る）', y:'まわる ぶんまわる', a:['回る','ぶん回る'], c:'talk', s:false,
+   d:'デッキやエンジンがうまくかみ合って、1回の手番でたくさんのことができる状態。',
+   m:'デッキ構築やエンジンビルドのゲームで、組み合わせがはまって一気に得をすることを「回った」「ぶん回った」と言います。',
+   e:'「今のターン、デッキがぶん回った！」',
+   r:['deckbuild','engine']},
+  {id:'gamemarket', w:'ゲームマーケット', y:'げーむまーけっと', a:['ゲムマ'], c:'talk', s:false,
+   d:'毎年開かれている、国内最大規模のアナログゲームのイベント。',
+   m:'略して「ゲムマ」。ボードゲームやカードゲームを作った人たちが集まって、新作を紹介・販売します。個人や小さなサークルが作ったゲームもたくさん並ぶので、ほかでは見られないゲームに出会えます。',
+   e:'「ゲムマで買ってきた新作、遊んでみよう！」',
+   r:['meet','cafe','tsumige']},
+  {id:'cafe', w:'ボドゲカフェ', y:'ぼどげかふぇ', a:['ボードゲームカフェ'], c:'talk', s:false,
+   d:'ボードゲームを遊べるカフェ。',
+   m:'料金を払うと、お店に置いてあるたくさんのゲームで遊べます。お店の人がルールを説明してくれる店も多く、初めての人でも気軽に楽しめます。',
+   e:'「今度、ボドゲカフェで新しいゲームを探そう」',
+   r:['meet','inst','gamemarket']},
+  {id:'variant', w:'ヴァリアント', y:'ゔぁりあんと', a:['バリアント','上級ルール','別ルール'], c:'talk', s:false,
+   d:'基本のルールとは違う、別の遊び方のルール。',
+   m:'説明書に公式にのっているもの（「上級ルール」「2人用ヴァリアント」など）と、ファンが考えたものがあります。自分たちで決めたものは「ハウスルール」と呼ぶことが多いです。',
+   e:'「慣れてきたら、上級ヴァリアントで遊ぼう」',
+   r:['house','errata','replay']}
+
 ];
+/* ---------------- ことばの ず（ドットふうの かんたんな え） ---------------- */
+const DG_COL = {r:'#d9534f', b:'#4a7fd6', y:'#e0b23a', g:'#4aa865', k:'#8a8fa3'};
+const DICT_DG = {turn:'turn', start:'turn', trick:'trick', lead:'trick', mustfollow:'mustfollow', trump:'trump',
+  draft:'draft', deckbuild:'deckbuild', worker:'worker', majority:'majority', territory:'majority', burst:'burst',
+  setcollect:'setcollect', tileplace:'tileplace', simul:'simul', engine:'engine', weight:'weight'};
+function dgOf(x){ return x.dg || DICT_DG[x.id] || ''; }
+const dg = {
+  svg(h, body, label){ return '<svg class="dg" viewBox="0 0 320 ' + h + '" role="img" aria-label="' + esc(label || '') + '">' + body + '</svg>'; },
+  t(x, y, s, cls, anchor){ return '<text x="' + x + '" y="' + y + '" class="' + (cls || '') + '" text-anchor="' + (anchor || 'middle') + '">' + esc(s) + '</text>'; },
+  card(x, y, s, col, opt){
+    opt = opt || {};
+    const w = opt.w || 34, h = opt.h || 46;
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="3" fill="' + (DG_COL[col] || col) + '" class="dg-card' + (opt.hl ? ' hl' : '') + (opt.dim ? ' dim' : '') + '"/>' +
+      '<text x="' + (x + w / 2) + '" y="' + (y + h / 2 + 6) + '" class="dg-on" text-anchor="middle">' + esc(s) + '</text>' +
+      (opt.x ? '<path d="M' + (x + 4) + ' ' + (y + 4) + ' L' + (x + w - 4) + ' ' + (y + h - 4) + ' M' + (x + w - 4) + ' ' + (y + 4) + ' L' + (x + 4) + ' ' + (y + h - 4) + '" class="dg-x"/>' : '');
+  },
+  arrow(x1, y1, x2, y2){ return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" class="dg-ln" marker-end="url(#dgArr)"/>'; },
+  crown(x, y){ return '<path d="M' + (x - 9) + ' ' + (y + 6) + ' L' + (x - 9) + ' ' + (y - 3) + ' L' + (x - 4) + ' ' + (y + 1) + ' L' + x + ' ' + (y - 6) + ' L' + (x + 4) + ' ' + (y + 1) + ' L' + (x + 9) + ' ' + (y - 3) + ' L' + (x + 9) + ' ' + (y + 6) + ' Z" class="dg-acc"/>'; },
+  person(x, y, col, s){ return '<circle cx="' + x + '" cy="' + (y - 8) + '" r="6" fill="' + (DG_COL[col] || col) + '"/>' +
+    '<rect x="' + (x - 8) + '" y="' + (y - 1) + '" width="16" height="14" rx="3" fill="' + (DG_COL[col] || col) + '"/>' + (s ? dg.t(x, y + 26, s, 'dg-s') : ''); },
+  defs: '<defs><marker id="dgArr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="dg-acc"/></marker></defs>'
+};
+const DICT_DIAGRAMS = {
+  turn(){
+    const P = [[160, 30, 'r', 'A'], [250, 78, 'b', 'B'], [160, 126, 'y', 'C'], [70, 78, 'g', 'D']];
+    return dg.svg(160, dg.defs +
+      '<path d="M185 28 Q240 30 246 58" class="dg-ln" marker-end="url(#dgArr)"/>' +
+      '<path d="M246 100 Q240 126 186 128" class="dg-ln" marker-end="url(#dgArr)"/>' +
+      '<path d="M134 128 Q80 126 74 100" class="dg-ln" marker-end="url(#dgArr)"/>' +
+      '<path d="M74 58 Q80 30 134 28" class="dg-ln" marker-end="url(#dgArr)"/>' +
+      P.map(p => dg.person(p[0], p[1], p[2], '')).join('') +
+      P.map(p => dg.t(p[0] + (p[0] === 160 ? 22 : p[0] > 160 ? 26 : -26), p[1] + 6, p[3], 'dg-b')).join('') +
+      dg.t(160, 72, 'とけいまわり', 'dg-s') + dg.t(160, 88, '（ひだりどなりへ）', 'dg-s') +
+      '<text x="108" y="20" class="dg-accT" text-anchor="middle">★スタプレ</text>', '手番は とけいまわりに すすむ');
+  },
+  trick(){
+    return dg.svg(150, dg.card(40, 34, '5', 'r') + dg.card(106, 34, '8', 'r', {hl:1}) + dg.card(172, 34, '9', 'b', {dim:1}) + dg.card(238, 34, '3', 'r') +
+      dg.crown(123, 22) +
+      dg.t(57, 96, 'リード', 'dg-s') + dg.t(123, 96, 'かち！', 'dg-accT') + dg.t(189, 96, 'ちがう いろ', 'dg-s') + dg.t(255, 96, '', 'dg-s') +
+      dg.t(160, 124, '最初の 赤と おなじ いろで いちばん 大きい', 'dg-s') + dg.t(160, 140, '「赤8」が この トリックを とる', 'dg-s'),
+      'トリックテイキングの れい');
+  },
+  mustfollow(){
+    return dg.svg(170, dg.t(60, 18, 'リード', 'dg-s') + dg.card(43, 24, '5', 'r') +
+      dg.t(200, 18, 'あなたの 手札', 'dg-s') +
+      dg.card(140, 24, '2', 'r', {hl:1}) + dg.card(190, 24, '9', 'b', {x:1, dim:1}) + dg.card(240, 24, '7', 'y', {x:1, dim:1}) +
+      dg.t(157, 90, 'だす！', 'dg-accT') + dg.t(232, 90, 'だせない', 'dg-s') +
+      dg.t(160, 124, '赤が リード された ので、', 'dg-s') + dg.t(160, 140, '赤を もって いたら 赤を だす', 'dg-s') +
+      dg.t(160, 158, '（赤が ない ときだけ ほかの いろを だせる）', 'dg-s'), 'マストフォローの れい');
+  },
+  trump(){
+    return dg.svg(150, dg.card(60, 34, '9', 'r') + dg.card(143, 34, '3', 'r') + dg.card(226, 34, '2', 'y', {hl:1}) + dg.crown(243, 22) +
+      dg.t(77, 96, 'リード', 'dg-s') + dg.t(160, 96, '', 'dg-s') + dg.t(243, 96, '切り札！', 'dg-accT') +
+      dg.t(160, 124, 'きいろが 切り札 の とき、', 'dg-s') + dg.t(160, 140, '数字が 小さくても きいろの 2が かつ', 'dg-s'), '切り札の れい');
+  },
+  draft(){
+    const hand = (x, y, n) => Array.from({length:n}, (_, i) => dg.card(x + i * 14, y, '', ['r', 'b', 'y', 'g'][i % 4], {w:22, h:30})).join('');
+    return dg.svg(170, dg.defs +
+      dg.person(50, 40, 'r', 'あなた') + hand(24, 70, 3) +
+      dg.person(160, 40, 'b', 'となり') + hand(134, 70, 3) +
+      dg.person(270, 40, 'y', 'その となり') + hand(244, 70, 3) +
+      dg.arrow(84, 86, 126, 86) + dg.arrow(194, 86, 236, 86) +
+      dg.t(160, 126, '① 手札から 1まい えらんで とる', 'dg-s') + dg.t(160, 144, '② のこりを となりへ まわす', 'dg-s') + dg.t(160, 162, '（くりかえす）', 'dg-s'),
+      'ドラフトの ながれ');
+  },
+  deckbuild(){
+    const box = (x, y, s) => '<rect x="' + x + '" y="' + y + '" width="84" height="34" rx="3" class="dg-box"/>' + dg.t(x + 42, y + 22, s, 'dg-b');
+    return dg.svg(188, dg.defs +
+      box(20, 20, '山札') + box(216, 20, '手札') + box(216, 110, 'つかう・かう') + box(20, 110, '捨て札') +
+      dg.arrow(106, 37, 212, 37) + dg.arrow(258, 56, 258, 106) + dg.arrow(212, 127, 108, 127) + dg.arrow(62, 106, 62, 58) +
+      dg.t(160, 30, 'ひく', 'dg-s') + dg.t(160, 120, 'すてる', 'dg-s') + dg.t(70, 86, 'まぜる', 'dg-s', 'start') + dg.t(250, 86, 'かう', 'dg-s', 'end') +
+      dg.t(160, 164, 'かった カードも 捨て札に 入り、まぜて 山札へ', 'dg-s') + dg.t(160, 180, '→ だんだん つよい デッキに なる', 'dg-accT'), 'デッキ構築の ながれ');
+  },
+  worker(){
+    const sp = (x, s) => '<rect x="' + x + '" y="46" width="88" height="56" rx="3" class="dg-box"/>' + dg.t(x + 44, 64, s, 'dg-b');
+    return dg.svg(150, sp(12, '木を とる') + sp(116, 'お金 +2') + sp(220, '石を とる') +
+      dg.person(56, 90, 'r') + dg.person(264, 90, 'b') +
+      dg.t(56, 36, 'うまって いる', 'dg-s') + dg.t(160, 36, 'あいて いる', 'dg-accT') + dg.t(264, 36, 'うまって いる', 'dg-s') +
+      dg.t(160, 126, 'コマ（ワーカー）を おいた ばしょの 行動が できる', 'dg-s') + dg.t(160, 142, 'ほかの 人が おいた ばしょには おけない', 'dg-s'),
+      'ワーカープレイスメントの れい');
+  },
+  majority(){
+    const cube = (x, y, c) => '<rect x="' + x + '" y="' + y + '" width="14" height="14" fill="' + DG_COL[c] + '"/>';
+    return dg.svg(150,
+      '<rect x="14" y="20" width="140" height="100" rx="6" class="dg-box"/>' + dg.t(84, 38, 'エリア', 'dg-s') +
+      cube(34, 52, 'r') + cube(52, 52, 'r') + cube(70, 52, 'r') + cube(34, 72, 'b') + cube(52, 72, 'b') + cube(34, 92, 'y') +
+      dg.t(178, 50, '1い 赤（3こ）→ 5点', 'dg-accT', 'start') + dg.t(178, 76, '2い 青（2こ）→ 2点', 'dg-b', 'start') + dg.t(178, 102, '3い 黄（1こ）→ 0点', 'dg-s', 'start') +
+      dg.t(160, 142, 'いちばん おおく おいた 人が いちばん とくをする', 'dg-s'), 'エリアマジョリティの れい');
+  },
+  burst(){
+    return dg.svg(180, dg.defs +
+      dg.card(10, 24, '+3', 'g', {w:36}) + dg.card(52, 24, '+5', 'g', {w:36}) + dg.card(94, 24, '+2', 'g', {w:36}) +
+      dg.t(70, 90, 'ここまで 10点', 'dg-b') +
+      dg.arrow(136, 38, 176, 26) + dg.arrow(136, 58, 176, 84) +
+      dg.t(182, 30, 'やめる', 'dg-b', 'start') + dg.t(182, 46, '→ 10点 ゲット', 'dg-accT', 'start') +
+      dg.t(182, 88, 'もう1まい…', 'dg-b', 'start') +
+      '<path d="M196 100 l6 10 l10 -6 l-4 11 l11 3 l-11 4 l5 10 l-10 -5 l-5 10 l-3 -11 l-11 2 l8 -8 l-8 -8 l11 2 z" fill="' + DG_COL.r + '"/>' +
+      dg.t(222, 118, 'バースト！', 'dg-b', 'start') + dg.t(222, 134, '→ 0点', 'dg-s', 'start') +
+      dg.t(160, 160, 'つづける ほど ふえる けど、', 'dg-s') + dg.t(160, 176, 'しっぱい すると ぜんぶ なくなる', 'dg-s'), 'バーストの れい');
+  },
+  setcollect(){
+    return dg.svg(150, dg.card(20, 14, '★', 'y') + dg.card(60, 14, '★', 'y') + dg.card(100, 14, '★', 'y') +
+      dg.t(150, 42, '→ おなじ 3まい で 10点！', 'dg-accT', 'start') +
+      dg.card(20, 76, '★', 'y') + dg.card(60, 76, '●', 'b') + dg.card(100, 76, '▲', 'r') +
+      dg.t(150, 104, '→ ばらばら だと 2点', 'dg-s', 'start') +
+      dg.t(160, 144, 'きめられた くみあわせで そろえると とくてん', 'dg-s'), 'セットコレクションの れい');
+  },
+  tileplace(){
+    const tile = (x, y, road, hl) => '<rect x="' + x + '" y="' + y + '" width="46" height="46" class="dg-tile' + (hl ? ' hl' : '') + '"/>' +
+      (road === 'h' ? '<rect x="' + x + '" y="' + (y + 19) + '" width="46" height="8" fill="#c9b37a"/>' : '') +
+      (road === 'c' ? '<path d="M' + x + ' ' + (y + 23) + ' H' + (x + 23) + ' V' + (y + 46) + '" stroke="#c9b37a" stroke-width="8" fill="none"/>' : '');
+    return dg.svg(160, tile(20, 16, 'h') + tile(68, 16, 'h') + tile(116, 16, 'c') + tile(20, 64, '') + tile(68, 64, '') + tile(116, 64, 'v', true) +
+      '<rect x="135" y="64" width="8" height="46" fill="#c9b37a"/>' +
+      dg.t(172, 84, '← あたらしい タイル', 'dg-accT', 'start') + dg.t(180, 102, '道が つながる ように', 'dg-s', 'start') +
+      dg.t(160, 140, 'え や 道が つながる ように タイルを おいて いく', 'dg-s'), 'タイル配置の れい');
+  },
+  simul(){
+    return dg.svg(150, dg.person(60, 28, 'r') + dg.person(160, 28, 'b') + dg.person(260, 28, 'y') +
+      dg.card(43, 52, '？', 'k') + dg.card(143, 52, '？', 'k') + dg.card(243, 52, '？', 'k') +
+      dg.t(160, 120, 'みんな ふせて えらんで、', 'dg-s') + dg.t(160, 136, '「せーの」で いっせいに オープン！', 'dg-accT'), '同時手番の れい');
+  },
+  batting(){
+    return dg.svg(160, dg.person(60, 28, 'r') + dg.person(160, 28, 'b') + dg.person(260, 28, 'y') +
+      dg.card(43, 52, '5', 'r', {x:1, dim:1}) + dg.card(143, 52, '5', 'b', {x:1, dim:1}) + dg.card(243, 52, '3', 'y', {hl:1}) + dg.crown(260, 40) +
+      dg.t(110, 116, 'おなじ 5 → どちらも むこう', 'dg-s') + dg.t(260, 116, 'かち！', 'dg-accT') +
+      dg.t(160, 146, 'ほかの 人と かぶると しっぱい（バッティング）', 'dg-s'), 'バッティングの れい');
+  },
+  engine(){
+    const bar = (x, v, s) => '<rect x="' + x + '" y="' + (120 - v * 11) + '" width="36" height="' + (v * 11) + '" class="dg-bar"/>' + dg.t(x + 18, 136, s, 'dg-s') + dg.t(x + 18, 114 - v * 11, String(v), 'dg-b');
+    return dg.svg(160, dg.defs + bar(40, 1, '1かいめ') + bar(104, 2, '2かいめ') + bar(168, 4, '3かいめ') + bar(232, 8, '4かいめ') +
+      dg.t(20, 20, 'もらえる しげんの かず', 'dg-s', 'start') + dg.t(160, 154, 'しくみを ふやすと、あとに なるほど たくさん もらえる', 'dg-s'),
+      'エンジンビルドの れい');
+  },
+  weight(){
+    const box = (x, h, s, tm) => '<rect x="' + x + '" y="' + (110 - h) + '" width="70" height="' + h + '" rx="3" class="dg-box"/>' + dg.t(x + 35, 128, s, 'dg-b') + dg.t(x + 35, 144, tm, 'dg-s');
+    return dg.svg(150, box(28, 26, '軽量級', '〜30分') + box(125, 52, '中量級', '30〜90分') + box(222, 86, '重量級', '90分〜') +
+      dg.t(160, 16, 'ルールの おおさ・かんがえる りょう・じかん', 'dg-s'), 'ゲームの おもさの めやす');
+  },
+  suit(){
+    const s = (x, ch, c) => '<rect x="' + x + '" y="20" width="50" height="66" rx="4" class="dg-paper"/>' +
+      '<text x="' + (x + 25) + '" y="64" text-anchor="middle" style="font-size:30px;fill:' + c + '">' + ch + '</text>';
+    return dg.svg(130, s(28, '♠', '#222') + s(98, '♥', DG_COL.r) + s(168, '♦', DG_COL.r) + s(238, '♣', '#222') +
+      dg.t(160, 112, 'トランプの スートは この 4しゅるい', 'dg-s'), 'スートの れい');
+  }
+};
+function dictDiagramHTML(x){
+  const id = dgOf(x);
+  return (id && DICT_DIAGRAMS[id]) ? '<div class="dg-wrap">' + DICT_DIAGRAMS[id]() + '</div>' : '';
+}
+
+/* ---------------- ことばを おぼえる ---------------- */
+const DICT_TITLES = [
+  {n:20, name:'ことばの みならい'},
+  {n:50, name:'ことばの ものしり'},
+  {n:0,  name:'ことばの けんじゃ'}      /* 0 = ぜんぶ */
+];
+function dictTitleNeed(i){ return DICT_TITLES[i].n || DICT.length; }
+function dictKnown(){ return state.dictKnown || (state.dictKnown = store.read(KEY.dictKnown, []) || []); }
+function isKnown(id){ return dictKnown().indexOf(id) >= 0; }
+function setKnown(id, on){
+  const k = dictKnown().filter(x => x !== id && DICT.some(y => y.id === x));
+  if(on) k.push(id);
+  state.dictKnown = k;
+  store.write(KEY.dictKnown, k);
+  checkDictTitles();
+}
+function dictKnownCount(){ return dictKnown().filter(id => DICT.some(x => x.id === id)).length; }
+/* おぼえた かずで しょうごうを てに いれる */
+async function checkDictTitles(){
+  const n = dictKnownCount();
+  const have = (state.profile.titles || []).map(x => x.k);
+  const add = [];
+  DICT_TITLES.forEach((t, i) => { const k = 'dict:' + i; if(n >= dictTitleNeed(i) && have.indexOf(k) < 0) add.push({k, at: todayStr()}); });
+  if(!add.length) return;
+  const names = add.map(a => DICT_TITLES[Number(a.k.split(':')[1])].name);
+  if(isOnline()){
+    try{ await saveProfile({earned: add}); }catch(e){ state.profile.titles = (state.profile.titles || []).concat(add); saveProfileLocal(); }
+  }else{
+    state.profile.titles = (state.profile.titles || []).concat(add); saveProfileLocal();
+  }
+  toast('しょうごう「' + names[names.length - 1] + '」を てに いれた！');
+  playJobSe && playJobSe();
+}
+
+/* --- ことばクイズ --- */
+function dictShuffle(a){ a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function startDictQuiz(){
+  const pool = state.dictCat && state.dictCat !== 'all' && state.dictCat !== 'todo'
+    ? DICT.filter(x => state.dictCat === 'star' ? x.s : x.c === state.dictCat) : DICT.slice();
+  const unknown = dictShuffle(pool.filter(x => !isKnown(x.id))), known = dictShuffle(pool.filter(x => isKnown(x.id)));
+  const qs = unknown.concat(known).slice(0, Math.min(10, pool.length)).map(x => x.id);
+  state.dictQuiz = {qs, i:0, score:0, ans:null, choices:dictChoices(qs[0])};
+}
+function dictChoices(id){
+  const x = DICT.find(y => y.id === id);
+  const same = dictShuffle(DICT.filter(y => y.id !== id && y.c === x.c));
+  const other = dictShuffle(DICT.filter(y => y.id !== id && y.c !== x.c));
+  return dictShuffle([id].concat(same.concat(other).slice(0, 2).map(y => y.id)));
+}
+/* もんだいの 文に こたえの ことばが 入って いたら かくす */
+function dictMask(x, s){
+  let out = s;
+  [x.w].concat(x.a || []).concat(String(x.w).split(/[（）]/)).filter(f => f && f.length >= 2).forEach(f => { out = out.split(f).join('〇〇'); });
+  return out;
+}
+function dictQuizHTML(){
+  const q = state.dictQuiz;
+  if(q.i >= q.qs.length){
+    return '<div class="win" style="text-align:center;padding:18px">' +
+      '<p style="font-size:18px;color:var(--accent);margin:0 0 6px">けっか：' + q.score + ' / ' + q.qs.length + ' もん せいかい</p>' +
+      '<p class="count" style="margin:0 0 14px">' + (q.score === q.qs.length ? 'パーフェクト！ すばらしい！' : q.score >= q.qs.length * 0.7 ? 'よく おぼえて います！' : 'すこしずつ おぼえて いこう！') +
+        '<br>おぼえた ことば：' + dictKnownCount() + ' / ' + DICT.length + '</p>' +
+      '<div class="btn-row"><button class="btn small" id="dictQuizEnd" style="flex:1">じてんに もどる</button>' +
+      '<button class="btn small primary" id="dictQuizAgain" style="flex:1">もういちど</button></div></div>';
+  }
+  const x = DICT.find(y => y.id === q.qs[q.i]);
+  const ans = q.ans;
+  return '<div class="win" style="padding:14px">' +
+    '<p class="count" style="margin:0 0 6px">もんだい ' + (q.i + 1) + ' / ' + q.qs.length + '　せいかい ' + q.score + '</p>' +
+    '<p style="margin:0 0 4px;color:var(--accent-2)">この いみの ことばは どれ？</p>' +
+    '<p style="margin:0 0 12px;font-size:15px;line-height:1.7">' + esc(dictMask(x, x.d)) + '</p>' +
+    q.choices.map(id => {
+      const y = DICT.find(z => z.id === id);
+      const st = ans ? (id === x.id ? ' ok' : (id === ans ? ' ng' : '')) : '';
+      return '<button class="btn small dict-choice' + st + '" data-dictans="' + id + '" style="width:100%;margin-bottom:8px"' + (ans ? ' disabled' : '') + '>' + esc(y.w) + '</button>';
+    }).join('') +
+    (ans ? '<div class="note" style="margin:6px 0 10px;border-color:' + (ans === x.id ? 'var(--accent)' : 'var(--danger)') + '">' +
+        '<b style="color:' + (ans === x.id ? 'var(--accent)' : 'var(--danger)') + '">' + (ans === x.id ? 'せいかい！ 「おぼえた」に いれました' : 'ざんねん…') + '</b><br>' +
+        '<b>' + esc(x.w) + '</b>：' + esc(x.m) + '</div>' +
+      '<button class="btn primary" id="dictQuizNext" style="width:100%">' + (q.i + 1 >= q.qs.length ? 'けっかを みる' : 'つぎの もんだい ▶') + '</button>'
+      : '<button class="mini" id="dictQuizQuit" style="margin-top:4px">やめる</button>') +
+  '</div>';
+}
+
+/* ---------------- ゲームの せつめいの 中の ことばに しるしを つける ---------------- */
+const TERM_STOP = ['場','卓','親','運','準備','内容物','部品','点数','テーブル','チーム','対戦','協力','ゲーム終了','同点','はったり','待ち時間',
+  'ソロ','初期配置','取引','トレード','言葉あそび','早い者勝ち','スピード','何度も遊べる','自分の番','リソース','資源','マーク','色','宣言',
+  'かぶり','引き','引く','カードを引く','先手','後手','回る','あがり','記憶','アクション','メモリー','説明書','独走','謎解き','ターン','ラウンド説明',
+  'フォロー','トリック','エンジン','ワーカー','ソリティア','ハンド','デッキ','チップ','マーカー','駒','ポーン','サイコロ','オークション','入札',
+  '拡大再生産','バースト','交換','ゴール','ルール説明','点数計算','1手目','時計回り','おすすめ人数','遊ぶ時間','ルール修正','別ルール','上級ルール'];
+let TERM_INDEX = null;
+function termIndex(){
+  if(TERM_INDEX) return TERM_INDEX;
+  const forms = [];
+  DICT.forEach(x => {
+    const base = String(x.w).replace(/（.*?）/g, '');
+    const inner = (String(x.w).match(/（(.*?)）/) || [])[1] || '';
+    const mains = [base].concat(inner ? inner.split('・') : []).filter(f => f.indexOf('・') < 0);
+    mains.concat(x.a || []).forEach(f => {
+      f = String(f).trim();
+      if(f.length < 2) return;
+      if(mains.indexOf(f) < 0 && TERM_STOP.indexOf(f) >= 0) return;   /* べつの よびかたは ありふれた ものを のぞく */
+      if(!forms.some(z => z.f === f)) forms.push({f, id:x.id});
+    });
+  });
+  forms.sort((a, b) => b.f.length - a.f.length);
+  const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  TERM_INDEX = {forms, re: new RegExp(forms.map(z => reEsc(esc(z.f))).join('|'), 'g'),
+                byForm: Object.fromEntries(forms.map(z => [esc(z.f), z.id]))};
+  return TERM_INDEX;
+}
+/* esc() した 文に、はじめて でて きた ことば だけ しるしを つける */
+function linkTerms(escaped, seen){
+  const ix = termIndex();
+  const kata = /[ァ-ヶー]/;
+  return String(escaped).replace(ix.re, (m, off, str) => {
+    const id = ix.byForm[m];
+    if(!id || seen[id]) return m;
+    /* 「スタイル」の 中の「タイル」の ような、カタカナの とちゅうは つかわない */
+    if(kata.test(m.charAt(0)) && kata.test(str.charAt(off - 1) || '')) return m;
+    if(kata.test(m.charAt(m.length - 1)) && kata.test(str.charAt(off + m.length) || '') &&
+       str.slice(off + m.length, off + m.length + 3) !== 'ゲーム') return m;
+    seen[id] = 1;
+    return '<span class="term" data-term="' + id + '" role="button" tabindex="0">' + m + '</span>';
+  });
+}
+function termForTag(tag){ const x = DICT.find(y => (y.t || []).indexOf(tag) >= 0); return x ? x.id : ''; }
+function openTermPop(id){
+  const x = DICT.find(y => y.id === id);
+  if(!x) return;
+  let el = document.getElementById('termPop');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'termPop'; el.className = 'term-pop-back';
+    document.body.appendChild(el);
+    el.addEventListener('click', e => { if(e.target === el || e.target.closest('[data-termclose]')) el.hidden = true; });
+  }
+  el.innerHTML = '<div class="term-pop">' +
+    '<p style="margin:0 0 2px;font-size:17px;color:var(--accent)">' + esc(x.w) + '</p>' +
+    '<p class="count" style="margin:0 0 8px">' + esc(x.y) + '</p>' +
+    '<p style="margin:0 0 8px;font-size:14.5px;line-height:1.7">' + esc(x.d) + '</p>' +
+    dictDiagramHTML(x) +
+    '<div class="btn-row" style="margin-top:10px">' +
+      '<button class="btn small" data-termclose style="flex:1">とじる</button>' +
+      '<button class="btn small primary" id="termMore" style="flex:1.4">じてんで くわしく</button></div></div>';
+  el.hidden = false;
+  el.querySelector('#termMore').onclick = () => {
+    el.hidden = true;
+    state.dictCat = 'all'; state.dictQ = ''; state.dictQuiz = null;
+    state.dictOpen = id; state.dictScrollTo = id;
+    go('#/tool/dict');
+  };
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest && e.target.closest('[data-term]');
+  if(t){ e.preventDefault(); e.stopPropagation(); openTermPop(t.dataset.term); }
+}, true);
+
 
 /* ことばに かんけいの ある、うちの ずかんの ゲーム */
 function dictGames(x){
@@ -7065,9 +7582,11 @@ function dictMatches(x, q){
   return hay.includes(q);
 }
 function dictListHTML(){
+  if(state.dictQuiz) return dictQuizHTML();
   const q = normalizeText(state.dictQ || '');
   const cat = state.dictCat || 'all';
-  const list = DICT.filter(x => (cat === 'all' || (cat === 'star' ? x.s : x.c === cat)) && dictMatches(x, q));
+  const list = DICT.filter(x => (cat === 'all' || (cat === 'star' ? x.s : cat === 'todo' ? !isKnown(x.id) : x.c === cat)) && dictMatches(x, q));
+  if(!list.length && cat === 'todo' && !q) return '<div class="note">ぜんぶ おぼえました！ すごい！</div>';
   if(!list.length) return '<div class="note">みつかりません でした。べつの ことばで さがして みてください。</div>';
   const groups = (cat === 'all' && !q) ? DICT_CATS.map(c => [c.name, list.filter(x => x.c === c.id)]) : [[null, list]];
   return groups.filter(g => g[1].length).map(g =>
@@ -7078,7 +7597,8 @@ function dictItemHTML(x){
   const open = state.dictOpen === x.id;
   let html = '<div class="win dict-item' + (open ? ' open' : '') + '" id="dict-' + x.id + '">' +
     '<button type="button" class="dict-head" data-dictopen="' + x.id + '" aria-expanded="' + open + '">' +
-      '<span class="dict-w">' + (x.s ? '<span class="dict-star">★</span>' : '') + esc(x.w) + '</span>' +
+      '<span class="dict-w">' + (x.s ? '<span class="dict-star">★</span>' : '') + esc(x.w) +
+        (isKnown(x.id) ? '<span class="dict-known">✓ おぼえた</span>' : '') + (dgOf(x) ? '<span class="dict-hasdg">ず</span>' : '') + '</span>' +
       '<span class="dict-y">' + esc(x.y) + '</span>' +
       '<span class="dict-d">' + esc(x.d) + '</span>' +
       '<span class="dict-arrow">' + (open ? '▲' : '▼') + '</span>' +
@@ -7088,7 +7608,10 @@ function dictItemHTML(x){
     html += '<div class="dict-body">' +
       ((x.a || []).length ? '<p class="count" style="margin:0 0 6px">べつの よびかた：' + esc(x.a.join('・')) + '</p>' : '') +
       '<p style="margin:0 0 10px;line-height:1.8;font-size:14px">' + esc(x.m) + '</p>' +
+      dictDiagramHTML(x) +
       '<div class="dict-ex"><span class="catlabel" style="margin:0 0 2px">れい</span>' + esc(x.e) + '</div>' +
+      '<button type="button" class="btn small' + (isKnown(x.id) ? ' primary' : '') + '" data-dictknown="' + x.id + '" style="width:100%;margin-top:10px">' +
+        (isKnown(x.id) ? '✓ おぼえた（タップで もどす）' : 'おぼえた！') + '</button>' +
       ((x.r || []).length ? '<div class="catlabel" style="margin:10px 0 4px">かんけいの ある ことば</div><div class="chips">' +
         x.r.map(id => DICT.find(y => y.id === id)).filter(Boolean).map(y =>
           '<button type="button" class="chip sm" data-dictjump="' + y.id + '">' + esc(y.w) + '</button>').join('') + '</div>' : '') +
@@ -7102,14 +7625,29 @@ function dictItemHTML(x){
 }
 function toolDictHTML(){
   const cat = state.dictCat || 'all';
-  const chips = [['all', 'すべて（' + DICT.length + '）'], ['star', '★ はじめに']].concat(DICT_CATS.map(c => [c.id, c.name]));
+  const chips = [['all', 'すべて（' + DICT.length + '）'], ['star', '★ はじめに'], ['todo', 'まだ おぼえて いない']].concat(DICT_CATS.map(c => [c.id, c.name]));
+  const kn = dictKnownCount(), pct = Math.round(kn * 100 / DICT.length);
+  const nextT = DICT_TITLES.map((t, i) => ({i, need:dictTitleNeed(i), name:t.name})).find(t => kn < t.need);
   return '<p class="count" style="margin:0 0 10px">ボードゲームで よく つかう ことばを しらべられます。' +
-      '★は はじめに おぼえて おくと べんりな ことばです。ことばを タップすると くわしい せつめいが でます。</p>' +
+      '★は はじめに おぼえて おくと べんりな ことば、「ず」が ついた ことばは 図で せつめい して います。</p>' +
+    '<div class="win" style="padding:10px 12px;margin-bottom:12px">' +
+      '<div class="row" style="align-items:center;gap:8px;margin-bottom:6px">' +
+        '<span style="flex:1;font-size:14px">おぼえた ことば <b style="color:var(--accent)">' + kn + '</b> / ' + DICT.length + '</span>' +
+        '<button class="btn small primary" id="dictQuizBtn" style="flex:0 0 auto">ことばクイズ</button></div>' +
+      '<div class="dict-meter"><span style="width:' + pct + '%"></span></div>' +
+      '<p class="count" style="margin:6px 0 0">' + (nextT ? 'あと ' + (nextT.need - kn) + 'こ で しょうごう「' + esc(nextT.name) + '」' : 'しょうごう「' + esc(DICT_TITLES[2].name) + '」を てに いれました！') +
+        '<br>クイズで せいかい すると「おぼえた」に なります。</p></div>' +
     '<input type="search" id="dictQ" placeholder="ことばで さがす（ひらがなでも OK）" value="' + esc(state.dictQ || '') + '" ' +
       'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:10px">' +
     '<div class="chips" style="margin-bottom:12px">' + chips.map(c =>
       '<button type="button" class="chip sm" data-dictcat="' + c[0] + '" aria-pressed="' + (cat === c[0]) + '">' + esc(c[1]) + '</button>').join('') + '</div>' +
     '<div id="dictList">' + dictListHTML() + '</div>';
+}
+function paintDictMeter(){
+  const m = document.querySelector('.dict-meter span');
+  if(m) m.style.width = Math.round(dictKnownCount() * 100 / DICT.length) + '%';
+  const b = document.querySelector('.win b[style*="accent"]');
+  if(b && m) b.textContent = dictKnownCount();
 }
 function updateDictList(){
   const box = document.getElementById('dictList');
@@ -7130,6 +7668,24 @@ function openDictWord(id, scroll){
   }
 }
 function bindDict(root){
+  root.querySelectorAll('[data-dictknown]').forEach(b => b.onclick = () => {
+    const id = b.dataset.dictknown;
+    setKnown(id, !isKnown(id));
+    updateDictList(); paintDictMeter();
+    playClick();
+  });
+  root.querySelectorAll('[data-dictans]').forEach(b => b.onclick = () => {
+    const q = state.dictQuiz; if(!q || q.ans) return;
+    q.ans = b.dataset.dictans;
+    const right = q.ans === q.qs[q.i];
+    if(right){ q.score++; setKnown(q.qs[q.i], true); playHitSe && playHitSe(); } else { playMissSe && playMissSe(); }
+    updateDictList(); paintDictMeter();
+  });
+  const nx = root.querySelector('#dictQuizNext');
+  if(nx) nx.onclick = () => { const q = state.dictQuiz; q.i++; q.ans = null; if(q.i < q.qs.length) q.choices = dictChoices(q.qs[q.i]); updateDictList(); window.scrollTo({top:0, behavior:'smooth'}); };
+  const qe = root.querySelector('#dictQuizEnd'); if(qe) qe.onclick = () => { state.dictQuiz = null; render(); };
+  const qq = root.querySelector('#dictQuizQuit'); if(qq) qq.onclick = () => { state.dictQuiz = null; render(); };
+  const qa = root.querySelector('#dictQuizAgain'); if(qa) qa.onclick = () => { startDictQuiz(); updateDictList(); };
   root.querySelectorAll('[data-dictopen]').forEach(b => b.onclick = () => {
     const id = b.dataset.dictopen;
     openDictWord(state.dictOpen === id ? '' : id, state.dictOpen !== id);
@@ -9885,6 +10441,12 @@ function bind(r){
   /* --- ことばじてん --- */
   if(document.getElementById('dictList')){
     bindDict(document.getElementById('dictList'));
+    const qb = document.getElementById('dictQuizBtn');
+    if(qb) qb.onclick = () => { startDictQuiz(); updateDictList(); document.getElementById('dictList').scrollIntoView({behavior:'smooth', block:'start'}); };
+    if(state.dictScrollTo){
+      const id = state.dictScrollTo; state.dictScrollTo = '';
+      setTimeout(() => { const el = document.getElementById('dict-' + id); if(el) window.scrollTo({top: el.getBoundingClientRect().top + window.scrollY - 70}); }, 60);
+    }
     app.querySelectorAll('[data-dictcat]').forEach(b => b.onclick = () => {
       state.dictCat = b.dataset.dictcat;
       app.querySelectorAll('[data-dictcat]').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.dictcat === state.dictCat)));
