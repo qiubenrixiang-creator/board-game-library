@@ -452,6 +452,23 @@ h2.sec::before{content:"■ ";font-size:12px}
 }
 @media (max-width:360px){.vote-pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vote-pick-grid.tall{max-height:420px}
+/* ノート */
+.note-item{position:relative;margin-bottom:10px}
+.note-item textarea{padding-right:56px}
+.note-x{position:absolute;top:6px;right:6px}
+.note-photo{all:unset;display:block;width:100%;cursor:pointer;border:3px solid var(--frame);background:#000;position:relative}
+.note-photo img{display:block;width:100%;max-height:360px;object-fit:contain;min-height:60px}
+.note-photo-hint{position:absolute;left:6px;bottom:6px;font-size:11px;padding:2px 6px;background:rgba(0,0,0,.6);color:#fff}
+.ne-back{background:#06080f}
+.ne-stage{flex:1 1 auto;display:flex;align-items:center;justify-content:center;overflow:auto;min-height:0}
+#neCanvas{display:block;background:#000;touch-action:none}
+.ne-tools{flex:0 0 auto;padding:8px 10px 6px;display:grid;gap:8px}
+.ne-row{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
+.ne-color{width:34px;height:34px;border:3px solid rgba(255,255,255,.35);cursor:pointer}
+.ne-color.on{border-color:#fff;box-shadow:0 0 0 2px #000,0 0 0 4px #fff}
+.ne-btn{border:2px solid var(--lb-fg);background:rgba(0,0,0,.5);color:var(--lb-fg);padding:6px 10px;font-size:13px;cursor:pointer}
+.ne-btn.on{background:var(--lb-fg);color:#111}
+.ne-btn:disabled{opacity:.35}
 /* ことばじてん */
 .dict-item{padding:0;margin-bottom:8px;scroll-margin-top:70px}
 .dict-item.open{border-color:var(--accent)}
@@ -1814,7 +1831,7 @@ function playFanfare(){
 function paintFriendDot(){
   const d = document.getElementById('friendDot');
   if(!d) return;
-  d.hidden = !(isOnline() && state.friends && (state.friends.incoming || []).length);
+  d.hidden = !(isOnline() && ((state.friends && (state.friends.incoming || []).length) || (state.noteInbox || []).length));
 }
 function paintDirtyDot(){
   const d = document.getElementById('dirtyDot');
@@ -2019,6 +2036,8 @@ const state = {
   jobPick: false,                                   /* ジョブを えらぶ まどを ひらいて いるか */
   titlePick: false,                                 /* しょうごうを えらぶ まどを ひらいて いるか */
   suggField: 'summary',                             /* せつめいを かく らん */
+  notes: [], notesLoaded: false, noteInbox: [],      /* ノート */
+  noteOpen: '', noteNew: false,
   amida: null,                                      /* あみだくじの ばん（autoReveal・allPaths も ここに 入る） */
   score: {names:[], rows:[]},                       /* てんすう表 */
   scoreSel: {r:0, c:0},                             /* てんすう表で えらんで いる マス */
@@ -3178,7 +3197,7 @@ function viewDetail(id){
     '<button class="mini" data-go2="#/list" style="margin-bottom:14px">◀ ずかんへ もどる</button>' +
     '<h1 class="detail-title">'+esc(g.title)+newBadge(g)+'</h1>' +
     (isNewArrival(g) ? '<p class="count" style="margin:-6px 0 12px">'+esc(dateLabel(g.addedAt))+' に ずかんへ くわわりました。</p>' : '') +
-    gallery + favBoxHTML(g) + reqBoxHTML(g) + helpBoxHTML(g) +
+    gallery + favBoxHTML(g) + reqBoxHTML(g) + noteLinkHTML(g) + helpBoxHTML(g) +
 
     '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+esc(g.summary||'（みきにゅう）')+'</p></div>' +
     (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+esc(g.quickRule)+'</div></div>' : '') +
@@ -5860,9 +5879,12 @@ function toolMemoHTML(){
   }
 
   let html = '<div class="chips" style="margin-bottom:10px">' +
-      '<button class="chip sm" data-memomode="check" aria-pressed="'+(m.mode!=='free')+'">チェックしき</button>' +
+      '<button class="chip sm" data-memomode="check" aria-pressed="'+(m.mode!=='free' && m.mode!=='notes')+'">チェックしき</button>' +
       '<button class="chip sm" data-memomode="free" aria-pressed="'+(m.mode==='free')+'">じゆうに かく</button>' +
+      '<button class="chip sm" data-memomode="notes" aria-pressed="'+(m.mode==='notes')+'">ノート' +
+        ((state.noteInbox || []).length ? '（とどいた '+state.noteInbox.length+'）' : '') + '</button>' +
     '</div>';
+  if(m.mode === 'notes') return html + toolNotesHTML();
 
   if(m.mode === 'free'){
     return html +
@@ -5889,6 +5911,534 @@ function toolMemoHTML(){
     '<button class="btn small" id="memoClear" style="width:100%;margin-top:8px">ぜんぶ けす</button>';
 
   return html;
+}
+
+
+/* ---------------- ノート（しゃしん・かきこみ・なかまに おくる） ----------------
+   ゲームごとに ノートを つくり、しゃしんと もじの メモを のこす。
+   しゃしんが おおく なっても だいじょうぶな ように、ブラウザの IndexedDB に しまう
+   （この スマホの 中だけ）。なかまには サーバーを とおして コピーを おくれる。 */
+const NoteDB = {
+  open(){
+    if(this._p) return this._p;
+    this._p = new Promise((res, rej) => {
+      if(!window.indexedDB) return rej(new Error('この ブラウザでは ノートを ほぞん できません'));
+      const r = indexedDB.open('bgl-notes', 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        if(!d.objectStoreNames.contains('notes')) d.createObjectStore('notes', {keyPath:'id'});
+        if(!d.objectStoreNames.contains('photos')) d.createObjectStore('photos', {keyPath:'id'});
+      };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error || new Error('idb'));
+    });
+    return this._p;
+  },
+  async req(store, mode, fn){
+    const d = await this.open();
+    return new Promise((res, rej) => {
+      const tx = d.transaction(store, mode);
+      const r = fn(tx.objectStore(store));
+      tx.oncomplete = () => res(r && 'result' in r ? r.result : undefined);
+      tx.onerror = () => rej(tx.error || new Error('idb'));
+      tx.onabort = () => rej(tx.error || new Error('idb'));
+    });
+  },
+  all(store){ return this.req(store, 'readonly', s => s.getAll()); },
+  get(store, id){ return this.req(store, 'readonly', s => s.get(id)); },
+  put(store, obj){ return this.req(store, 'readwrite', s => s.put(obj)); },
+  del(store, id){ return this.req(store, 'readwrite', s => s.delete(id)); }
+};
+const notePhotoCache = {};      /* id → 見せる がぞう（かきこみ いり） */
+function noteUid(p){ return (p || 'n') + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+async function loadNotes(){
+  try{
+    const list = await NoteDB.all('notes');
+    state.notes = (list || []).sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')));
+  }catch(e){ state.notes = []; state.notesError = e.message; }
+  state.notesLoaded = true;
+  return state.notes;
+}
+function noteById(id){ return (state.notes || []).find(n => n.id === id) || null; }
+async function saveNote(n){
+  n.updated = new Date().toISOString();
+  await NoteDB.put('notes', n);
+  const i = (state.notes || []).findIndex(x => x.id === n.id);
+  if(i >= 0) state.notes[i] = n; else (state.notes = state.notes || []).unshift(n);
+  state.notes.sort((a, b) => String(b.updated || '').localeCompare(String(a.updated || '')));
+}
+async function deleteNote(n){
+  for(const it of n.items || []) if(it.type === 'photo'){ try{ await NoteDB.del('photos', it.pid); }catch(e){} delete notePhotoCache[it.pid]; }
+  await NoteDB.del('notes', n.id);
+  state.notes = (state.notes || []).filter(x => x.id !== n.id);
+}
+async function notePhotoSrc(pid){
+  if(notePhotoCache[pid]) return notePhotoCache[pid];
+  const p = await NoteDB.get('photos', pid);
+  const src = p ? (p.drawn || p.orig) : '';
+  if(src) notePhotoCache[pid] = src;
+  return src;
+}
+function notesOfGame(gid){ return (state.notes || []).filter(n => n.gid === gid); }
+/* 大きい しゃしんを ちいさく しなおす（おくる とき） */
+function shrinkDataUrl(src, maxSize, quality){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const sc = Math.min(1, maxSize / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      resolve(cv.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => reject(new Error('decode'));
+    img.src = src;
+  });
+}
+async function urlToDataUrl(u){
+  const r = await fetch(u);
+  if(!r.ok) throw new Error('しゃしんを うけとれませんでした');
+  const b = await r.blob();
+  return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(b); });
+}
+
+/* --- とどいた ノート --- */
+async function refreshNoteInbox(){
+  if(!isOnline()) return false;
+  const d = await api('/api/notes');
+  const next = d.notes || [];
+  const changed = JSON.stringify(next.map(x => x.id)) !== JSON.stringify((state.noteInbox || []).map(x => x.id));
+  state.noteInbox = next;
+  refreshNoteInbox.at = Date.now();
+  paintFriendDot();
+  return changed;
+}
+async function acceptSharedNote(x){
+  const items = [];
+  for(const it of x.items || []){
+    if(it.type === 'text') items.push({id:noteUid('t'), type:'text', text:it.text});
+    else if(it.type === 'photo'){
+      const src = await urlToDataUrl(it.u);
+      const pid = noteUid('p');
+      await NoteDB.put('photos', {id:pid, orig:src, strokes:[], drawn:''});
+      notePhotoCache[pid] = src;
+      items.push({id:noteUid('i'), type:'photo', pid});
+    }
+  }
+  const n = {id:noteUid('n'), title:x.title || 'ノート', gid:x.g || '', gtitle:x.t || '', items,
+             from:x.from || '', created:new Date().toISOString()};
+  await saveNote(n);
+  await api('/api/notes/ack', {method:'POST', body:{id:x.id}});
+  state.noteInbox = (state.noteInbox || []).filter(y => y.id !== x.id);
+  paintFriendDot();
+  return n;
+}
+
+/* --- がめん --- */
+function noteGameName(n){
+  const g = n.gid && state.games.find(x => x.id === n.gid);
+  return g ? g.title : (n.gtitle || (n.gid ? 'ずかんに ない ゲーム' : 'ゲームなし'));
+}
+function notesListHTML(){
+  if(!state.notesLoaded){ loadNotes().then(() => { if(currentRoute().param === 'memo') render(); }); return '<p class="count">よみこみ中…</p>'; }
+  if(state.notesError) return '<div class="note">この ブラウザでは ノートを ほぞん できません（' + esc(state.notesError) + '）。</div>';
+  let html = '';
+  const inbox = state.noteInbox || [];
+  if(inbox.length){
+    html += '<div class="catlabel" style="color:var(--accent)">▶ なかまから ノートが とどいて います</div>' +
+      inbox.map(x => '<div class="admin-row"><div class="t"><b style="font-size:14px;font-weight:400">' + esc(x.title || 'ノート') + '</b>' +
+        '<span>' + esc(x.from) + ' さんから・' + esc(x.t || 'ゲームなし') + '・しゃしん ' + (x.items || []).filter(i => i.type === 'photo').length + 'まい</span></div>' +
+        '<button class="mini" data-noteaccept="' + esc(x.id) + '">うけとる</button>' +
+        '<button class="mini warn" data-noterefuse="' + esc(x.id) + '">いらない</button></div>').join('') +
+      '<div style="height:10px"></div>';
+  }
+  html += '<p class="count" style="margin:0 0 10px">ゲームごとに ノートを つくって、しゃしんと メモを のこせます。' +
+    'せんりゃくの メモ、あそんだ ときの しゃしん、なぞときの てがかり など、なんでも どうぞ。' +
+    'しゃしんには ゆびで かきこめます。ノートは この スマホの 中に ほぞん されます。</p>' +
+    '<button class="btn small primary" id="noteNewBtn" style="width:100%;margin-bottom:14px">＋ あたらしい ノートを つくる</button>';
+  const notes = state.notes || [];
+  if(!notes.length) return html + '<div class="note">まだ ノートは ありません。</div>';
+  const groups = [];
+  notes.forEach(n => {
+    const key = n.gid || ('~' + (n.gtitle || ''));
+    let g = groups.find(x => x.key === key);
+    if(!g){ g = {key, name:noteGameName(n), game: state.games.find(x => x.id === n.gid), notes:[]}; groups.push(g); }
+    g.notes.push(n);
+  });
+  return html + groups.map(g =>
+    '<div class="row" style="align-items:center;gap:8px;margin:14px 0 6px">' +
+      (g.game ? thumbHTML(g.game, 'mini') : '') +
+      '<b style="font-size:14px;color:var(--accent-2);font-weight:400">' + esc(g.name) + '</b></div>' +
+    g.notes.map(n => {
+      const ph = (n.items || []).filter(i => i.type === 'photo').length;
+      const tx = (n.items || []).filter(i => i.type === 'text').length;
+      return '<button class="admin-row" data-noteopen="' + esc(n.id) + '" style="width:100%;text-align:left;cursor:pointer;color:var(--text);font:inherit">' +
+        '<div class="t"><b style="font-size:14px;font-weight:400">' + esc(n.title || 'ノート') + '</b>' +
+        '<span>しゃしん ' + ph + 'まい・メモ ' + tx + 'こ・' + esc(dateLabel(String(n.updated || '').slice(0, 10))) +
+          (n.from ? '・' + esc(n.from) + ' さんから' : '') + '</span></div><span style="color:var(--muted)">▶</span></button>';
+    }).join('')).join('');
+}
+function noteNewHTML(){
+  const q = normalizeText(state.noteGameQ || '');
+  let list = state.games.slice();
+  if(q) list = list.filter(g => searchIndex(g).includes(q));
+  const sel = state.noteNewGid || '';
+  return '<button class="mini" id="noteBack" style="margin-bottom:12px">◀ ノートの いちらん</button>' +
+    '<label class="lbl" for="noteNewTitle">ノートの なまえ</label>' +
+    '<input type="text" id="noteNewTitle" value="' + esc(state.noteNewTitle || '') + '" placeholder="れい：1かいめ、さくせん メモ" style="margin-bottom:12px">' +
+    '<label class="lbl">どの ゲームの ノート？<span class="hint">しゃしんを タップ</span></label>' +
+    '<input type="search" id="noteGameQ" placeholder="ゲームめいで さがす" value="' + esc(state.noteGameQ || '') + '" ' +
+      'autocomplete="off" autocorrect="off" spellcheck="false" style="margin-bottom:8px">' +
+    '<div id="noteGamePick">' + (list.length ? gamePickGridHTML(list.slice(0, 60), {attr:'notegame', on:g => g.id === sel, tall:true})
+      : '<p class="count">みつかりません でした。</p>') + '</div>' +
+    '<label class="row" style="align-items:center;gap:8px;margin:0 0 12px;font-size:13px">' +
+      '<input type="checkbox" id="noteNoGame" ' + (sel === '' && state.noteNoGame ? 'checked' : '') + ' style="flex:0 0 auto;width:18px;height:18px">' +
+      '<span>ゲームを えらばない</span></label>' +
+    '<button class="btn primary" id="noteCreate" style="width:100%">ノートを つくる</button>';
+}
+function noteOpenHTML(n){
+  const photos = (n.items || []).filter(i => i.type === 'photo');
+  const g = n.gid && state.games.find(x => x.id === n.gid);
+  return '<button class="mini" id="noteBack" style="margin-bottom:12px">◀ ノートの いちらん</button>' +
+    '<input type="text" id="noteTitle" value="' + esc(n.title || '') + '" placeholder="ノートの なまえ" style="margin-bottom:6px;font-size:16px">' +
+    '<p class="count" style="margin:0 0 12px">' +
+      (g ? '<button class="mini" data-go2="#/game/' + esc(g.id) + '">' + esc(g.title) + ' ▶</button>' : esc(noteGameName(n))) +
+      (n.from ? '　' + esc(n.from) + ' さんから とどいた ノート' : '') + '</p>' +
+    '<div class="btn-row" style="margin-bottom:8px">' +
+      '<label class="btn small" style="flex:1;cursor:pointer">しゃしんを とる<input type="file" id="noteCam" accept="image/*" capture="environment" style="display:none"></label>' +
+      '<label class="btn small" style="flex:1;cursor:pointer">アルバムから<input type="file" id="notePick" accept="image/*" multiple style="display:none"></label>' +
+    '</div>' +
+    '<button class="btn small" id="noteAddText" style="width:100%;margin-bottom:14px">＋ もじの メモを ついか</button>' +
+    ((n.items || []).length ? (n.items || []).map((it, i) => it.type === 'photo'
+      ? '<div class="note-item"><button class="note-photo" data-noteedit="' + esc(it.pid) + '" aria-label="しゃしんを ひらく">' +
+          '<img data-notepid="' + esc(it.pid) + '" alt=""><span class="note-photo-hint">タップで 大きく・かきこむ</span></button>' +
+          '<button class="mini warn note-x" data-notedel="' + i + '">けす</button></div>'
+      : '<div class="note-item"><textarea class="grow" data-notetext="' + i + '" rows="2" placeholder="きづいた こと、てがかり など">' + esc(it.text || '') + '</textarea>' +
+          '<button class="mini warn note-x" data-notedel="' + i + '">けす</button></div>').join('')
+      : '<div class="note">まだ なにも ありません。しゃしんや メモを ついか して ください。</div>') +
+    '<div class="divider"></div>' +
+    (isOnline() ? noteSendHTML(n) : '<p class="count">なかまに おくるには「なかまの なまえ」で ぼうけんしゃの証を つくって ください。</p>') +
+    '<button class="btn small danger" id="noteDelete" style="width:100%;margin-top:14px">この ノートを けす</button>' +
+    (photos.length ? '<p class="count" style="margin:8px 0 0">しゃしん ' + photos.length + 'まい</p>' : '');
+}
+function noteSendHTML(n){
+  const fr = friendList();
+  if(!fr.length) return '<p class="count">なかまが いると、この ノートを おくれます（ともだちコードで つなげます）。</p>';
+  const sel = state.noteSendTo || [];
+  return '<div class="catlabel">なかまに おくる<span class="hint">いまの ないようの コピーが とどきます</span></div>' +
+    '<div class="chips" style="margin-bottom:8px">' + fr.map(f =>
+      '<button type="button" class="chip sm" data-notesendto="' + esc(f.id) + '" aria-pressed="' + (sel.indexOf(f.id) >= 0) + '">' + esc(f.name) + '</button>').join('') + '</div>' +
+    '<button class="btn small primary" id="noteSend" style="width:100%">えらんだ なかまに おくる</button>' +
+    '<div id="noteSendStatus"></div>';
+}
+function noteLinkHTML(g){
+  const list = notesOfGame(g.id);
+  if(!list.length) return '';
+  return '<button class="btn small" data-notesofgame="' + esc(g.id) + '" style="width:100%;margin:0 0 14px">' +
+    'この ゲームの ノート（' + list.length + '）</button>';
+}
+function toolNotesHTML(){
+  if(state.noteNew) return noteNewHTML();
+  const n = state.noteOpen && noteById(state.noteOpen);
+  if(n) return noteOpenHTML(n);
+  return notesListHTML();
+}
+/* しゃしんを IndexedDB から よんで <img> に いれる */
+function paintNotePhotos(root){
+  (root || app).querySelectorAll('img[data-notepid]').forEach(async img => {
+    const src = await notePhotoSrc(img.dataset.notepid);
+    if(src) img.src = src;
+  });
+}
+async function addNotePhotos(n, files){
+  let added = 0;
+  for(const f of files){
+    try{
+      const src = await readImage(f, 1600, 0.82);
+      const pid = noteUid('p');
+      await NoteDB.put('photos', {id:pid, orig:src, strokes:[], drawn:''});
+      notePhotoCache[pid] = src;
+      n.items.push({id:noteUid('i'), type:'photo', pid});
+      added++;
+    }catch(e){ toast('しゃしんを よみこめませんでした'); }
+  }
+  if(added){ await saveNote(n); render(); toast('しゃしんを ' + added + 'まい ついか しました'); }
+}
+async function sendNote(n, to){
+  const st = document.getElementById('noteSendStatus');
+  const say = t => { if(st) st.innerHTML = '<p class="count" style="margin:8px 0 0">' + esc(t) + '</p>'; };
+  const items = [];
+  const photos = (n.items || []).filter(i => i.type === 'photo');
+  let done = 0;
+  for(const it of n.items || []){
+    if(it.type === 'text'){ if(String(it.text || '').trim()) items.push({type:'text', text:it.text}); continue; }
+    say('しゃしんを おくって います… ' + (++done) + ' / ' + photos.length);
+    let src = await notePhotoSrc(it.pid);
+    if(!src) continue;
+    if(src.length > 650000) src = await shrinkDataUrl(src, 1280, 0.7);
+    if(src.length > 650000) src = await shrinkDataUrl(src, 1000, 0.6);
+    items.push({type:'photo', u: await uploadOnePhoto('note', src)});
+  }
+  const g = n.gid && state.games.find(x => x.id === n.gid);
+  const d = await api('/api/notes/send', {method:'POST', body:{to, title:n.title, g:n.gid, t:g ? g.title : (n.gtitle || ''), items}});
+  say('');
+  return d.sent;
+}
+
+/* ---------------- しゃしんに かきこむ ---------------- */
+const NE = {pids:[], idx:0, rec:null, img:null, strokes:[], color:'#ff3b30', size:'m', mode:'pen', dirty:false, cur:null};
+const NE_COLORS = [['#ff3b30','あか'],['#ffd60a','きいろ'],['#34c759','みどり'],['#0a84ff','あお'],['#ffffff','しろ'],['#111111','くろ']];
+const NE_SIZES = {s:0.004, m:0.008, l:0.016};
+function noteEditorEl(){
+  let el = document.getElementById('noteEd');
+  if(el) return el;
+  el = document.createElement('div');
+  el.id = 'noteEd'; el.className = 'lb-back ne-back'; el.hidden = true;
+  el.innerHTML =
+    '<div class="lb-bar" style="justify-content:space-between">' +
+      '<span id="neCount" style="font-size:14px"></span>' +
+      '<button class="icon-btn" id="neClose" style="border:2px solid var(--lb-fg);color:var(--lb-fg);background:rgba(0,0,0,.55)">✕ とじる</button>' +
+    '</div>' +
+    '<div class="ne-stage" id="neStage"><canvas id="neCanvas"></canvas></div>' +
+    '<div class="ne-tools">' +
+      '<div class="ne-row">' + NE_COLORS.map(c => '<button class="ne-color" data-necolor="' + c[0] + '" style="background:' + c[0] + '" aria-label="' + c[1] + '"></button>').join('') + '</div>' +
+      '<div class="ne-row">' +
+        '<button class="ne-btn" data-nesize="s">ほそ</button><button class="ne-btn" data-nesize="m">ふつう</button><button class="ne-btn" data-nesize="l">ふと</button>' +
+        '<button class="ne-btn" id="neUndo">↶ もどす</button><button class="ne-btn" id="neClear">かきこみを けす</button>' +
+      '</div>' +
+      '<div class="ne-row">' +
+        '<button class="ne-btn" id="nePrev">◀</button>' +
+        '<button class="ne-btn" id="neMode"></button>' +
+        '<button class="ne-btn" id="neNext">▶</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(el);
+  el.querySelector('#neClose').onclick = () => closeNoteEditor();
+  el.querySelector('#nePrev').onclick = () => gotoNotePhoto(NE.idx - 1);
+  el.querySelector('#neNext').onclick = () => gotoNotePhoto(NE.idx + 1);
+  el.querySelector('#neUndo').onclick = () => { if(NE.strokes.length){ NE.strokes.pop(); NE.dirty = true; drawNoteCanvas(); } };
+  el.querySelector('#neClear').onclick = () => { if(NE.strokes.length){ NE.strokes = []; NE.dirty = true; drawNoteCanvas(); } };
+  el.querySelector('#neMode').onclick = () => { NE.mode = NE.mode === 'pen' ? 'look' : 'pen'; paintNoteTools(); };
+  el.querySelectorAll('[data-necolor]').forEach(b => b.onclick = () => { NE.color = b.dataset.necolor; NE.mode = 'pen'; paintNoteTools(); });
+  el.querySelectorAll('[data-nesize]').forEach(b => b.onclick = () => { NE.size = b.dataset.nesize; NE.mode = 'pen'; paintNoteTools(); });
+  const cv = el.querySelector('#neCanvas');
+  const pos = e => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; };
+  cv.addEventListener('pointerdown', e => {
+    if(NE.mode !== 'pen' || !NE.img) return;
+    e.preventDefault();
+    cv.setPointerCapture(e.pointerId);
+    NE.cur = {c:NE.color, w:NE_SIZES[NE.size] || NE_SIZES.m, p:[pos(e)]};
+    NE.strokes.push(NE.cur); NE.dirty = true;
+    drawNoteCanvas();
+  });
+  cv.addEventListener('pointermove', e => {
+    if(!NE.cur) return;
+    e.preventDefault();
+    NE.cur.p.push(pos(e));
+    drawNoteCanvas();
+  });
+  const end = () => { NE.cur = null; };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  window.addEventListener('resize', () => { if(!el.hidden) fitNoteCanvas(); });
+  return el;
+}
+function paintNoteTools(){
+  const el = noteEditorEl();
+  el.querySelectorAll('[data-necolor]').forEach(b => b.classList.toggle('on', b.dataset.necolor === NE.color && NE.mode === 'pen'));
+  el.querySelectorAll('[data-nesize]').forEach(b => b.classList.toggle('on', b.dataset.nesize === NE.size && NE.mode === 'pen'));
+  el.querySelector('#neMode').textContent = NE.mode === 'pen' ? '✎ かく（🔍 みる に する）' : '🔍 みる（✎ かく に する）';
+  el.querySelector('#neCanvas').style.touchAction = NE.mode === 'pen' ? 'none' : 'pinch-zoom';
+  el.querySelector('#neCount').textContent = NE.pids.length > 1 ? (NE.idx + 1) + ' / ' + NE.pids.length + 'まい' : '';
+  el.querySelector('#nePrev').disabled = NE.idx <= 0;
+  el.querySelector('#neNext').disabled = NE.idx >= NE.pids.length - 1;
+}
+function fitNoteCanvas(){
+  const el = noteEditorEl(), cv = el.querySelector('#neCanvas'), st = el.querySelector('#neStage');
+  if(!NE.img) return;
+  const sw = st.clientWidth - 16, sh = st.clientHeight - 8;
+  const sc = Math.min(sw / NE.img.width, sh / NE.img.height, 1.5);
+  const w = Math.max(1, Math.round(NE.img.width * sc)), h = Math.max(1, Math.round(NE.img.height * sc));
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  drawNoteCanvas();
+}
+function paintStrokes(ctx, strokes, w, h){
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  strokes.forEach(s => {
+    ctx.strokeStyle = s.c; ctx.lineWidth = Math.max(1, s.w * w);
+    ctx.beginPath();
+    s.p.forEach((pt, i) => { const x = pt[0] * w, y = pt[1] * h; if(i) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+    if(s.p.length === 1){ ctx.lineTo(s.p[0][0] * w + 0.1, s.p[0][1] * h + 0.1); }
+    ctx.stroke();
+  });
+}
+function drawNoteCanvas(){
+  const cv = noteEditorEl().querySelector('#neCanvas');
+  if(!NE.img) return;
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.drawImage(NE.img, 0, 0, cv.width, cv.height);
+  paintStrokes(ctx, NE.strokes, cv.width, cv.height);
+}
+async function saveNoteDrawing(){
+  if(!NE.dirty || !NE.rec) return;
+  const cv = document.createElement('canvas');
+  cv.width = NE.img.width; cv.height = NE.img.height;
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(NE.img, 0, 0);
+  paintStrokes(ctx, NE.strokes, cv.width, cv.height);
+  NE.rec.strokes = NE.strokes;
+  NE.rec.drawn = NE.strokes.length ? cv.toDataURL('image/jpeg', 0.85) : '';
+  await NoteDB.put('photos', NE.rec);
+  notePhotoCache[NE.rec.id] = NE.rec.drawn || NE.rec.orig;
+  NE.dirty = false;
+}
+async function gotoNotePhoto(i){
+  if(i < 0 || i >= NE.pids.length) return;
+  try{ await saveNoteDrawing(); }catch(e){ toast('ほぞん できませんでした'); }
+  NE.idx = i;
+  NE.rec = await NoteDB.get('photos', NE.pids[i]);
+  if(!NE.rec) return;
+  NE.strokes = (NE.rec.strokes || []).map(s => ({c:s.c, w:s.w, p:s.p.slice()}));
+  NE.dirty = false;
+  NE.img = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = NE.rec.orig; });
+  paintNoteTools();
+  fitNoteCanvas();
+}
+async function openNoteEditor(n, pid){
+  const el = noteEditorEl();
+  NE.pids = (n.items || []).filter(i => i.type === 'photo').map(i => i.pid);
+  NE.mode = 'pen';
+  el.hidden = false;
+  document.body.style.overflow = 'hidden';
+  await gotoNotePhoto(Math.max(0, NE.pids.indexOf(pid)));
+}
+async function closeNoteEditor(){
+  try{ await saveNoteDrawing(); }catch(e){ toast('ほぞん できませんでした'); }
+  const el = noteEditorEl();
+  el.hidden = true;
+  document.body.style.overflow = '';
+  NE.img = null; NE.rec = null;
+  const n = state.noteOpen && noteById(state.noteOpen);
+  if(n){ await saveNote(n); }
+  paintNotePhotos(app);
+}
+
+/* ノートの ボタンの うごき（bind から よぶ） */
+function bindNotes(){
+  const onList = !state.noteNew && !(state.noteOpen && noteById(state.noteOpen));
+  if(onList && isOnline() && (!refreshNoteInbox.at || Date.now() - refreshNoteInbox.at > 15000)){
+    refreshNoteInbox().then(ch => { if(ch) render(); }).catch(() => {});
+  }
+  paintNotePhotos(app);
+  const back = document.getElementById('noteBack');
+  if(back) back.onclick = () => { state.noteNew = false; state.noteOpen = ''; render(); };
+  const nb = document.getElementById('noteNewBtn');
+  if(nb) nb.onclick = () => { state.noteNew = true; state.noteNewTitle = ''; state.noteNewGid = state.noteForGame || ''; state.noteGameQ = ''; render(); };
+  app.querySelectorAll('[data-noteopen]').forEach(b => b.onclick = () => { state.noteOpen = b.dataset.noteopen; state.noteSendTo = []; render(); window.scrollTo(0, 0); });
+  app.querySelectorAll('[data-noteaccept]').forEach(b => b.onclick = async () => {
+    const x = (state.noteInbox || []).find(y => y.id === b.dataset.noteaccept);
+    if(!x) return;
+    b.disabled = true; toast('うけとって います…');
+    try{ const n = await acceptSharedNote(x); state.noteOpen = n.id; render(); toast('ノートを うけとりました'); }
+    catch(e){ toast(e.message || 'うけとれませんでした'); b.disabled = false; }
+  });
+  app.querySelectorAll('[data-noterefuse]').forEach(b => b.onclick = () => {
+    ask('この ノートを うけとらずに けしますか？', async () => {
+      try{ await api('/api/notes/ack', {method:'POST', body:{id:b.dataset.noterefuse}}); await refreshNoteInbox(); render(); }
+      catch(e){ toast(e.message); }
+    });
+  });
+  /* あたらしい ノート */
+  const nt = document.getElementById('noteNewTitle');
+  if(nt) nt.addEventListener('input', () => { state.noteNewTitle = nt.value; });
+  const bindPick = root => root.querySelectorAll('[data-notegame]').forEach(b => b.onclick = () => {
+    state.noteNewGid = state.noteNewGid === b.dataset.notegame ? '' : b.dataset.notegame;
+    state.noteNoGame = false;
+    const ng = document.getElementById('noteNoGame'); if(ng) ng.checked = false;
+    root.querySelectorAll('[data-notegame]').forEach(x => { const on = x.dataset.notegame === state.noteNewGid; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); });
+    playClick();
+  });
+  const pickBox = document.getElementById('noteGamePick');
+  if(pickBox) bindPick(pickBox);
+  const gq = document.getElementById('noteGameQ');
+  if(gq){
+    let composing = false;
+    const run = () => {
+      state.noteGameQ = gq.value;
+      const q = normalizeText(gq.value);
+      let list = state.games.slice(); if(q) list = list.filter(g => searchIndex(g).includes(q));
+      pickBox.innerHTML = list.length ? gamePickGridHTML(list.slice(0, 60), {attr:'notegame', on:g => g.id === state.noteNewGid, tall:true}) : '<p class="count">みつかりません でした。</p>';
+      bindPick(pickBox);
+    };
+    gq.addEventListener('compositionstart', () => { composing = true; });
+    gq.addEventListener('compositionend', () => { composing = false; run(); });
+    gq.addEventListener('input', () => { if(!composing) run(); });
+  }
+  const ng = document.getElementById('noteNoGame');
+  if(ng) ng.onchange = () => { state.noteNoGame = ng.checked; if(ng.checked){ state.noteNewGid = ''; pickBox && pickBox.querySelectorAll('.vote-pick.on').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed','false'); }); } };
+  const nc = document.getElementById('noteCreate');
+  if(nc) nc.onclick = async () => {
+    const gid = state.noteNewGid || '';
+    if(!gid && !state.noteNoGame) return toast('ゲームを えらぶか「ゲームを えらばない」に チェック して ください');
+    const g = gid && state.games.find(x => x.id === gid);
+    const title = String(state.noteNewTitle || '').trim() || ((g ? g.title : 'ノート') + '（' + dateLabel(todayStr()) + '）');
+    const n = {id:noteUid('n'), title, gid, gtitle: g ? g.title : '', items:[], from:'', created:new Date().toISOString()};
+    try{ await saveNote(n); }catch(e){ return toast('ほぞん できませんでした'); }
+    state.noteNew = false; state.noteOpen = n.id; state.noteForGame = '';
+    render(); toast('ノートを つくりました');
+  };
+  /* ひらいて いる ノート */
+  const n = state.noteOpen && noteById(state.noteOpen);
+  if(!n) return;
+  const title = document.getElementById('noteTitle');
+  if(title) title.addEventListener('change', async () => { n.title = title.value.trim() || n.title; await saveNote(n); });
+  const cam = document.getElementById('noteCam');
+  if(cam) cam.onchange = () => addNotePhotos(n, [...(cam.files || [])]);
+  const pick = document.getElementById('notePick');
+  if(pick) pick.onchange = () => addNotePhotos(n, [...(pick.files || [])]);
+  const addT = document.getElementById('noteAddText');
+  if(addT) addT.onclick = async () => {
+    n.items.push({id:noteUid('t'), type:'text', text:''});
+    await saveNote(n); render();
+    const ts = app.querySelectorAll('[data-notetext]'); if(ts.length) ts[ts.length - 1].focus();
+  };
+  app.querySelectorAll('[data-notetext]').forEach(t => {
+    const i = Number(t.dataset.notetext);
+    const save = () => { if(n.items[i]){ n.items[i].text = t.value; saveNote(n).catch(() => {}); } };
+    let tm = null;
+    t.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(save, 500); });
+    t.addEventListener('blur', save);
+  });
+  app.querySelectorAll('[data-notedel]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.notedel), it = n.items[i];
+    if(!it) return;
+    ask(it.type === 'photo' ? 'この しゃしんを けしますか？' : 'この メモを けしますか？', async () => {
+      n.items.splice(i, 1);
+      if(it.type === 'photo'){ try{ await NoteDB.del('photos', it.pid); }catch(e){} delete notePhotoCache[it.pid]; }
+      await saveNote(n); render();
+    });
+  });
+  app.querySelectorAll('[data-noteedit]').forEach(b => b.onclick = () => openNoteEditor(n, b.dataset.noteedit));
+  app.querySelectorAll('[data-notesendto]').forEach(b => b.onclick = () => {
+    const id = b.dataset.notesendto, sel = state.noteSendTo = state.noteSendTo || [];
+    const i = sel.indexOf(id); if(i >= 0) sel.splice(i, 1); else sel.push(id);
+    b.setAttribute('aria-pressed', String(i < 0));
+  });
+  const send = document.getElementById('noteSend');
+  if(send) send.onclick = async () => {
+    const to = state.noteSendTo || [];
+    if(!to.length) return toast('おくる なかまを えらんで ください');
+    if(!(n.items || []).some(it => it.type === 'photo' || String(it.text || '').trim())) return toast('ノートが からっぽです');
+    send.disabled = true;
+    try{ const k = await sendNote(n, to); toast(k + '人に おくりました'); state.noteSendTo = []; render(); }
+    catch(e){ toast(e.message || 'おくれませんでした'); send.disabled = false; }
+  };
+  const del = document.getElementById('noteDelete');
+  if(del) del.onclick = () => ask('この ノートを けします。しゃしんも ぜんぶ きえます。\nよろしいですか？', async () => {
+    await deleteNote(n); state.noteOpen = ''; render(); toast('けしました');
+  });
 }
 
 /* ---------------- とうひょう ----------------
@@ -6085,7 +6635,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-f';
+const APP_VERSION = '2026.09.24-h';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -6634,6 +7184,7 @@ function maybeCheckFriends(){
   if(maybeCheckFriends.at && Date.now() - maybeCheckFriends.at < 60000) return;
   maybeCheckFriends.at = Date.now();
   refreshFriends().then(ch => { if(ch) render(); askFriendRequests(); }).catch(() => {});
+  refreshNoteInbox().then(ch => { if(ch && currentRoute().param === 'memo') render(); }).catch(() => {});
 }
 function maybeRefreshHelp(key){
   if(!isOnline()) return;
@@ -8320,8 +8871,10 @@ function bind(r){
   /* --- メモ --- */
   app.querySelectorAll('[data-memomode]').forEach(b => b.onclick = () => {
     state.memo.mode = b.dataset.memomode;
+    if(state.memo.mode === 'notes'){ state.noteNew = false; state.noteOpen = ''; }
     saveMemo(); render();
   });
+  if(r.name === 'tool' && r.param === 'memo' && state.memo.mode === 'notes') bindNotes();
   const memoText = document.getElementById('memoText');
   if(memoText){
     let composing = false;
@@ -9331,6 +9884,12 @@ function bind(r){
       dq.addEventListener('input', () => { if(!composing) run(); });
     }
   }
+  app.querySelectorAll('[data-notesofgame]').forEach(b => b.onclick = () => {
+    const list = notesOfGame(b.dataset.notesofgame);
+    state.memo.mode = 'notes'; saveMemo();
+    state.noteNew = false; state.noteOpen = list.length === 1 ? list[0].id : '';
+    go('#/tool/memo');
+  });
   const claimAdmin = document.getElementById('claimAdmin');
   if(claimAdmin) claimAdmin.onclick = () => {
     ask('あなたが ずかんの かんりにんに なります。\n1人だけで、あとから かえられません。よろしいですか？', async () => {
@@ -9961,6 +10520,7 @@ document.addEventListener('click', e => {
 });
 initTheme();
 loadAll();
+loadNotes().then(() => { const rt = currentRoute(); if(rt.name === 'game' || (rt.name === 'tool' && rt.param === 'memo')) render(); });
 adoptKaiFromUrl();
 catchFriendCode();
 render();
