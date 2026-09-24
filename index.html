@@ -452,6 +452,21 @@ h2.sec::before{content:"■ ";font-size:12px}
 }
 @media (max-width:360px){.vote-pick-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .vote-pick-grid.tall{max-height:420px}
+/* ことばじてん */
+.dict-item{padding:0;margin-bottom:8px;scroll-margin-top:70px}
+.dict-item.open{border-color:var(--accent)}
+.dict-head{
+  all:unset;box-sizing:border-box;display:grid;grid-template-columns:1fr auto;gap:2px 8px;
+  width:100%;padding:10px 12px;cursor:pointer;
+}
+.dict-w{font-size:15px;color:var(--text)}
+.dict-item.open .dict-w{color:var(--accent)}
+.dict-star{color:var(--accent);margin-right:4px}
+.dict-y{grid-column:1;font-size:10.5px;color:var(--muted)}
+.dict-d{grid-column:1 / 3;font-size:12.5px;color:var(--muted);line-height:1.6}
+.dict-arrow{grid-column:2;grid-row:1;color:var(--muted);font-size:12px}
+.dict-body{padding:0 12px 12px;border-top:2px solid var(--line);padding-top:10px}
+.dict-ex{border-left:3px solid var(--accent-2);padding:4px 10px;font-size:13px;line-height:1.7;background:rgba(0,0,0,.12)}
 .vote-pick{
   display:flex;flex-direction:column;gap:4px;padding:5px;min-width:0;position:relative;
   background:var(--panel);border:3px solid var(--frame);color:var(--text);cursor:pointer;text-align:center;
@@ -5358,7 +5373,8 @@ const TOOLS = [
   {id:'jukebox', name:'ジュークボックス', icon:'jukebox', desc:'BGMを えらぶ・きく'},
   {id:'choubo',  name:'しゅくやの ちょうぼ', icon:'coin', desc:'わりかんを する'},
   {id:'talk',    name:'さかばの うわさばなし', icon:'talk', desc:'トークの おだい'},
-  {id:'help',    name:'ずかんづくり', icon:'quill', desc:'せつめいを かいて おくる'}
+  {id:'help',    name:'ずかんづくり', icon:'quill', desc:'せつめいを かいて おくる'},
+  {id:'dict',    name:'ことばじてん', icon:'book',  desc:'ボドゲの ことばを しらべる'}
 ];
 
 function viewTools(){
@@ -6034,6 +6050,7 @@ function toolBodyHTML(id){
   if(id === 'choubo')  return '<div id="chouboBox">' + toolChouboHTML() + '</div>';
   if(id === 'talk')    return '<div id="talkBox">' + toolTalkHTML() + '</div>';
   if(id === 'help')    return toolHelpHTML();
+  if(id === 'dict')    return toolDictHTML();
   return '';
 }
 
@@ -6068,7 +6085,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-e';
+const APP_VERSION = '2026.09.24-f';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -6126,6 +6143,447 @@ function playsToPush(){
   }));
   return out;
 }
+/* ---------------- ことばじてん ----------------
+   ボードゲームで よく つかう ことば。
+   w:ことば y:よみ a:べつの よびかた c:ぶるい s:はじめに おぼえたい d:ひとことで m:もうすこし e:れい
+   r:かんけいの ある ことば t:ずかんの タグ k:ずかんの なまえ・せつめいから さがす ことば */
+const DICT_CATS = [
+  {id:'prep', name:'あそぶ まえ・じゅんび'},
+  {id:'win',  name:'かちかた・てんすう'},
+  {id:'kind', name:'ゲームの しゅるい'},
+  {id:'mech', name:'ゲームの しくみ'},
+  {id:'talk', name:'かいわで よく きく'}
+];
+const DICT = [
+  /* ===== 1. あそぶ まえ・じゅんび ===== */
+  {id:'inst', w:'インスト', y:'いんすと', a:['インストラクション','ルール説明'], c:'prep', s:true,
+   d:'遊ぶ前に、ルールを説明すること。',
+   m:'英語のインストラクション（説明）を短くした言葉です。ゲームを知っている人が「インストします」と言って、目的・手番でできること・終わり方などを説明します。説明する人は「インスト役」と呼ばれます。',
+   e:'「最初にインストするので、分からないところは途中で聞いてください」',
+   r:['start','turn','house']},
+  {id:'start', w:'スタートプレイヤー', y:'すたーとぷれいやー', a:['スタプレ','親','先手'], c:'prep', s:true,
+   d:'いちばん最初に手番をする人。',
+   m:'略して「スタプレ」とも言います。決め方はゲームごとにルールブックに書かれていることが多く、「いちばん最近◯◯した人」のような遊び心のある決め方もあります。ラウンドごとにスタートプレイヤーが交代するゲームもあり、その目印として「スタートプレイヤーマーカー」が入っていることがあります。',
+   e:'「最近いちばん遠くへ旅行した人がスタートプレイヤーです」',
+   r:['turn','round']},
+  {id:'turn', w:'手番', y:'てばん', a:['ターン','自分の番'], c:'prep', s:true,
+   d:'自分が行動できる順番のこと。',
+   m:'1人ずつ順番に回ってくる「自分があれこれできる番」です。「ターン」とも言います。多くのゲームは時計回り（左どなりへ）に手番が進みます。自分の手番でできることは、ゲームのルールで決まっています。',
+   e:'「自分の手番では、カードを1枚引いて1枚出します」',
+   r:['start','round','phase','downtime','simul']},
+  {id:'round', w:'ラウンド', y:'らうんど', a:[], c:'prep', s:true,
+   d:'ゲームの中で何回か繰り返す、大きな区切り。',
+   m:'全員が1回ずつ手番をすると1ラウンド、というゲームが多いです。「5ラウンドで終わり」のように、ラウンドの数でゲームの長さが決まるものもあります。',
+   e:'「3ラウンド遊んで、合計点がいちばん高い人の勝ち」',
+   r:['turn','phase','end']},
+  {id:'phase', w:'フェイズ', y:'ふぇいず', a:['フェーズ'], c:'prep', s:false,
+   d:'手番やラウンドの中を、さらに分けた「段階」。',
+   m:'「準備フェイズ → 行動フェイズ → 片付けフェイズ」のように、1回の手番やラウンドの中でやることが順番に決まっているときに使います。今どのフェイズなのかを確認しながら進めると、やり忘れが減ります。',
+   e:'「行動フェイズが終わったら、得点フェイズです」',
+   r:['turn','round']},
+  {id:'hand', w:'手札', y:'てふだ', a:['ハンド'], c:'prep', s:true,
+   d:'自分が手に持っているカード。',
+   m:'ふつうは他の人に見せません。手札に持てる枚数に上限がある「手札上限」のルールがあるゲームも多いです。手札をどう使うかを考えるのが、カードゲームの大事なところです。',
+   e:'「手札は5枚まで。多い分は捨て札にします」',
+   r:['deck','discard','handmgmt']},
+  {id:'deck', w:'山札', y:'やまふだ', a:['デッキ','ドロー'], c:'prep', s:true,
+   d:'裏向きに積んだカードの束。ここからカードを引く。',
+   m:'「デッキ」とも呼びます。山札からカードを取ることを「引く」「ドローする」と言います。山札がなくなったときに捨て札を混ぜ直すか、ゲームが終わるかは、ゲームによって違います。',
+   e:'「山札から2枚引いてください」',
+   r:['hand','discard','deckbuild','end']},
+  {id:'discard', w:'捨て札', y:'すてふだ', a:['ディスカード','捨て山'], c:'prep', s:false,
+   d:'使い終わったカードや、捨てたカードを置く場所。',
+   m:'「捨て札の山」「ディスカード」とも言います。表向きに置いて、誰でも中身を見られるゲームが多いです。デッキ構築のゲームでは、捨て札を混ぜ直して次の山札にします。',
+   e:'「使ったカードは捨て札に置きます」',
+   r:['deck','hand','deckbuild']},
+  {id:'supply', w:'サプライ（場）', y:'さぷらい ば', a:['サプライ','場','共通の場'], c:'prep', s:false,
+   d:'みんなが共通で使う、取ったり買ったりできるカードやコマの置き場。',
+   m:'ゲームによって呼び方はいろいろで、「場」「ストック」とも言います。デッキ構築ゲームの代表『ドミニオン』では、ゲーム中に買えるカードの置き場を「サプライ」と呼びます。',
+   e:'「サプライから好きなカードを1枚買えます」',
+   r:['deckbuild','component']},
+  {id:'component', w:'コンポーネント', y:'こんぽーねんと', a:['内容物','部品'], c:'prep', s:false,
+   d:'箱に入っているもの全部（ボード・カード・コマなど）のこと。',
+   m:'ボードゲームの内容物の総称です。「コンポーネントが豪華」「コンポーネントが多くて準備が大変」のように使います。',
+   e:'「このゲームは木のコンポーネントがかわいい」',
+   r:['meeple','token','tile','dice','setup']},
+  {id:'meeple', w:'コマ（ミープル）', y:'こま みーぷる', a:['ミープル','駒','ポーン'], c:'prep', s:false,
+   d:'盤の上に置いたり動かしたりする駒。人の形の木のコマは「ミープル」と呼ぶ。',
+   m:'ミープルは「マイ・ピープル（わたしの人たち）」から生まれた言葉で、タイル配置ゲーム『カルカソンヌ』で広く知られるようになりました。ワーカープレイスメントでは、このコマを「ワーカー（働く人）」として使います。',
+   e:'「自分の色のミープルを1つ置いてください」',
+   r:['component','worker','tileplace']},
+  {id:'token', w:'トークン', y:'とーくん', a:['チップ','マーカー'], c:'prep', s:false,
+   d:'お金・資源・状態などを表す、小さなチップや駒。',
+   m:'カードでもタイルでもない小さな部品をまとめてトークンと呼ぶことが多いです。形は丸いチップ、木のキューブ、宝石の形などいろいろです。',
+   e:'「宝石トークンを2つ受け取ります」',
+   r:['component','vp']},
+  {id:'tile', w:'タイル', y:'たいる', a:[], c:'prep', s:false,
+   d:'厚紙などでできた板状の部品。',
+   m:'並べて地図や模様を作ったり、手元に集めたりして使います。四角や六角形のものがよくあります。',
+   e:'「タイルを1枚引いて、つながるように置きます」',
+   r:['tileplace','component']},
+  {id:'dice', w:'ダイス', y:'だいす', a:['サイコロ','ダイスロール'], c:'prep', s:false,
+   d:'サイコロのこと。',
+   m:'振ることを「ダイスを振る」「ロールする」と言います。6面が多いですが、数字の代わりに絵が描かれたものや、6面以外のダイスもあります。ダイスを使うゲームは運要素が入りやすいです。',
+   e:'「ダイスを2個振って、出た目の合計だけ進みます」',
+   r:['luck','burst'], t:['ダイス']},
+  {id:'setup', w:'セットアップ', y:'せっとあっぷ', a:['準備','初期配置'], c:'prep', s:false,
+   d:'遊び始める前の準備。部品を並べたり配ったりすること。',
+   m:'ルールブックの最初に「準備（セットアップ）」として書かれていることが多いです。重いゲームほどセットアップに時間がかかる傾向があります。',
+   e:'「セットアップに10分くらいかかります」',
+   r:['component','inst']},
+  {id:'expansion', w:'拡張', y:'かくちょう', a:['拡張セット','エクスパンション'], c:'prep', s:false,
+   d:'元のゲームに、新しいカードやルールを足すための追加セット。',
+   m:'遊べる人数を増やしたり、新しい要素を加えたりできます。ふつうは元のゲーム（「基本セット」「基本ゲーム」）が必要で、拡張だけでは遊べないことが多いです。',
+   e:'「拡張を入れると6人まで遊べます」',
+   r:['replay']},
+
+  /* ===== 2. かちかた・てんすう ===== */
+  {id:'vp', w:'勝利点', y:'しょうりてん', a:['VP','ビクトリーポイント','点数'], c:'win', s:true,
+   d:'勝ち負けを決めるための点数。いちばん多い人が勝つことが多い。',
+   m:'英語の Victory Points を略して「VP」とも書きます。ゲームの途中で少しずつもらうものと、最後にまとめて数えるものがあります。お金や資源とは別に数えることが多いので、「お金はたくさんあるのに勝利点が少ない」ということも起こります。',
+   e:'「このカードは3勝利点です」',
+   r:['scoring','end','tiebreak']},
+  {id:'scoring', w:'得点計算', y:'とくてんけいさん', a:['点数計算','スコアリング'], c:'win', s:true,
+   d:'点数を数えて、順位を決めること。',
+   m:'ゲームの最後にまとめて行うものと、ラウンドの途中で行うもの（中間得点）があります。数える項目が多いゲームには、得点を書き込むシートや、点数を示すコマを進める「得点トラック」が入っていることがあります。',
+   e:'「ゲーム終了です。得点計算をしましょう」',
+   r:['vp','tiebreak','end']},
+  {id:'end', w:'終了条件', y:'しゅうりょうじょうけん', a:['ゲーム終了'], c:'win', s:true,
+   d:'ゲームが終わるきっかけ。',
+   m:'「決められたラウンド数が終わる」「山札がなくなる」「誰かが◯点に届く」など、ゲームによって違います。インストでは最初に聞いておくと、ゴールが見えて遊びやすくなります。',
+   e:'「誰かが15点に届いたら、そのラウンドの終わりでゲーム終了です」',
+   r:['vp','round','scoring']},
+  {id:'tiebreak', w:'タイブレーク', y:'たいぶれーく', a:['同点'], c:'win', s:false,
+   d:'同点のときに、順位を決めるためのルール。',
+   m:'「残ったお金が多い人」「手番が後だった人」などがよくあります。それでも同じなら「勝利を分け合う」とするゲームも多いです。',
+   e:'「同点なら、残りのコインが多い人が上です」',
+   r:['vp','scoring']},
+  {id:'elim', w:'脱落', y:'だつらく', a:['プレイヤー脱落'], c:'win', s:false,
+   d:'ゲームの途中で負けが決まり、抜けること。',
+   m:'人狼系やサバイバル系のゲームによくあります。脱落した人は終わるまで待つことになるので、脱落のないゲームのほうが全員が最後まで楽しめる、という考え方もあります。',
+   e:'「ライフが0になったら脱落です」',
+   r:['werewolf','downtime']},
+  {id:'solo', w:'ソロプレイ', y:'そろぷれい', a:['ソロ','1人プレイ','ソリティア'], c:'win', s:false,
+   d:'1人で遊ぶこと。',
+   m:'1人用のルール（ソロルール）が用意されているゲームもあります。自分の最高得点を目指したり、ゲームが動かす相手（「オートマ」と呼ばれます）と戦ったりします。',
+   e:'「このゲームはソロプレイもできます」',
+   r:['solitaire','coop'], solo:true},
+
+  /* ===== 3. ゲームの しゅるい ===== */
+  {id:'coop', w:'協力ゲーム', y:'きょうりょくげーむ', a:['協力'], c:'kind', s:true,
+   d:'全員が同じチームになって、ゲームに勝つことを目指すゲーム。',
+   m:'プレイヤー同士は競わず、ゲームが出してくる困難に全員で立ち向かいます。勝つときも負けるときも全員いっしょです。相談しながら進められるので、初心者と経験者が一緒に遊びやすいです。',
+   e:'代表例：『パンデミック』、ずかんの中なら ito など',
+   r:['versus','team','kingmaker'], t:['協力']},
+  {id:'versus', w:'対戦ゲーム', y:'たいせんげーむ', a:['対戦'], c:'kind', s:true,
+   d:'プレイヤー同士で勝ち負けを競うゲーム。',
+   m:'いちばんよくある形です。1位を決めるもの、1対1で戦うものなどがあります。',
+   e:'「2人で遊ぶなら対戦ゲームがおすすめ」',
+   r:['coop','team','interaction'], t:['対戦']},
+  {id:'team', w:'チーム戦', y:'ちーむせん', a:['チーム'], c:'kind', s:false,
+   d:'チームに分かれて競うゲーム。',
+   m:'同じチームの人と協力しつつ、相手チームと勝ち負けを競います。チームの中でヒントを出し合うワードゲームなどによくあります。',
+   e:'代表例：『コードネーム』（赤チームと青チームに分かれる）',
+   r:['coop','versus','word'], k:['チーム']},
+  {id:'hidden', w:'正体隠匿', y:'しょうたいいんとく', a:['正体隠匿系','隠匿'], c:'kind', s:true,
+   d:'自分の役割（正体）を隠して遊ぶゲーム。',
+   m:'「村人」と「人狼」のように、見た目では分からない役割が配られます。誰が味方で誰が敵なのかを、話し合いや行動から推理します。うそをつく役の人は、正体がばれないようにふるまいます。',
+   e:'代表例：『ワンナイト人狼』『レジスタンス：アヴァロン』',
+   r:['werewolf','bluff','deduction'], t:['正体隠匿']},
+  {id:'werewolf', w:'人狼系', y:'じんろうけい', a:['人狼','人狼ゲーム'], c:'kind', s:false,
+   d:'「人狼ゲーム」の流れをもとにしたゲーム。',
+   m:'村人の中にまぎれた人狼を、話し合いと投票で見つけ出す遊びです。正体隠匿ゲームの代表で、1晩だけで終わる『ワンナイト人狼』のように短く遊べるものも人気です。',
+   e:'「今日は人狼系を1回やろう」',
+   r:['hidden','bluff','elim'], k:['人狼']},
+  {id:'bluff', w:'ブラフ', y:'ぶらふ', a:['はったり'], c:'kind', s:true,
+   d:'はったり。本当ではないことを、本当のように見せること。',
+   m:'弱いカードなのに強いふりをしたり、うそのカードを出したりして相手をだまします。見破る側は、相手の表情や言い方から本当かどうかを考えます。',
+   e:'代表例：『ごきぶりポーカー』『スカル』',
+   r:['hidden','deduction'], t:['ブラフ']},
+  {id:'deduction', w:'推理', y:'すいり', a:['推理ゲーム','デダクション'], c:'kind', s:false,
+   d:'手がかりから、答えや犯人を導き出すゲーム。',
+   m:'少しずつ集まる情報を組み合わせて、正解を当てます。1人ずつ質問して答えを絞り込むもの、カードの動きから犯人を追いかけるものなど、いろいろあります。',
+   e:'「推理が好きなら、犯人探しのゲームがおすすめ」',
+   r:['hidden','bluff'], k:['推理','犯人','探偵']},
+  {id:'word', w:'ワードゲーム', y:'わーどげーむ', a:['言葉あそび'], c:'kind', s:false,
+   d:'言葉を使って遊ぶゲーム。',
+   m:'お題を別の言葉で言い換えたり、連想したり、言葉のヒントで仲間に伝えたりします。ルールが分かりやすいものが多く、初心者にも遊びやすいジャンルです。',
+   e:'代表例：『コードネーム』、ずかんの中なら ito など',
+   r:['team','party'], t:['ワードゲーム']},
+  {id:'party', w:'パーティーゲーム', y:'ぱーてぃーげーむ', a:['パーティー'], c:'kind', s:true,
+   d:'大人数で、短い時間で、わいわい盛り上がれるゲーム。',
+   m:'ルールが簡単で、1回が数分〜20分くらいのものが多いです。勝ち負けよりも、その場の会話や笑いを楽しむことに向いています。',
+   e:'「人数が多いから、パーティーゲームにしよう」',
+   r:['weight','word','hidden'], t:['パーティー']},
+  {id:'territory', w:'陣取り', y:'じんとり', a:['陣取りゲーム'], c:'kind', s:false,
+   d:'盤面の場所を取り合い、より多く・より広く取った人が有利になるゲーム。',
+   m:'ボードの上に自分のコマやタイルを置いて、場所を自分のものにしていきます。場所ごとに「いちばん多くコマを置いた人が得点」という決め方をするものは、特に「エリアマジョリティ」と呼ばれます。',
+   e:'「陣取りは、ほかの人とのにらみ合いが楽しい」',
+   r:['majority','tileplace','interaction'], k:['陣取り','陣地','エリアマジョリティ']},
+  {id:'race', w:'レース', y:'れーす', a:['レースゲーム'], c:'kind', s:false,
+   d:'ゴールを目指して、先に着いた人が勝つゲーム。',
+   m:'すごろくもレースゲームの一つです。コマを進める速さだけでなく、ほかの人のじゃまをしたり、近道を選んだりする工夫があるものも多いです。',
+   e:'「先にゴールした人の勝ち！」',
+   r:['dice','burst'], k:['レース','すごろく']},
+
+  /* ===== 4. ゲームの しくみ ===== */
+  {id:'trick', w:'トリックテイキング', y:'とりっくていきんぐ', a:['トリテ','トリック'], c:'mech', s:true,
+   d:'全員が1枚ずつカードを出して、いちばん強いカードを出した人がその回（トリック）を取る、を繰り返すゲーム。',
+   m:'全員が1枚ずつ出して勝ち負けを決める1回分を「トリック」と呼び、それを取り合うので「トリックテイキング」と言います。略して「トリテ」。最初に出す人（リード）と同じマークを出さなければならない「マストフォロー」や、特別に強い「切り札」のルールがあることが多いです。トランプの「ナポレオン」や「ハーツ」もこの仲間です。',
+   e:'「トリテは、どのカードをいつ出すかが勝負」',
+   r:['mustfollow','trump','lead','handmgmt'], t:['トリックテイキング']},
+  {id:'mustfollow', w:'マストフォロー', y:'ますとふぉろー', a:['フォロー'], c:'mech', s:false,
+   d:'最初に出されたカードと同じマーク（色）を持っていたら、必ずそれを出すというルール。',
+   m:'トリックテイキングの基本ルールです。最初に出されたカードのマーク（スート）を「リードスート」と呼び、同じスートを出すことを「フォローする」と言います。持っていないときだけ、ほかのマークや切り札を出せます。',
+   e:'「赤がリードされたので、赤を持っていたら赤を出してください」',
+   r:['trick','lead','trump']},
+  {id:'trump', w:'切り札', y:'きりふだ', a:['トランプ','トランプスート'], c:'mech', s:false,
+   d:'ほかのマークより強い、特別なマーク（色）のカード。',
+   m:'英語では「トランプ（trump）」と言い、カードの「トランプ」の語源とも言われます。リードされたマークを持っていないときに切り札を出すと、数字が小さくても勝てることが多いです。',
+   e:'「今回は黄色が切り札です」',
+   r:['trick','mustfollow','lead']},
+  {id:'lead', w:'リード', y:'りーど', a:['打ち出し'], c:'mech', s:false,
+   d:'トリックで、いちばん最初にカードを出すこと（出す人）。',
+   m:'リードされたカードのマークがその回の基準になります。前のトリックを取った人が、次のトリックをリードするゲームが多いです。',
+   e:'「トリックを取った人が次のリードです」',
+   r:['trick','mustfollow','trump']},
+  {id:'draft', w:'ドラフト', y:'どらふと', a:['カードドラフト'], c:'mech', s:true,
+   d:'たくさんの選択肢の中から、順番に欲しいものを選んで取っていく仕組み。',
+   m:'よくある形は「配られた手札から1枚選んで取り、残りを隣の人に回す」を繰り返すやり方です。自分が欲しいものだけでなく、「これを回すと隣の人が得をするかも」と考えるのがおもしろいところです。',
+   e:'代表例：『世界の七不思議（7ワンダーズ）』『スシゴー！』',
+   r:['setcollect','handmgmt','engine'], t:['ドラフト']},
+  {id:'deckbuild', w:'デッキ構築', y:'でっきこうちく', a:['デッキビルド'], c:'mech', s:true,
+   d:'ゲームの中でカードを手に入れて、自分の山札（デッキ）を少しずつ強くしていく仕組み。',
+   m:'全員が同じ弱いカードの山札から始め、ゲーム中にカードを買ったり取ったりして自分の山札に加えます。山札を使い切ったら捨て札を混ぜ直すので、強いカードを引ける回数が増えていきます。遊ぶ前に山札を組むトレーディングカードゲームとは違い、ゲームの中で組み立てていくのが特徴です。',
+   e:'代表例：『ドミニオン』',
+   r:['deck','discard','supply','engine'], t:['デッキ構築']},
+  {id:'worker', w:'ワーカープレイスメント', y:'わーかーぷれいすめんと', a:['ワカプレ','ワーカー'], c:'mech', s:true,
+   d:'自分のコマ（ワーカー）をボード上の場所に置いて、その場所の行動をする仕組み。',
+   m:'ボードには「木を取る」「お金をもらう」などの行動の場所があり、そこにワーカーを置くとその行動ができます。ほかの人が先に置いた場所は使えないことが多いので、「どこを先に取るか」の取り合いになります。略して「ワカプレ」。',
+   e:'代表例：『アグリコラ』『ストーンエイジ』',
+   r:['meeple','interaction','weight'], t:['ワーカープレイスメント']},
+  {id:'setcollect', w:'セットコレクション', y:'せっとこれくしょん', a:['セット集め'], c:'mech', s:false,
+   d:'決められた組み合わせのカードなどを集めて、得点を得る仕組み。',
+   m:'「同じ種類を3枚そろえる」「違う色を1枚ずつ集める」など、決められた組み合わせでそろえると高い得点になります。トランプの「ポーカー」の役も、セットコレクションの考え方に近いです。',
+   e:'「同じ絵を3枚そろえると10点！」',
+   r:['draft','vp','handmgmt'], k:['セットコレクション','そろえ']},
+  {id:'majority', w:'エリアマジョリティ', y:'えりあまじょりてぃ', a:['マジョリティ','エリアコントロール'], c:'mech', s:false,
+   d:'場所（エリア）ごとに、いちばん多くコマを置いた人が得点などを得る仕組み。',
+   m:'「マジョリティ」は「多数派」という意味です。1位の人が多く得点し、2位は少し、3位以下はなし、というように差がつくものが多いです。陣取りゲームの代表的な仕組みです。',
+   e:'代表例：『エルグランデ』',
+   r:['territory','interaction','kingmaker'], k:['エリアマジョリティ','マジョリティ']},
+  {id:'burst', w:'バースト（チキンレース）', y:'ばーすと ちきんれーす', a:['バースト','チキンレース','プッシュユアラック'], c:'mech', s:false,
+   d:'続けるほど得をするが、やりすぎると失敗してそれまでの分を失う、「どこでやめるか」が勝負の仕組み。',
+   m:'失敗してしまうことを「バースト」と言います（トランプの「ブラックジャック」で21を超えて負けるのもバーストです）。まだ行けるか、ここでやめて確実に取るかを決める、ドキドキ感が魅力です。カードの持てる枚数などの上限を超えて失敗することをバーストと呼ぶゲームもあります。',
+   e:'代表例：『キャント・ストップ』『ダイヤモンド（インカの黄金）』',
+   r:['luck','dice'], k:['バースト','チキンレース']},
+  {id:'auction', w:'競り', y:'せり', a:['オークション','入札','ビッド'], c:'mech', s:false,
+   d:'欲しいものに値段をつけ合って、いちばん高く出した人が手に入れる仕組み。',
+   m:'「オークション」とも言います。順番に値段を上げていくもの、全員がこっそり金額を決めて一斉に見せるものなど、やり方はいろいろです。高く出しすぎると後で苦しくなるので、ものの値打ちを見きわめる力が大事です。',
+   e:'代表例：『モダンアート』、ずかんの中なら ハゲタカのえじき など',
+   r:['simul','interaction'], k:['競り','オークション','入札']},
+  {id:'handmgmt', w:'ハンドマネジメント', y:'はんどまねじめんと', a:['手札管理','手札のやりくり'], c:'mech', s:false,
+   d:'手札を、いつ・どの順番で・どう使うかをやりくりする仕組み。',
+   m:'「今使うか、あとのために取っておくか」を考えるのが中心になります。カードゲームの多くに入っている、基本的な考え方です。',
+   e:'「強いカードは最後まで取っておこう」',
+   r:['hand','trick','draft']},
+  {id:'tileplace', w:'タイル配置', y:'たいるはいち', a:['タイルプレイスメント'], c:'mech', s:false,
+   d:'タイルを並べて地図や模様を作り、そのつながり方などで得点する仕組み。',
+   m:'引いたタイルを、絵や道がつながるように置いていきます。遊ぶたびに違う形の地図ができあがるのも楽しいところです。',
+   e:'代表例：『カルカソンヌ』',
+   r:['tile','meeple','territory'], k:['タイル']},
+  {id:'engine', w:'エンジンビルド', y:'えんじんびるど', a:['拡大再生産','エンジン'], c:'mech', s:false,
+   d:'資源やお金を生み出す仕組み（エンジン）を作り、どんどん効率よく大きくしていく仕組み。',
+   m:'序盤は小さなことしかできませんが、カードなどを組み合わせて「何かをすると、別の得が生まれる」流れを作ると、後半になるほど一度にたくさんのことができるようになります。日本では「拡大再生産」と呼ばれることもあります。',
+   e:'代表例：『宝石の煌き（スプレンダー）』『ウイングスパン』',
+   r:['deckbuild','draft','weight'], k:['エンジンビルド','拡大再生産']},
+  {id:'simul', w:'同時手番', y:'どうじてばん', a:['同時プレイ','一斉公開'], c:'mech', s:false,
+   d:'全員が同時に行動を決めて進める仕組み。',
+   m:'カードを裏向きに出して一斉に表にする、などのやり方があります。順番を待たなくてよいので、人数が多くても待ち時間（ダウンタイム）が少ないのが良いところです。',
+   e:'代表例：ずかんの中なら ハゲタカのえじき など',
+   r:['downtime','auction','realtime'], k:['同時','一斉']},
+  {id:'nego', w:'交渉', y:'こうしょう', a:['取引','トレード'], c:'mech', s:false,
+   d:'プレイヤー同士で、ものの交換や約束などを話し合って決める仕組み。',
+   m:'「木1つと羊1つを交換しない？」のように、ルールの中で自由に話し合います。話し上手な人が有利になりやすく、会話がとても盛り上がります。',
+   e:'代表例：『カタン』',
+   r:['interaction','party'], k:['交渉']},
+  {id:'realtime', w:'リアルタイム', y:'りあるたいむ', a:['早い者勝ち','スピード'], c:'mech', s:false,
+   d:'順番を待たずに、全員が同時に・早い者勝ちで進めるゲーム。',
+   m:'砂時計などで時間を区切るものや、見つけた人から手を出すものがあります。考える時間が短いので、慣れている人とそうでない人の差が出にくく、盛り上がりやすいです。',
+   e:'「よーいスタート！ 砂時計が落ちるまでに…」',
+   r:['simul','party'], t:['リアルタイム']},
+  {id:'legacy', w:'レガシー', y:'れがしー', a:['レガシーシステム','レガシーゲーム'], c:'mech', s:false,
+   d:'遊ぶたびにカードにシールを貼ったり、書き込んだり、破ったりして、ゲームそのものが変わっていく仕組み。',
+   m:'一度加えた変化は元に戻せないので、同じ箱でも遊ぶグループごとに違うゲームになっていきます。何回かに分けて続きものの物語（キャンペーン）を遊ぶものが多いです。',
+   e:'代表例：『パンデミック レガシー』',
+   r:['coop','replay'], k:['レガシー']},
+
+  /* ===== 5. かいわで よく きく ことば ===== */
+  {id:'weight', w:'軽量級・中量級・重量級', y:'けいりょうきゅう ちゅうりょうきゅう じゅうりょうきゅう', a:['軽量級','中量級','重量級','重ゲー','軽ゲー','ゲームの重さ'], c:'talk', s:true,
+   d:'ゲームの「重さ」（ルールの多さ・考える量・遊ぶ時間）の目安。',
+   m:'決まった基準はありませんが、軽量級はルールが簡単で30分くらいまで、重量級はルールが多くて90分以上かかるもの、中量級はその間、くらいに使われることが多いです。「重ゲー」「軽ゲー」とも言います。',
+   e:'「最初は軽量級から遊ぶのがおすすめ」',
+   r:['party','downtime','worker'], t:['軽量級','重量級']},
+  {id:'luck', w:'運要素', y:'うんようそ', a:['運ゲー','運'], c:'talk', s:true,
+   d:'サイコロの目やカードの引きなど、偶然で決まる部分。',
+   m:'運要素が大きいゲームは、初めての人や子どもでも勝てるチャンスがあります。反対に運要素が少ないゲームは、考えた分だけ結果に出やすいです。運要素が特に強いゲームを「運ゲー」と呼ぶこともあります。',
+   e:'「運要素があるから、初心者でも勝てるよ」',
+   r:['dice','burst','weight'], t:['運要素']},
+  {id:'interaction', w:'インタラクション', y:'いんたらくしょん', a:['絡み','からみ'], c:'talk', s:false,
+   d:'ほかのプレイヤーに影響を与えること。プレイヤー同士の関わり合い。',
+   m:'じゃまをする、取り合う、交渉するなど、ほかの人の行動で自分の状況が変わることです。「インタラクションが強い（多い）」ゲームは駆け引きが熱く、「弱い（少ない）」ゲームは自分のことに集中できます。',
+   e:'「このゲームはインタラクションが強めで、けんかにならないようにね」',
+   r:['solitaire','versus','nego'] },
+  {id:'downtime', w:'ダウンタイム', y:'だうんたいむ', a:['待ち時間'], c:'talk', s:false,
+   d:'ほかの人の手番を待っている時間。',
+   m:'人数が多いゲームや、1回の手番で考えることが多いゲームは、ダウンタイムが長くなりがちです。同時手番のゲームは、ダウンタイムが短くなります。',
+   e:'「6人だとダウンタイムが長いから、4人で遊ぼう」',
+   r:['turn','simul','weight']},
+  {id:'replay', w:'リプレイ性', y:'りぷれいせい', a:['リプレイ','何度も遊べる'], c:'talk', s:false,
+   d:'何回遊んでも楽しめるかどうか。',
+   m:'使うカードの組み合わせが毎回変わる、遊ぶ人によって展開が変わる、などのゲームは「リプレイ性が高い」と言われます。',
+   e:'「毎回違う地図になるから、リプレイ性が高い」',
+   r:['expansion','legacy']},
+  {id:'house', w:'ハウスルール', y:'はうするーる', a:['独自ルール','ローカルルール'], c:'talk', s:false,
+   d:'公式のルールとは別に、その家や集まりで決めたルール。',
+   m:'初心者向けに少しやさしくしたり、人数に合わせて調整したりするときに使います。遊ぶ前に「今日はこのハウスルールで」と、全員で確認しておくのが大切です。',
+   e:'「うちでは、最初の1回だけ手札を見せ合うハウスルールにしてる」',
+   r:['inst']},
+  {id:'kingmaker', w:'キングメーカー', y:'きんぐめーかー', a:['キングメイカー','キングメーカー問題'], c:'talk', s:false,
+   d:'もう勝てない人の行動によって、誰が1位になるかが決まってしまうこと。',
+   m:'たとえば3人以上のゲームで、勝ち目のなくなった人が「AさんとBさん、どちらのじゃまをするか」を選べてしまう状況です。最後まで全員が勝ちを目指すのが大切、と言われる理由の一つです。',
+   e:'「最後の1手でキングメーカーになっちゃった…」',
+   r:['interaction','majority','versus']},
+  {id:'solitaire', w:'ソリティア感', y:'そりてぃあかん', a:['ソリティア','ソロ感'], c:'talk', s:false,
+   d:'ほかの人との関わりが少なく、1人で遊んでいるように感じること。',
+   m:'インタラクション（関わり合い）が少ないゲームのことを、1人用のトランプ遊び「ソリティア」にたとえて言います。悪口として使われることもありますが、「自分のペースで考えられる」と好む人もいます。',
+   e:'「このゲーム、ちょっとソリティア感があるね」',
+   r:['interaction','solo']},
+  {id:'tsumige', w:'積みゲー', y:'つみげー', a:['積みボドゲ'], c:'talk', s:false,
+   d:'買ったけれど、まだ遊んでいないゲーム。',
+   m:'部屋に積んである様子から、こう呼ばれます。ボードゲーム好きの間では、よく使われる言葉です。',
+   e:'「積みゲーを崩す会をやろう」',
+   r:['meet']},
+  {id:'table', w:'卓', y:'たく', a:['テーブル','卓分け'], c:'talk', s:false,
+   d:'ボードゲームを遊んでいるテーブル。また、そこで一緒に遊んでいるグループ。',
+   m:'人が多いときは「2卓に分かれよう」のように、テーブルごとに別のゲームを遊びます。誰がどのテーブルで遊ぶかを決めることを「卓分け」と言います。',
+   e:'「こっちの卓は軽いゲーム、あっちの卓は重いゲームにしよう」',
+   r:['meet']},
+  {id:'meet', w:'ボドゲ会', y:'ぼどげかい', a:['ボードゲーム会','オープン会'], c:'talk', s:false,
+   d:'ボードゲームを遊ぶために集まる会。',
+   m:'友だち同士で集まるもののほか、誰でも参加できる「オープン会」もあります。いろいろな人がゲームを持ち寄るので、知らないゲームに出会えるのが楽しいところです。',
+   e:'「週末のボドゲ会に、このゲームを持っていこう」',
+   r:['table','inst','tsumige']}
+];
+
+/* ことばに かんけいの ある、うちの ずかんの ゲーム */
+function dictGames(x){
+  const own = ownedGames();
+  if(x.solo) return {sure:true, list: own.filter(g => Number(g.playersMin) === 1)};
+  if(x.t && x.t.length){
+    const list = own.filter(g => (g.tags || []).some(t => x.t.indexOf(t) >= 0));
+    if(list.length) return {sure:true, list};
+  }
+  if(x.k && x.k.length){
+    const keys = x.k.map(normalizeText);
+    const list = own.filter(g => {
+      const hay = normalizeText([g.title, g.reading || '', g.summary || '', (g.tags || []).join(' ')].join(' '));
+      return keys.some(k => hay.includes(k));
+    });
+    return {sure:false, list};
+  }
+  return {sure:true, list:[]};
+}
+function dictMatches(x, q){
+  if(!q) return true;
+  const hay = normalizeText([x.w, x.y, (x.a || []).join(' '), x.d, x.m].join(' '));
+  return hay.includes(q);
+}
+function dictListHTML(){
+  const q = normalizeText(state.dictQ || '');
+  const cat = state.dictCat || 'all';
+  const list = DICT.filter(x => (cat === 'all' || (cat === 'star' ? x.s : x.c === cat)) && dictMatches(x, q));
+  if(!list.length) return '<div class="note">みつかりません でした。べつの ことばで さがして みてください。</div>';
+  const groups = (cat === 'all' && !q) ? DICT_CATS.map(c => [c.name, list.filter(x => x.c === c.id)]) : [[null, list]];
+  return groups.filter(g => g[1].length).map(g =>
+    (g[0] ? '<h2 class="sec" style="margin-top:14px">' + esc(g[0]) + '</h2>' : '') +
+    g[1].map(dictItemHTML).join('')).join('');
+}
+function dictItemHTML(x){
+  const open = state.dictOpen === x.id;
+  let html = '<div class="win dict-item' + (open ? ' open' : '') + '" id="dict-' + x.id + '">' +
+    '<button type="button" class="dict-head" data-dictopen="' + x.id + '" aria-expanded="' + open + '">' +
+      '<span class="dict-w">' + (x.s ? '<span class="dict-star">★</span>' : '') + esc(x.w) + '</span>' +
+      '<span class="dict-y">' + esc(x.y) + '</span>' +
+      '<span class="dict-d">' + esc(x.d) + '</span>' +
+      '<span class="dict-arrow">' + (open ? '▲' : '▼') + '</span>' +
+    '</button>';
+  if(open){
+    const gs = dictGames(x);
+    html += '<div class="dict-body">' +
+      ((x.a || []).length ? '<p class="count" style="margin:0 0 6px">べつの よびかた：' + esc(x.a.join('・')) + '</p>' : '') +
+      '<p style="margin:0 0 10px;line-height:1.8;font-size:14px">' + esc(x.m) + '</p>' +
+      '<div class="dict-ex"><span class="catlabel" style="margin:0 0 2px">れい</span>' + esc(x.e) + '</div>' +
+      ((x.r || []).length ? '<div class="catlabel" style="margin:10px 0 4px">かんけいの ある ことば</div><div class="chips">' +
+        x.r.map(id => DICT.find(y => y.id === id)).filter(Boolean).map(y =>
+          '<button type="button" class="chip sm" data-dictjump="' + y.id + '">' + esc(y.w) + '</button>').join('') + '</div>' : '') +
+      (gs.list.length ?
+        '<div class="catlabel" style="margin:12px 0 4px">うちに ある ゲーム（' + gs.list.length + '）' +
+          (gs.sure ? '' : '<span class="hint">せつめいから さがしたので、ちがう ことも あります</span>') + '</div>' +
+        gamePickGridHTML(gs.list.slice(0, 30), {attr:'open', on:() => false}) : '') +
+    '</div>';
+  }
+  return html + '</div>';
+}
+function toolDictHTML(){
+  const cat = state.dictCat || 'all';
+  const chips = [['all', 'すべて（' + DICT.length + '）'], ['star', '★ はじめに']].concat(DICT_CATS.map(c => [c.id, c.name]));
+  return '<p class="count" style="margin:0 0 10px">ボードゲームで よく つかう ことばを しらべられます。' +
+      '★は はじめに おぼえて おくと べんりな ことばです。ことばを タップすると くわしい せつめいが でます。</p>' +
+    '<input type="search" id="dictQ" placeholder="ことばで さがす（ひらがなでも OK）" value="' + esc(state.dictQ || '') + '" ' +
+      'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:10px">' +
+    '<div class="chips" style="margin-bottom:12px">' + chips.map(c =>
+      '<button type="button" class="chip sm" data-dictcat="' + c[0] + '" aria-pressed="' + (cat === c[0]) + '">' + esc(c[1]) + '</button>').join('') + '</div>' +
+    '<div id="dictList">' + dictListHTML() + '</div>';
+}
+function updateDictList(){
+  const box = document.getElementById('dictList');
+  if(!box) return;
+  box.innerHTML = dictListHTML();
+  paintIcons(box);
+  bindDict(box);
+}
+function openDictWord(id, scroll){
+  state.dictOpen = id;
+  updateDictList();
+  if(scroll){
+    const el = document.getElementById('dict-' + id);
+    if(el){
+      const top = el.getBoundingClientRect().top + window.scrollY - 70;
+      window.scrollTo({top: Math.max(0, top), behavior:'smooth'});
+    }
+  }
+}
+function bindDict(root){
+  root.querySelectorAll('[data-dictopen]').forEach(b => b.onclick = () => {
+    const id = b.dataset.dictopen;
+    openDictWord(state.dictOpen === id ? '' : id, state.dictOpen !== id);
+  });
+  root.querySelectorAll('[data-dictjump]').forEach(b => b.onclick = () => {
+    const id = b.dataset.dictjump;
+    const x = DICT.find(y => y.id === id);
+    /* いまの しぼりこみで みえない ときは、ぜんぶ みえる ように する */
+    if(x && !((state.dictCat || 'all') === 'all' || state.dictCat === x.c || (state.dictCat === 'star' && x.s)) || !dictMatches(x, normalizeText(state.dictQ || ''))){
+      state.dictCat = 'all'; state.dictQ = '';
+      const q = document.getElementById('dictQ'); if(q) q.value = '';
+      document.querySelectorAll('[data-dictcat]').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.dictcat === 'all')));
+    }
+    openDictWord(id, true);
+    playClick();
+  });
+  root.querySelectorAll('[data-open]').forEach(b => b.onclick = () => go('#/game/' + b.dataset.open));
+}
+
 /* ---------------- ずかんづくりの てつだい ----------------
    なかまが ずかんの せつめいを かいて おくり、かんりにんが みくらべて とりこむ。
    とりこんだ ものは「サイトを こうしんする」で みんなに とどく。 */
@@ -8856,6 +9314,23 @@ function bind(r){
       catch(e){ toast(e.message); }
     });
   });
+  /* --- ことばじてん --- */
+  if(document.getElementById('dictList')){
+    bindDict(document.getElementById('dictList'));
+    app.querySelectorAll('[data-dictcat]').forEach(b => b.onclick = () => {
+      state.dictCat = b.dataset.dictcat;
+      app.querySelectorAll('[data-dictcat]').forEach(c => c.setAttribute('aria-pressed', String(c.dataset.dictcat === state.dictCat)));
+      updateDictList();
+    });
+    const dq = document.getElementById('dictQ');
+    if(dq){
+      let composing = false;
+      const run = () => { clearTimeout(bind._dq); bind._dq = setTimeout(() => { state.dictQ = dq.value; updateDictList(); }, 200); };
+      dq.addEventListener('compositionstart', () => { composing = true; });
+      dq.addEventListener('compositionend', () => { composing = false; run(); });
+      dq.addEventListener('input', () => { if(!composing) run(); });
+    }
+  }
   const claimAdmin = document.getElementById('claimAdmin');
   if(claimAdmin) claimAdmin.onclick = () => {
     ask('あなたが ずかんの かんりにんに なります。\n1人だけで、あとから かえられません。よろしいですか？', async () => {
