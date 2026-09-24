@@ -6729,7 +6729,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.24-m';
+const APP_VERSION = '2026.09.25-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7477,7 +7477,31 @@ function dictChoices(id){
   const other = dictShuffle(DICT.filter(y => y.id !== id && y.c !== x.c));
   return dictShuffle([id].concat(same.concat(other).slice(0, 2).map(y => y.id)));
 }
-/* もんだいの 文に こたえの ことばが 入って いたら かくす */
+/* クイズ用の もんだい文（ふつうの せつめいに こたえの ことばや べつの よびかたが 入って しまう もの） */
+const DICT_Q = {
+  meeple:'盤の上に置いたり動かしたりする部品。人の形をした木のものが有名。',
+  token:'お金や資源などを表す、カードでもタイルでもない小さな部品。',
+  dice:'振って、出た目で進む数などを決める道具。',
+  setup:'遊び始める前に、部品を並べたり配ったりすること。',
+  vp:'勝ち負けを決めるための点。最後にいちばん多い人が勝つことが多い。',
+  tiebreak:'点が同じになったときに、順位を決めるためのルール。',
+  team:'何人かずつの組に分かれて、組同士で競うゲーム。',
+  werewolf:'村人にまぎれた「おおかみ」を、話し合いと投票で見つけ出す遊びをもとにしたゲーム。',
+  bluff:'弱いのに強いふりをするなど、本当ではないことを本当のように見せること。',
+  trick:'全員が1枚ずつカードを出し、いちばん強いカードを出した人がその回を取る、を繰り返すゲーム。',
+  worker:'自分のコマを、ボード上の行動の場所に置いて、その行動をする仕組み。',
+  engine:'資源を生み出す仕組みを増やして、後半ほど効率よくたくさん得られるようにしていく仕組み。',
+  realtime:'順番を待たずに、全員が同時に急いで進めるゲーム。',
+  table:'ボードゲームを遊んでいる机。また、そこで一緒に遊んでいるグループ。',
+  draw:'山札からカードを1枚取って、手札に入れること。',
+  rulebook:'ゲームの遊び方が書かれた冊子。',
+  goout:'手札を先になくした人が勝ち抜けになる、カードゲームの形。',
+  suit:'カードの種類を表す記号（♠♥など）や色分け。',
+  bid:'「いくら払う」「何回勝つ」などを、みんなの前で言うこと。',
+  resource:'木・石・お金など、何かを作るのに使うものを、足りなくならないようにやりくりすること。',
+  hiki:'カードを引いたときや、ダイスを振ったときの運のこと。'
+};
+/* もんだいの 文に こたえの ことばが 入って いたら かくす（ねんのため） */
 function dictMask(x, s){
   let out = s;
   [x.w].concat(x.a || []).concat(String(x.w).split(/[（）]/)).filter(f => f && f.length >= 2).forEach(f => { out = out.split(f).join('〇〇'); });
@@ -7498,7 +7522,7 @@ function dictQuizHTML(){
   return '<div class="win" style="padding:14px">' +
     '<p class="count" style="margin:0 0 6px">もんだい ' + (q.i + 1) + ' / ' + q.qs.length + '　せいかい ' + q.score + '</p>' +
     '<p style="margin:0 0 4px;color:var(--accent-2)">この いみの ことばは どれ？</p>' +
-    '<p style="margin:0 0 12px;font-size:15px;line-height:1.7">' + esc(dictMask(x, x.d)) + '</p>' +
+    '<p style="margin:0 0 12px;font-size:15px;line-height:1.7">' + esc(dictMask(x, DICT_Q[x.id] || x.d)) + '</p>' +
     q.choices.map(id => {
       const y = DICT.find(z => z.id === id);
       const st = ans ? (id === x.id ? ' ok' : (id === ans ? ' ng' : '')) : '';
