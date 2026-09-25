@@ -6729,7 +6729,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.25-a';
+const APP_VERSION = '2026.09.25-b';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7663,8 +7663,9 @@ function dictItemHTML(x){
       '<p style="margin:0 0 10px;line-height:1.8;font-size:14px">' + esc(x.m) + '</p>' +
       dictDiagramHTML(x) +
       '<div class="dict-ex"><span class="catlabel" style="margin:0 0 2px">れい</span>' + esc(x.e) + '</div>' +
-      '<button type="button" class="btn small' + (isKnown(x.id) ? ' primary' : '') + '" data-dictknown="' + x.id + '" style="width:100%;margin-top:10px">' +
-        (isKnown(x.id) ? '✓ おぼえた（タップで もどす）' : 'おぼえた！') + '</button>' +
+      '<p class="count" style="margin:10px 0 0">' + (isKnown(x.id)
+        ? '<span style="color:var(--accent)">✓ クイズで せいかい して おぼえた ことばです</span>'
+        : 'ことばクイズで せいかい すると「✓ おぼえた」に なります') + '</p>' +
       ((x.r || []).length ? '<div class="catlabel" style="margin:10px 0 4px">かんけいの ある ことば</div><div class="chips">' +
         x.r.map(id => DICT.find(y => y.id === id)).filter(Boolean).map(y =>
           '<button type="button" class="chip sm" data-dictjump="' + y.id + '">' + esc(y.w) + '</button>').join('') + '</div>' : '') +
@@ -7689,7 +7690,9 @@ function toolDictHTML(){
         '<button class="btn small primary" id="dictQuizBtn" style="flex:0 0 auto">ことばクイズ</button></div>' +
       '<div class="dict-meter"><span style="width:' + pct + '%"></span></div>' +
       '<p class="count" style="margin:6px 0 0">' + (nextT ? 'あと ' + (nextT.need - kn) + 'こ で しょうごう「' + esc(nextT.name) + '」' : 'しょうごう「' + esc(DICT_TITLES[2].name) + '」を てに いれました！') +
-        '<br>クイズで せいかい すると「おぼえた」に なります。</p></div>' +
+        '<br>クイズで せいかい すると「おぼえた」に なります。</p>' +
+      (kn ? '<p class="count" style="margin:6px 0 0;text-align:right"><button class="mini" id="dictReset">おぼえた きろくを リセット</button></p>' : '') +
+    '</div>' +
     '<input type="search" id="dictQ" placeholder="ことばで さがす（ひらがなでも OK）" value="' + esc(state.dictQ || '') + '" ' +
       'autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search" style="margin-bottom:10px">' +
     '<div class="chips" style="margin-bottom:12px">' + chips.map(c =>
@@ -10508,6 +10511,10 @@ function bind(r){
   /* --- ことばじてん --- */
   if(document.getElementById('dictList')){
     bindDict(document.getElementById('dictList'));
+    const dr = document.getElementById('dictReset');
+    if(dr) dr.onclick = () => ask('おぼえた ことばの きろくを ぜんぶ けして、さいしょから やりなおしますか？\n（てに いれた しょうごうは のこります）', () => {
+      state.dictKnown = []; store.write(KEY.dictKnown, []); render(); toast('リセット しました');
+    });
     const qb = document.getElementById('dictQuizBtn');
     if(qb) qb.onclick = () => { startDictQuiz(); updateDictList(); document.getElementById('dictList').scrollIntoView({behavior:'smooth', block:'start'}); };
     if(state.dictScrollTo){
