@@ -6729,7 +6729,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.25-c';
+const APP_VERSION = '2026.09.25-d';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7757,6 +7757,125 @@ const DICT_DIAGRAMS = {
       dg.t(160, 112, 'トランプの スートは この 4しゅるい', 'dg-s'), 'スートの れい');
   }
 };
+/* ---- ついかの ず（63ごの なかから） ---- */
+Object.assign(DICT_DIAGRAMS, {
+  role(){
+    const r = (x, s, hl) => '<rect x="' + x + '" y="30" width="66" height="44" rx="3" class="dg-box' + '"' + (hl ? ' style="stroke:var(--accent);stroke-width:4"' : '') + '/>' + dg.t(x + 33, 57, s, hl ? 'dg-accT' : 'dg-b');
+    return dg.svg(150, dg.defs + r(10, '建築家', true) + r(86, '商人') + r(162, '市長') + r(238, '船長') +
+      dg.person(43, 112, 'r') + dg.arrow(43, 96, 43, 80) +
+      dg.t(43, 18, 'えらんだ！', 'dg-accT') +
+      dg.t(200, 102, 'えらんだ 人は とくべつに 得をする', 'dg-s') +
+      dg.t(200, 120, 'ほかの 人も おなじ 行動が できる', 'dg-s') +
+      dg.t(200, 140, 'ことが おおい', 'dg-s'), '役割選択の れい');
+  },
+  routebuild(){
+    const city = (x, y, s) => '<circle cx="' + x + '" cy="' + y + '" r="9" class="dg-box"/>' + dg.t(x, y - 14, s, 'dg-b');
+    const rail = (x1, y1, x2, y2, c, on) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="' + (DG_COL[c] || c) + '" stroke-width="' + (on ? 7 : 5) + '" stroke-dasharray="' + (on ? '0' : '10 5') + '"/>';
+    return dg.svg(160, rail(40, 70, 130, 40, 'r', true) + rail(130, 40, 230, 60, 'r', true) + rail(230, 60, 290, 110, 'k') + rail(40, 70, 110, 120, 'k') + rail(110, 120, 230, 60, 'k') +
+      city(40, 70, 'A') + city(130, 40, 'B') + city(230, 60, 'C') + city(290, 110, 'D') + city(110, 120, 'E') +
+      dg.t(160, 150, '赤の 線路で A → B → C が つながった！', 'dg-accT'), 'ルートビルディングの れい');
+  },
+  pattern(){
+    const C = ['r', 'b', 'y', 'g'];
+    const grid = [[0, 1, 2], [3, 3, 3], [1, -1, 0]];
+    let body = '';
+    grid.forEach((row, j) => row.forEach((c, i) => {
+      body += '<rect x="' + (40 + i * 36) + '" y="' + (20 + j * 36) + '" width="32" height="32" ' + (c < 0 ? 'class="dg-box"' : 'fill="' + DG_COL[C[c]] + '"') + '/>';
+    }));
+    body += '<rect x="37" y="53" width="110" height="38" fill="none" stroke="var(--accent)" stroke-width="3"/>';
+    return dg.svg(150, body + dg.t(170, 76, '← よこ 1れつ', 'dg-accT', 'start') + dg.t(186, 94, 'おなじ 色で そろった！', 'dg-accT', 'start') +
+      dg.t(186, 112, '→ ボーナス点', 'dg-s', 'start') +
+      dg.t(160, 142, 'きめられた かたちや もようを つくると とくてん', 'dg-s'), 'パターンビルディングの れい');
+  },
+  diceplace(){
+    const die = (x, y, n, c) => '<rect x="' + x + '" y="' + y + '" width="30" height="30" rx="5" fill="' + (DG_COL[c] || '#f4f0e6') + '" stroke="var(--frame)" stroke-width="2"/>' +
+      '<text x="' + (x + 15) + '" y="' + (y + 21) + '" text-anchor="middle" style="font-size:16px;fill:' + (c ? '#fff' : '#222') + '">' + n + '</text>';
+    const sp = (x, s, need) => '<rect x="' + x + '" y="62" width="92" height="56" rx="3" class="dg-box"/>' + dg.t(x + 46, 80, s, 'dg-b') + dg.t(x + 46, 134, need, 'dg-s');
+    return dg.svg(176, dg.defs + dg.t(60, 18, 'ふった ダイス', 'dg-s') + die(20, 24, 5) + die(56, 24, 2) + die(92, 24, 6) +
+      sp(12, 'お金 +3', '5いじょう') + sp(114, '木を とる', 'なんでも') + sp(216, 'たてもの', '6だけ') +
+      die(46, 84, 5, 'r') + die(248, 84, 6, 'r') +
+      dg.t(160, 164, 'でた 目に あう ばしょに ダイスを おいて 行動する', 'dg-s'), 'ダイスプレイスメントの れい');
+  },
+  modular(){
+    const hex = (cx, cy, c) => {
+      const pts = [0, 1, 2, 3, 4, 5].map(k => { const a = Math.PI / 3 * k + Math.PI / 6; return (cx + 13 * Math.cos(a)).toFixed(1) + ',' + (cy + 13 * Math.sin(a)).toFixed(1); }).join(' ');
+      return '<polygon points="' + pts + '" fill="' + DG_COL[c] + '" stroke="var(--panel)" stroke-width="2"/>';
+    };
+    const island = (ox, cs) => {
+      const pos = [[0, 0], [22.5, 0], [45, 0], [11, 19.5], [33.5, 19.5], [0, 39], [22.5, 39], [45, 39]];
+      return pos.map((p, i) => hex(ox + p[0], 44 + p[1], cs[i])).join('');
+    };
+    return dg.svg(150, island(40, ['g', 'y', 'k', 'b', 'r', 'y', 'g', 'b']) + island(200, ['r', 'b', 'g', 'y', 'k', 'g', 'r', 'y']) +
+      dg.t(62, 22, '1かいめ', 'dg-b') + dg.t(222, 22, '2かいめ', 'dg-b') + dg.t(160, 76, '→', 'dg-accT') +
+      dg.t(160, 128, 'タイルの ならびが まいかい かわる', 'dg-s') + dg.t(160, 144, '→ おなじ さくせんが つうじにくい', 'dg-s'), '可変ボードの れい');
+  },
+  market(){
+    const coin = (x, n) => '<circle cx="' + x + '" cy="100" r="11" fill="#e0b23a"/><text x="' + x + '" y="105" text-anchor="middle" style="font-size:12px;fill:#222">' + n + '</text>';
+    return dg.svg(158, dg.defs + dg.t(160, 16, 'マーケット（かえる カード）', 'dg-s') +
+      dg.card(40, 30, 'A', 'b') + dg.card(106, 30, 'B', 'g') + dg.card(172, 30, 'C', 'r') + dg.card(238, 30, 'D', 'y') +
+      coin(57, 1) + coin(123, 2) + coin(189, 3) + coin(255, 4) +
+      dg.t(160, 132, '左の カードほど やすい。', 'dg-s') + dg.t(160, 148, 'かわれたら 左に つめて、あいた ところを 補充', 'dg-s'), '市場の れい');
+  },
+  secret(){
+    return dg.svg(156, dg.person(70, 60, 'r', 'あなた') + dg.card(100, 30, '★', 'y', {w:40, h:54}) +
+      dg.t(120, 104, 'ひみつの もくひょう', 'dg-accT') +
+      dg.person(220, 60, 'b', 'なかま') + '<rect x="248" y="30" width="40" height="54" rx="3" fill="#8a8fa3"/>' + dg.t(268, 62, '？', 'dg-on') +
+      dg.t(160, 130, 'じぶんだけが 知って いる もくひょう。', 'dg-s') + dg.t(160, 146, 'たっせい すると 点が もらえる', 'dg-s'), '秘密目標の れい');
+  },
+  info(){
+    return dg.svg(170, '<rect x="14" y="14" width="292" height="62" rx="4" class="dg-box"/>' + dg.t(40, 32, '場', 'dg-s') +
+      dg.card(70, 22, '3', 'r', {w:30, h:42}) + dg.card(106, 22, '7', 'b', {w:30, h:42}) + dg.card(142, 22, '5', 'g', {w:30, h:42}) +
+      dg.t(188, 40, '公開情報：', 'dg-accT', 'start') + dg.t(188, 58, 'みんなに みえる', 'dg-s', 'start') +
+      '<rect x="60" y="92" width="30" height="42" rx="3" fill="#8a8fa3"/><rect x="96" y="92" width="30" height="42" rx="3" fill="#8a8fa3"/><rect x="132" y="92" width="30" height="42" rx="3" fill="#8a8fa3"/>' +
+      dg.t(111, 152, 'あなたの 手札', 'dg-s') + dg.t(236, 118, '非公開情報：', 'dg-b') + dg.t(236, 136, 'じぶんだけ しって いる', 'dg-s'),
+      '公開情報と非公開情報');
+  },
+  lastround(){
+    const cell = (x, s, st) => '<rect x="' + x + '" y="40" width="56" height="40" rx="3" class="dg-box"' + (st === 'hit' ? ' style="stroke:var(--accent);stroke-width:4"' : '') + '/>' + dg.t(x + 28, 66, s, st === 'hit' ? 'dg-accT' : 'dg-b');
+    return dg.svg(160, dg.defs + cell(14, 'A', 'done') + cell(88, 'B', 'hit') + cell(162, 'C') + cell(236, 'D') +
+      dg.t(116, 26, '終了条件 たっせい！', 'dg-accT') +
+      dg.arrow(146, 60, 158, 60) + dg.arrow(220, 60, 232, 60) +
+      dg.t(160, 104, '→ C と D も さいごの 手番を する', 'dg-s') +
+      dg.t(160, 134, 'ぜんいんの 手番の かずが そろったら', 'dg-s') + dg.t(160, 150, 'ゲーム終了 → 得点計算', 'dg-accT'), '最終ラウンドの れい');
+  },
+  refill(){
+    return dg.svg(150, dg.defs + dg.t(56, 18, '山札', 'dg-s') + '<rect x="30" y="26" width="46" height="60" rx="3" fill="#8a8fa3" stroke="var(--frame)" stroke-width="2"/>' +
+      dg.t(210, 18, '場', 'dg-s') + dg.card(130, 30, 'A', 'b') + '<rect x="176" y="30" width="34" height="46" rx="3" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3"/>' + dg.card(222, 30, 'C', 'g') +
+      '<path d="M78 56 Q130 100 188 80" class="dg-ln" marker-end="url(#dgArr)"/>' +
+      dg.t(193, 96, 'あいた ところに たす', 'dg-accT') +
+      dg.t(160, 132, 'とられて へった ぶんを 山札から おぎなう', 'dg-s'), '補充の れい');
+  },
+  suddendeath(){
+    return dg.svg(150, dg.defs + '<rect x="14" y="40" width="200" height="12" class="dg-box"/>' + '<rect x="14" y="40" width="140" height="12" fill="#4a7fd6"/>' +
+      dg.t(114, 30, 'ふつうは さいごに 点数で しょうぶ…', 'dg-s') +
+      '<path d="M236 70 l6 10 l10 -6 l-4 11 l11 3 l-11 4 l5 10 l-10 -5 l-5 10 l-3 -11 l-11 2 l8 -8 l-8 -8 l11 2 z" fill="' + DG_COL.y + '"/>' +
+      dg.t(250, 118, '条件を みたした', 'dg-b') + dg.t(250, 134, 'しゅんかん かち！', 'dg-accT'), 'サドンデスの れい');
+  },
+  bonus(){
+    return dg.svg(140, dg.card(20, 20, '+3', 'g', {w:40}) + dg.card(72, 20, '+2', 'g', {w:40}) + dg.card(124, 20, '+5', 'y', {w:40}) + dg.card(176, 20, '-2', 'r', {w:40}) +
+      dg.t(144, 86, 'ボーナス', 'dg-accT') + dg.t(196, 86, 'マイナス', 'dg-s') +
+      dg.t(270, 50, '= 8点', 'dg-b') +
+      dg.t(160, 120, 'じょうけんで ふえる 点と、へる 点が ある', 'dg-s'), 'ボーナス点とマイナス点');
+  },
+  board(){
+    return dg.svg(170, '<rect x="100" y="44" width="120" height="80" rx="4" class="dg-box" style="stroke-width:3"/>' + dg.t(160, 88, 'メインボード', 'dg-accT') +
+      '<rect x="120" y="6" width="80" height="28" rx="3" class="dg-box"/><rect x="120" y="134" width="80" height="28" rx="3" class="dg-box"/>' +
+      '<rect x="14" y="70" width="76" height="28" rx="3" class="dg-box"/><rect x="230" y="70" width="76" height="28" rx="3" class="dg-box"/>' +
+      dg.t(160, 25, '個人ボード', 'dg-s') + dg.t(160, 153, '個人ボード', 'dg-s') + dg.t(52, 89, '個人ボード', 'dg-s') + dg.t(268, 89, '個人ボード', 'dg-s'),
+      'メインボードと個人ボード');
+  },
+  track(){
+    let cells = '';
+    for(let i = 0; i < 10; i++) cells += '<rect x="' + (14 + i * 29) + '" y="40" width="27" height="30" class="dg-box"/>' + dg.t(27 + i * 29, 90, String(i), 'dg-s');
+    const cube = (i, c, dy) => '<rect x="' + (20 + i * 29) + '" y="' + (46 + dy) + '" width="14" height="14" fill="' + DG_COL[c] + '"/>';
+    return dg.svg(130, cells + cube(3, 'r', 0) + cube(7, 'b', 0) + cube(5, 'y', 0) +
+      dg.t(160, 26, '点数に あわせて じぶんの コマを すすめる', 'dg-s') +
+      dg.t(160, 118, 'いま：青 7点・黄 5点・赤 3点', 'dg-accT'), '得点トラックの れい');
+  }
+});
+Object.assign(DICT_DG, {role:'role', routebuild:'routebuild', pattern:'pattern', diceplace:'diceplace', modular:'modular',
+  market:'market', secret:'secret', info:'info', lastround:'lastround', refill:'refill', suddendeath:'suddendeath',
+  bonus:'bonus', minus:'bonus', board:'board', track:'track'});
 function dictDiagramHTML(x){
   const id = dgOf(x);
   return (id && DICT_DIAGRAMS[id]) ? '<div class="dg-wrap">' + DICT_DIAGRAMS[id]() + '</div>' : '';
