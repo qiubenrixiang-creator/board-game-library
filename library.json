@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-26T13:21:37.230Z",
+  "version": "2026-09-26T13:29:00.222Z",
   "tags": [
     {
       "name": "初心者",
@@ -3092,21 +3092,37 @@
     {
       "id": "g132",
       "title": "魔法のラビリンス",
-      "images": [],
-      "summary": "見えない壁を覚えながら迷路を進む。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "まほうのらびりんす",
+      "videos": [
+        "https://youtube.com/watch?v=2odd7Muw5K0&si=L5eDdEEUbowyHwCv"
+      ],
+      "wish": false,
+      "images": [
+        "https://m.media-amazon.com/images/I/61zmo9q+cUL.jpg",
+        "https://www.hyakuchomori.co.jp/toy/i/4580215110474_02.jpg"
+      ],
       "playersMin": 2,
       "playersMax": 4,
       "playTime": 30,
       "age": 6,
       "difficulty": 2,
+      "strategy": 3,
+      "excitement": 5,
+      "luck": 3,
+      "replay": 4,
       "tags": [
         "家族向け",
-        "記憶"
+        "記憶",
+        "対戦",
+        "初心者",
+        "軽量級",
+        "頭脳戦"
       ],
-      "reading": "まほうのらびりんす"
+      "summary": "見えない壁を見極めよう！透明な壁の位置を覚えながら魔法の迷路のゴールを目指せ！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "addedAt": ""
     },
     {
       "id": "g133",
