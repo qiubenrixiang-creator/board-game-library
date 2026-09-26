@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-24T16:14:09.513Z",
+  "version": "2026-09-26T03:15:52.108Z",
   "tags": [
     {
       "name": "初心者",
@@ -1471,20 +1471,29 @@
     {
       "id": "g047",
       "title": "月面探険",
-      "images": [],
-      "summary": "",
+      "images": [
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTzpJQi588ijlV2kXwIMu6PvVlOVOpigGJTGL0wrpiJ5Q&s=10",
+        "https://oinkgames.com/images/description/moon-adventure/image01.png"
+      ],
+      "summary": "全員で力を合わせてミッション達成を目指す協力ボードゲーム！",
       "quickRule": "",
       "detailRule": "",
       "recommendation": "",
       "playersMin": 2,
-      "playersMax": 6,
-      "playTime": 30,
+      "playersMax": 5,
+      "playTime": 40,
       "age": 8,
-      "difficulty": 2,
+      "difficulty": 3,
       "tags": [
-        "データみきにゅう"
+        "協力",
+        "頭脳戦",
+        "軽量級"
       ],
-      "reading": "げつめんたんけん"
+      "reading": "げつめんたんけん",
+      "videos": [
+        "https://youtu.be/iGqHso0Qo64?si=jW1TsNLQQqxDTJ5b"
+      ],
+      "wish": false
     },
     {
       "id": "g048",
