@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-26T03:52:07.403Z",
+  "version": "2026-09-26T13:21:37.230Z",
   "tags": [
     {
       "name": "初心者",
@@ -389,6 +389,7 @@
       "strategy": 4,
       "excitement": 5,
       "luck": 3,
+      "replay": 0,
       "tags": [
         "初心者",
         "軽量級",
@@ -400,7 +401,8 @@
       "summary": "新感覚シリコンダーツ！",
       "quickRule": "",
       "detailRule": "",
-      "recommendation": ""
+      "recommendation": "",
+      "addedAt": ""
     },
     {
       "id": "g001",
@@ -1522,20 +1524,37 @@
     {
       "id": "g049",
       "title": "コードネームデュエット",
-      "images": [],
-      "summary": "2人で協力して単語を当てるコードネーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
+      "reading": "",
+      "videos": [
+        "https://youtu.be/PjrtMCDWF_Q?si=thNhFgQe4miaGXfI",
+        "https://youtu.be/2yS7Pg8BS7M?si=w_ErsuZUyKreGr1o"
+      ],
+      "wish": false,
+      "images": [
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSoqP5Abx8YqYG5NH12gJy_pG1uH3nnufnw6RjVSXXSrg&s=10",
+        "https://hobbyjapan.games/wp-content/uploads/2018/01/codenames_duet_comp.png"
+      ],
       "playersMin": 2,
       "playersMax": 2,
       "playTime": 15,
-      "age": 10,
+      "age": 11,
       "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
       "tags": [
         "協力",
-        "頭脳戦"
-      ]
+        "頭脳戦",
+        "軽量級",
+        "初心者",
+        "ドキドキ"
+      ],
+      "summary": "パートナーと協力して、時間内に味方のエージェント15人全員と接触せよ！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "addedAt": ""
     },
     {
       "id": "g050",
