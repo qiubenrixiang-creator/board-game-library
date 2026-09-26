@@ -995,6 +995,8 @@ const KEY = {
   a2hs:'bgl.a2hsSeen',        /* ホーム画面に ついかの おしらせを みた */
   pubOk:'bgl.lastPublishOk',  /* さいごに サイトを こうしん できた 日 */
   dictKnown:'bgl.dictKnown',  /* おぼえた ことば */
+  guestId:'bgl.guestId',      /* ゲストで とうひょう する ときの しるし */
+  guestName:'bgl.guestName',  /* ゲストの なまえ */
   pubsig:'bgl.publishedSig', /* さいごに サイトと そろえた ときの ずかんの ないようの しるし */
   preAdopt:'bgl.beforeSiteAdopt', /* サイトに そろえる まえの ひかえ */
   bgmTrack:'bgl.bgmTrack',  /* えらんで いる BGM */
@@ -1877,7 +1879,7 @@ function playFanfare(){
 function paintFriendDot(){
   const d = document.getElementById('friendDot');
   if(!d) return;
-  d.hidden = !(isOnline() && ((state.friends && (state.friends.incoming || []).length) || (state.noteInbox || []).length));
+  d.hidden = !(isOnline() && ((state.friends && (state.friends.incoming || []).length) || (state.noteInbox || []).length || pollInbox().length));
 }
 function paintDirtyDot(){
   const d = document.getElementById('dirtyDot');
@@ -2083,6 +2085,7 @@ const state = {
   titlePick: false,                                 /* しょうごうを えらぶ まどを ひらいて いるか */
   suggField: 'summary',                             /* せつめいを かく らん */
   notes: [], notesLoaded: false, noteInbox: [],      /* ノート */
+  polls: [], pollData: {}, pollSel: {}, pollErr: {}, pollFanfare: {}, pollName: store.read(KEY.guestName, '') || '',   /* みんなで とうひょう */
   noteOpen: '', noteNew: false,
   amida: null,                                      /* あみだくじの ばん（autoReveal・allPaths も ここに 入る） */
   score: {names:[], rows:[]},                       /* てんすう表 */
@@ -2668,12 +2671,12 @@ function render(){
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
                   print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools,
                   records:viewRecords, tool:viewTool, kai:viewKai, card:viewCard,
-                  suggest:viewSuggest, review:viewReview };
+                  suggest:viewSuggest, review:viewReview, poll:viewPoll };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
   const map = { home:'#/', list:'#/list', random:'#/random', tools:'#/tools', tool:'#/tools',
-                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin', card:'#/tools', suggest:'#/tools', review:'#/admin' };
+                records:'#/tools', playlog:'#/tools', admin:'#/admin', kai:'#/admin', card:'#/tools', suggest:'#/tools', review:'#/admin', poll:'#/tools' };
   document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-current', String(t.dataset.go === (map[r.name]||''))));
   if(['home','list','game','kai','card','tool'].indexOf(r.name) >= 0) maybeRefreshRequests(routeKey);
   if(['admin','game','tool','review','suggest'].indexOf(r.name) >= 0) maybeRefreshHelp(routeKey);
@@ -5485,6 +5488,11 @@ function viewTools(){
   const rest = TOOLS.filter(t => !t.hidden && t.id !== 'names' && used.indexOf(t.id) < 0);
   return '<section class="page">' +
     '<h1 class="lede">どうぐ</h1>' +
+    (pollInbox().length ? '<button class="tool-wide" data-pollinbox style="border-color:var(--accent);margin-bottom:10px">' +
+      '<span class="tool-ico" data-icon="vote" style="color:var(--accent)"></span>' +
+      '<span style="flex:1;min-width:0;text-align:left"><span class="tool-name" style="display:block;color:var(--accent)">とうひょうに よばれて います（' + pollInbox().length + '）</span>' +
+      '<span class="tool-desc">' + esc(pollInbox()[0].owner) + ' さんの「' + esc(pollInbox()[0].title || 'とうひょう') + '」</span></span>' +
+      '<span style="color:var(--muted)">▶</span></button>' : '') +
     '<button class="tool-wide" data-go2="#/tool/names">' +
       '<span class="tool-ico" data-icon="people2"></span>' +
       '<span style="flex:1;min-width:0;text-align:left">' +
@@ -6534,6 +6542,183 @@ function bindNotes(){
   });
 }
 
+
+/* ---------------- みんなの スマホで とうひょう ----------------
+   つくった 人が フレンドを よんだり、QRコードで ゲストを よんだりして、
+   それぞれの スマホから とうひょう する。しめきるまで けっかは ふせる。 */
+function guestId(){
+  let g = store.read(KEY.guestId, '');
+  if(!/^[a-z0-9]{8,40}$/.test(g || '')){
+    g = (Date.now().toString(36) + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)).slice(0, 24);
+    store.write(KEY.guestId, g);
+  }
+  return g;
+}
+function pollUrl(code){ return location.origin + location.pathname + '#/poll/' + code; }
+async function refreshPolls(){
+  if(!isOnline()) return false;
+  const d = await api('/api/polls');
+  const next = d.polls || [];
+  const changed = JSON.stringify(next) !== JSON.stringify(state.polls || []);
+  state.polls = next;
+  refreshPolls.at = Date.now();
+  paintFriendDot();
+  return changed;
+}
+function pollInbox(){ return (state.polls || []).filter(p => p.status === 'open' && !p.mineOwner && !p.voted); }
+async function refreshPoll(code){
+  const d = await api('/api/poll/' + encodeURIComponent(code) + '?voter=' + guestId(), {auth: isOnline()});
+  const prev = state.pollData[code];
+  const changed = JSON.stringify(prev) !== JSON.stringify(d);
+  state.pollData[code] = d;
+  if(!state.pollSel[code] && d.mine) state.pollSel[code] = d.mine.slice();
+  return changed;
+}
+function pollOptionsHTML(){
+  const o = state.pollOpt || (state.pollOpt = {named:false, multi:false, invite:[]});
+  const fr = friendList();
+  return '<div class="win" style="margin:0 0 12px;padding:10px 12px">' +
+    '<div class="catlabel" style="margin:0 0 4px">だれが なにに いれたか</div>' +
+    '<div class="chips" style="margin-bottom:8px">' +
+      '<button type="button" class="chip sm" data-pollnamed="0" aria-pressed="'+(!o.named)+'">むきめい（ひみつ）</button>' +
+      '<button type="button" class="chip sm" data-pollnamed="1" aria-pressed="'+(!!o.named)+'">きめい（なまえを だす）</button></div>' +
+    '<div class="catlabel" style="margin:0 0 4px">1人 なんぴょう？</div>' +
+    '<div class="chips" style="margin-bottom:8px">' +
+      '<button type="button" class="chip sm" data-pollmulti="0" aria-pressed="'+(!o.multi)+'">1人 1ぴょう</button>' +
+      '<button type="button" class="chip sm" data-pollmulti="1" aria-pressed="'+(!!o.multi)+'">いくつでも えらべる</button></div>' +
+    '<div class="catlabel" style="margin:0 0 4px">なかまを しょうたい<span class="hint">フレンドの スマホに とどきます</span></div>' +
+    (fr.length ? '<div class="chips" style="margin-bottom:4px">' + fr.map(f =>
+        '<button type="button" class="chip sm" data-pollinv="'+esc(f.id)+'" aria-pressed="'+(o.invite.indexOf(f.id) >= 0)+'">'+esc(f.name)+'</button>').join('') + '</div>'
+      : '<p class="count" style="margin:0 0 4px">フレンドが いません。</p>') +
+    '<p class="count" style="margin:4px 0 0">フレンドで ない 人は、はじめた あとに でる QRコードで さんか できます。</p>' +
+  '</div>';
+}
+function pollListHTML(){
+  const list = state.polls || [];
+  if(!list.length) return '';
+  return '<div class="catlabel" style="margin:14px 0 6px">さんか して いる とうひょう</div>' +
+    list.map(p =>
+      '<button class="admin-row" data-go2="#/poll/'+esc(p.code)+'" style="width:100%;text-align:left;cursor:pointer;color:var(--text);font:inherit">' +
+        '<div class="t"><b style="font-size:14px;font-weight:400">'+esc(p.title || 'とうひょう') +
+          (p.status === 'open' && !p.mineOwner && !p.voted ? ' <span style="color:var(--danger)">●</span>' : '') + '</b>' +
+        '<span>'+(p.mineOwner ? 'じぶんが つくった' : esc(p.owner) + ' さんから') + '・' +
+          (p.status === 'open' ? (p.voted ? 'とうひょう ずみ' : 'とうひょう まち') : 'けっか が でました') + '・' + p.votes + '人</span></div>' +
+        '<span style="color:var(--muted)">▶</span></button>').join('');
+}
+function viewPoll(code){
+  code = String(code || '').toUpperCase();
+  const d = state.pollData[code];
+  const head = '<section class="page">' +
+    '<button class="mini" data-go2="#/tool/vote" style="margin-bottom:14px">◀ とうひょう</button>' +
+    '<h1 class="lede">みんなで とうひょう</h1>';
+  if(!d){
+    if(!state.pollErr[code]) refreshPoll(code).then(() => { if(currentRoute().name === 'poll') render(); })
+      .catch(e => { state.pollErr[code] = e.message; if(currentRoute().name === 'poll') render(); });
+    return head + (state.pollErr[code] ? '<div class="note">'+esc(state.pollErr[code])+'</div>' : '<p class="count">よみこみ中…</p>') + '</section>';
+  }
+  const sel = state.pollSel[code] || [];
+  const badges = '<p class="count" style="margin:0 0 10px">' +
+    '<span class="badge" style="margin:0 6px 0 0">'+(d.named ? 'きめい' : 'むきめい')+'</span>' +
+    '<span class="badge" style="margin:0 6px 0 0">'+(d.multi ? 'いくつでも' : '1人 1ぴょう')+'</span>' +
+    '<span class="badge" style="margin:0;border-color:'+(d.status === 'open' ? 'var(--accent-2)' : 'var(--muted)')+';color:'+(d.status === 'open' ? 'var(--accent-2)' : 'var(--muted)')+'">'+(d.status === 'open' ? 'うけつけ中' : 'しめきり')+'</span></p>';
+  const itemThumb = it => { const g = (it.g && state.games.find(x => x.id === it.g)) || state.games.find(x => x.title === it.t); return g ? thumbHTML(g, 'vote-thumb') : ''; };
+  let body = '<p style="font-size:17px;margin:0 0 6px;color:var(--accent)">'+esc(d.title || 'とうひょう')+'</p>' + badges;
+  if(d.status === 'open'){
+    body += '<p class="count" style="margin:0 0 8px">'+(d.multi ? 'いれたい こうほを ぜんぶ えらんで ください。' : 'いれたい こうほを 1つ えらんで ください。') +
+      '<br>けっかは しめきる まで ひみつです。</p>' +
+      d.items.map((it, i) =>
+        '<button class="vote-row'+(sel.indexOf(i) >= 0 ? ' top' : '')+'" data-pollpick="'+i+'">' + itemThumb(it) +
+          '<span class="vote-name">'+esc(it.t)+'</span><span class="vote-n">'+(sel.indexOf(i) >= 0 ? '✓ えらんだ' : '')+'</span></button>').join('') +
+      (!isOnline() ? '<label class="lbl" for="pollName" style="margin-top:8px">あなたの なまえ'+(d.named ? '<span class="hint">ひつよう</span>' : '<span class="hint">にんい</span>')+'</label>' +
+        '<input type="text" id="pollName" maxlength="20" value="'+esc(state.pollName || '')+'" placeholder="れい：たろう" style="margin-bottom:8px">' : '') +
+      '<button class="btn primary" id="pollVote" style="width:100%;margin-top:6px">'+(d.mine ? 'とうひょうを かえる' : 'とうひょう する')+'</button>' +
+      (d.mine ? '<p class="count" style="margin:6px 0 0;color:var(--accent)">✓ とうひょう ずみ です（しめきり まで かえられます）</p>' : '') +
+      '<div class="win" style="margin-top:12px;text-align:center">' +
+        '<p class="count" style="margin:0 0 4px">いま とうひょう した 人</p>' +
+        '<p class="encounter" style="margin:0;font-size:26px">'+d.votes+'人</p>' +
+        (d.named && d.voters.length ? '<p class="count" style="margin:4px 0 0">'+esc(d.voters.join('・'))+'</p>' : '') +
+      '</div>';
+    if(d.isOwner){
+      body += '<div class="win" style="margin-top:12px;text-align:center">' +
+          '<p class="count" style="margin:0 0 8px">フレンドで ない 人は、この QRコードか アドレスから さんか できます。</p>' +
+          '<div id="pollQr"></div>' +
+          '<p class="count" style="margin:8px 0 0;word-break:break-all">'+esc(pollUrl(code))+'</p>' +
+          '<button class="mini" id="pollCopy" style="margin-top:6px">アドレスを コピー</button></div>' +
+        '<button class="btn danger" id="pollClose" style="width:100%;margin-top:12px">しめきって けっかを みる</button>';
+    }else{
+      body += '<p class="count" style="margin:10px 0 0">つくった 人が しめきると、ここに けっかが でます。</p>';
+    }
+  }else{
+    const res = d.results || [];
+    const max = Math.max.apply(null, res.map(r => r.n).concat([0]));
+    const order = d.items.map((it, i) => i).sort((a, b) => res[b].n - res[a].n);
+    body += '<p class="count" style="margin:0 0 8px">ぜんぶで '+d.votes+'人が とうひょう しました。</p>' +
+      order.map(i => {
+        const it = d.items[i], r = res[i];
+        return '<div class="vote-row'+(r.n === max && max > 0 ? ' top' : '')+'" style="flex-wrap:wrap">' + itemThumb(it) +
+          '<span class="vote-name">'+esc(it.t)+'</span>' +
+          '<span class="vote-bar"><span style="width:'+(d.votes ? Math.round(r.n / Math.max(1, max) * 100) : 0)+'%"></span></span>' +
+          '<span class="vote-n">'+r.n+'ひょう</span>' +
+          (d.named && r.names.length ? '<span style="flex:1 0 100%;font-size:11px;color:var(--muted);margin-top:4px">'+esc(r.names.join('・'))+'</span>' : '') +
+        '</div>';
+      }).join('') +
+      (max > 0 ? '<div class="win" style="margin-top:12px;text-align:center"><p class="encounter" style="margin:0">' +
+        esc(order.filter(i => res[i].n === max).map(i => d.items[i].t).join('、')) + ' に きまり！</p></div>' : '');
+  }
+  return head + body + '</section>';
+}
+function bindPoll(code){
+  code = String(code || '').toUpperCase();
+  const d = state.pollData[code];
+  if(!d) return;
+  if(d.status === 'closed' && !state.pollFanfare[code]){ state.pollFanfare[code] = 1; playFanfare && playFanfare(); }
+  app.querySelectorAll('[data-pollpick]').forEach(b => b.onclick = () => {
+    const i = Number(b.dataset.pollpick);
+    let sel = (state.pollSel[code] || []).slice();
+    if(d.multi){ const k = sel.indexOf(i); if(k >= 0) sel.splice(k, 1); else sel.push(i); }
+    else sel = [i];
+    state.pollSel[code] = sel;
+    render(); playClick();
+  });
+  const nm = document.getElementById('pollName');
+  if(nm) nm.addEventListener('input', () => { state.pollName = nm.value; store.write(KEY.guestName, nm.value); });
+  const vote = document.getElementById('pollVote');
+  if(vote) vote.onclick = async () => {
+    const sel = state.pollSel[code] || [];
+    if(!sel.length) return toast('こうほを えらんで ください');
+    const name = (state.pollName || '').trim();
+    if(!isOnline() && d.named && !name) return toast('なまえを いれて ください');
+    vote.disabled = true;
+    try{
+      await api('/api/poll/' + code + '/vote', {method:'POST', auth: isOnline(), body:{choices: sel, name, voter: guestId()}});
+      await refreshPoll(code);
+      if(isOnline()) refreshPolls().catch(() => {});
+      render(); toast('とうひょう しました');
+    }catch(e){ toast(e.message); vote.disabled = false; }
+  };
+  const qr = document.getElementById('pollQr');
+  if(qr && !qr.innerHTML) showQR(pollUrl(code), 'pollQr');
+  const cp = document.getElementById('pollCopy');
+  if(cp) cp.onclick = () => copyText(pollUrl(code));
+  const cl = document.getElementById('pollClose');
+  if(cl) cl.onclick = () => ask('とうひょうを しめきって、けっかを みんなに みせますか？', async () => {
+    try{ await api('/api/poll/' + code + '/close', {method:'POST'}); await refreshPoll(code); render(); }
+    catch(e){ toast(e.message); }
+  });
+  /* うけつけ中は すこしずつ ようすを みに いく（入力中は じゃま しない） */
+  clearTimeout(bindPoll._t);
+  if(d.status === 'open'){
+    bindPoll._t = setTimeout(async () => {
+      if(currentRoute().name !== 'poll' || String(currentRoute().param || '').toUpperCase() !== code) return;
+      try{
+        const ch = await refreshPoll(code);
+        const ae = document.activeElement;
+        if(ch && !(ae && ae.id === 'pollName')) render(); else bindPoll(code);
+      }catch(e){ bindPoll(code); }
+    }, 4000);
+  }
+}
+
 /* ---------------- とうひょう ----------------
    こうほを ならべて、みんなで タップして きめる。 */
 function saveVote(){ store.write(KEY.vote, state.vote); }
@@ -6571,8 +6756,17 @@ function toolVoteHTML(){
   const v = state.vote;
 
   if(!v){
-
-    return '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ハウスルールなどを みんなで きめられます。</p>' +
+    const net = state.voteMode === 'net';
+    const modes = '<div class="chips" style="margin-bottom:12px">' +
+      '<button type="button" class="chip sm" data-votemode="local" aria-pressed="'+(!net)+'">この スマホで</button>' +
+      '<button type="button" class="chip sm" data-votemode="net" aria-pressed="'+net+'">みんなの スマホで' + (pollInbox().length ? ' <span style="color:var(--danger)">●</span>' : '') + '</button></div>';
+    if(net && !isOnline()){
+      return modes + '<div class="note">みんなの スマホで とうひょう を つくるには、「なかまの なまえ」で ぼうけんしゃの証を つくって ください。<br>' +
+        'QRコードで よばれた ときは、証が なくても さんか できます。</div>' +
+        '<button class="btn small" data-go2="#/tool/names" style="width:100%;margin-top:10px">なかまの なまえへ</button>';
+    }
+    return modes + (net ? '<p class="count" style="margin:0 0 10px">つくった とうひょうに、フレンドや その場の 人が それぞれの スマホから とうひょう できます。けっかは しめきる まで ひみつです。</p>'
+        : '<p class="count" style="margin:0 0 10px">つぎに あそぶ ゲームや、ハウスルールなどを みんなで きめられます。</p>') +
       '<div class="row" style="margin-bottom:10px">' +
         '<input type="text" id="voteTitle" placeholder="なにを きめる？（れい：つぎの ゲーム）" value="'+esc(state.voteTitle||'')+'" style="flex:2"></div>' +
 
@@ -6588,7 +6782,9 @@ function toolVoteHTML(){
         '<button class="btn small" style="flex:1" id="voteRandom">ランダムに 4つ</button>' +
         '<button class="btn small" style="flex:1" id="voteClearPick">えらびなおす</button></div>' +
 
-      '<button class="btn primary" id="voteStart" style="width:100%">とうひょうを はじめる</button>';
+      (net ? pollOptionsHTML() : '') +
+      '<button class="btn primary" id="voteStart" style="width:100%">' + (net ? 'みんなで とうひょうを はじめる' : 'とうひょうを はじめる') + '</button>' +
+      (net ? pollListHTML() : '');
   }
 
   /* とうひょう中は かずを いっさい ださない */
@@ -6729,7 +6925,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.25-d';
+const APP_VERSION = '2026.09.26-b';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -8297,6 +8493,7 @@ function maybeCheckFriends(){
   maybeCheckFriends.at = Date.now();
   refreshFriends().then(ch => { if(ch) render(); askFriendRequests(); }).catch(() => {});
   refreshNoteInbox().then(ch => { if(ch && currentRoute().param === 'memo') render(); }).catch(() => {});
+  refreshPolls().then(ch => { const rt = currentRoute(); if(ch && (rt.name === 'tools' || rt.param === 'vote')) render(); }).catch(() => {});
 }
 function maybeRefreshHelp(key){
   if(!isOnline()) return;
@@ -9804,13 +10001,14 @@ function bind(r){
     let goals;
     if(amidaGoalMode === 'hit'){
       goals = names.map((_, i) => i === 0 ? 'あたり' : 'はずれ');
-      goals = shuffled(goals);
     }else if(amidaGoalMode === 'free'){
       const g = parseNames((document.getElementById('amidaGoals')||{value:''}).value);
       goals = names.map((_, i) => g[i] || (i+1)+'ばんめ');
     }else{
       goals = names.map((_, i) => (i+1)+'ばんめ');
     }
+    /* した の ふだは いつも ばらばらに ならべる（いれた じゅんばんで どこに なにが あるか わからない ように） */
+    goals = shuffled(goals);
 
     state.amida = amidaInit(names, goals);
     amidaShuffleLines(state.amida);     /* さいしょから すこし 線を ひいて おく */
@@ -10128,8 +10326,44 @@ function bind(r){
     updateVotePicks();
   };
 
+  app.querySelectorAll('[data-votemode]').forEach(b => b.onclick = () => {
+    keepVoteInputs();
+    state.voteMode = b.dataset.votemode; render();
+    if(state.voteMode === 'net' && isOnline()) refreshPolls().then(ch => { if(ch) render(); }).catch(() => {});
+  });
+  if(state.voteMode === 'net' && isOnline() && document.getElementById('voteStart') && (!refreshPolls.at || Date.now() - refreshPolls.at > 5000)){
+    refreshPolls().then(ch => { if(ch) render(); }).catch(() => {});
+  }
+  const po = () => state.pollOpt || (state.pollOpt = {named:false, multi:false, invite:[]});
+  app.querySelectorAll('[data-pollnamed]').forEach(b => b.onclick = () => { keepVoteInputs(); po().named = b.dataset.pollnamed === '1'; render(); });
+  app.querySelectorAll('[data-pollmulti]').forEach(b => b.onclick = () => { keepVoteInputs(); po().multi = b.dataset.pollmulti === '1'; render(); });
+  app.querySelectorAll('[data-pollinv]').forEach(b => b.onclick = () => {
+    const inv = po().invite, id = b.dataset.pollinv, k = inv.indexOf(id);
+    if(k >= 0) inv.splice(k, 1); else inv.push(id);
+    b.setAttribute('aria-pressed', String(k < 0));
+  });
   const voteStart = document.getElementById('voteStart');
-  if(voteStart) voteStart.onclick = () => {
+  if(voteStart && state.voteMode === 'net') voteStart.onclick = async () => {
+    keepVoteInputs();
+    const title = (state.voteTitle || '').trim() || 'とうひょう';
+    const typed = parseNames(state.voteItems || '');
+    const picked = state.votePick || [];
+    const names = typed.concat(picked.filter(n => typed.indexOf(n) < 0));
+    if(names.length < 2) return toast('こうほを 2つ いじょう えらんで ください');
+    const items = names.map(n => { const g = state.games.find(x => x.title === n);
+      return {t:n, g: g ? g.id : '', img: (g && g.images && /^https?:/.test(g.images[0] || '')) ? g.images[0] : ''}; });
+    const o = po();
+    voteStart.disabled = true;
+    try{
+      const d = await api('/api/polls', {method:'POST', body:{title, items, named:o.named, multi:o.multi, invite:o.invite}});
+      state.votePick = []; state.voteTitle = ''; state.voteItems = ''; state.voteQuery = '';
+      state.pollOpt = null;
+      refreshPolls().catch(() => {});
+      toast(d.invited ? d.invited + '人に とどけました' : 'とうひょうを つくりました');
+      go('#/poll/' + d.code);
+    }catch(e){ toast(e.message); voteStart.disabled = false; }
+  };
+  else if(voteStart) voteStart.onclick = () => {
     keepVoteInputs();
     const title = (state.voteTitle || '').trim();
     const typed = parseNames(state.voteItems || '');
@@ -10161,6 +10395,8 @@ function bind(r){
   if(voteReset) voteReset.onclick = () => {
     ask('とうひょうを やりなおしますか？', () => { state.vote = null; saveVote(); render(); });
   };
+
+  if(r.name === 'poll') bindPoll(r.param);
 
   /* --- てばん --- */
   const turnStart = document.getElementById('turnStart');
@@ -11014,6 +11250,8 @@ function bind(r){
     state.noteNew = false; state.noteOpen = list.length === 1 ? list[0].id : '';
     go('#/tool/memo');
   });
+  const pib = app.querySelector('[data-pollinbox]');
+  if(pib) pib.onclick = () => { const l = pollInbox(); if(l.length === 1) go('#/poll/' + l[0].code); else { state.voteMode = 'net'; go('#/tool/vote'); } };
   const claimAdmin = document.getElementById('claimAdmin');
   if(claimAdmin) claimAdmin.onclick = () => {
     ask('あなたが ずかんの かんりにんに なります。\n1人だけで、あとから かえられません。よろしいですか？', async () => {
