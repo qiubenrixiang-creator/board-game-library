@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-26T13:29:00.222Z",
+  "version": "2026-10-01T03:57:09.221Z",
   "tags": [
     {
       "name": "初心者",
@@ -111,6 +111,34 @@
     }
   ],
   "games": [
+    {
+      "id": "gmup067uoe9smu",
+      "title": "マジカル・アスリート",
+      "reading": "まじかる・あすりーと",
+      "videos": [],
+      "wish": true,
+      "images": [
+        "https://arclightgames.jp/wp-content/uploads/2026/05/MA_box_L_low_square-575x575.jpg"
+      ],
+      "playersMin": 2,
+      "playersMax": 6,
+      "playTime": 30,
+      "age": 6,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "中級者",
+        "初心者"
+      ],
+      "summary": "",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "addedAt": ""
+    },
     {
       "id": "gmu9tmigew87gt",
       "title": "SPACE MACHO 〜ダイスと共にあらんことを〜",
