@@ -13,7 +13,7 @@
 <meta name="apple-mobile-web-app-title" content="BOARD GAME LIBRARY">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">
 <style>
 /* =========================================================
    Board Game Library — 8bit RPG theme
@@ -33,6 +33,8 @@
   --scrim:rgba(10,14,36,.76);
   --px:16px;
   --font:"DotGothic16","HiraMaruProN-W4","Hiragino Maru Gothic ProN","MS Gothic","Osaka-mono",monospace;
+  /* せつめい文など ながい 文に つかう よみやすい 文字 */
+  --font-read:"BIZ UDPGothic","Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic","Meiryo",sans-serif;
 }
 html[data-theme="day"]{
   --bg:#E8E1CE;
@@ -264,6 +266,10 @@ img{image-rendering:auto}
 .thumb.mini .glyph{font-size:15px}
 .gcard h3{font-size:16px;line-height:1.4;margin:0 0 4px}
 .gcard .summary{font-size:12.5px;color:var(--muted);margin:5px 0 6px;line-height:1.6}
+/* せつめい文・ルール・ことばの いみ は よみやすい 文字で（見出しや ボタンは ドットの まま） */
+.read, .section .body, .summary-lead, .gcard .summary, .dict-d, .dict-ex, .guide-body, .term-pop .tp-d{
+  font-family:var(--font-read);-webkit-font-smoothing:antialiased;letter-spacing:.01em;
+}
 .meta{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:12.5px;color:var(--muted)}
 .meta b{color:var(--text);font-weight:400}
 .stars{color:var(--accent);letter-spacing:1px;font-size:13px}
@@ -3255,7 +3261,7 @@ function randomResultHTML(g){
   return '<div>' + img +
     '<div class="win" style="margin-top:12px">' +
       '<p class="encounter" style="margin:0 0 8px">'+esc(g.title)+' が あらわれた！</p>' +
-      '<p class="sub" style="margin:0 0 10px">'+esc(g.summary||'')+'</p>' +
+      '<p class="sub read" style="margin:0 0 10px">'+esc(g.summary||'')+'</p>' +
       '<div class="meta"><span><b>'+playersText(g)+'</b></span><span><b>'+(Number(g.playTime)||0)+'分</b></span>' +
       '<span>むずかしさ '+stars(g.difficulty)+'</span></div>' +
       '<div class="tagline">'+(g.tags||[]).map(t=>'<span class="tag">'+esc(t)+'</span>').join('')+'</div>' +
@@ -3327,7 +3333,7 @@ function viewDetail(id){
               '</div>' +
               (isEditing(g.id, r.i)
                 ? playEditHTML(g.id, r.i, r.pl)
-                : ((r.pl.m ? '<p style="margin:4px 0 0;white-space:pre-wrap;font-size:14px">'+esc(r.pl.m)+'</p>' : '')
+                : ((r.pl.m ? '<p class="read" style="margin:4px 0 0;white-space:pre-wrap;font-size:14px">'+esc(r.pl.m)+'</p>' : '')
                    + playPhotosHTML(r.pl, g.id, r.i))) +
             '</div>').join('') +
           '<button class="btn small" data-go2="#/records" style="width:100%">ぜんぶの きろくを みる</button>' +
@@ -5472,7 +5478,7 @@ function viewRecords(){
       (isEditing(r.g.id, r.i)
         ? playEditHTML(r.g.id, r.i, r.pl)
         : ((r.pl.m
-            ? '<p style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>'
+            ? '<p class="read" style="margin:10px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.8">'+esc(r.pl.m)+'</p>'
             : (isEmptyPlay(r.pl) ? '<p class="count" style="margin:8px 0 0">（なにも かいて いない きろく）</p>' : ''))
            + playPhotosHTML(r.pl, r.g.id, r.i))) +
     '</div>';
@@ -6965,7 +6971,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.02-a';
+const APP_VERSION = '2026.10.02-b';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -8220,7 +8226,7 @@ function dictQuizHTML(){
   return '<div class="win" style="padding:14px">' +
     '<p class="count" style="margin:0 0 6px">もんだい ' + (q.i + 1) + ' / ' + q.qs.length + '　せいかい ' + q.score + '</p>' +
     '<p style="margin:0 0 4px;color:var(--accent-2)">この いみの ことばは どれ？</p>' +
-    '<p style="margin:0 0 12px;font-size:15px;line-height:1.7">' + esc(dictMask(x, DICT_Q[x.id] || x.d)) + '</p>' +
+    '<p class="read" style="margin:0 0 12px;font-size:15px;line-height:1.7">' + esc(dictMask(x, DICT_Q[x.id] || x.d)) + '</p>' +
     q.choices.map(id => {
       const y = DICT.find(z => z.id === id);
       const st = ans ? (id === x.id ? ' ok' : (id === ans ? ' ng' : '')) : '';
@@ -8300,7 +8306,7 @@ function openTermPop(id){
   el.innerHTML = '<div class="term-pop">' +
     '<p style="margin:0 0 2px;font-size:17px;color:var(--accent)">' + esc(x.w) + '</p>' +
     '<p class="count" style="margin:0 0 8px">' + esc(x.y) + '</p>' +
-    '<p style="margin:0 0 8px;font-size:14.5px;line-height:1.7">' + esc(x.d) + '</p>' +
+    '<p class="tp-d" style="margin:0 0 8px;font-size:14.5px;line-height:1.7">' + esc(x.d) + '</p>' +
     dictDiagramHTML(x) +
     '<div class="btn-row" style="margin-top:10px">' +
       '<button class="btn small" data-termclose style="flex:1">とじる</button>' +
@@ -8369,7 +8375,7 @@ function dictItemHTML(x){
     const gs = dictGames(x);
     html += '<div class="dict-body">' +
       ((x.a || []).length ? '<p class="count" style="margin:0 0 6px">べつの よびかた：' + esc(x.a.join('・')) + '</p>' : '') +
-      '<p style="margin:0 0 10px;line-height:1.8;font-size:14px">' + esc(x.m) + '</p>' +
+      '<p class="read" style="margin:0 0 10px;line-height:1.8;font-size:14px">' + esc(x.m) + '</p>' +
       dictDiagramHTML(x) +
       '<div class="dict-ex"><span class="catlabel" style="margin:0 0 2px">れい</span>' + esc(x.e) + '</div>' +
       '<p class="count" style="margin:10px 0 0">' + (isKnown(x.id)
