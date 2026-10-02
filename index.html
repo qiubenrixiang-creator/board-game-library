@@ -788,6 +788,36 @@ body.big-tool .lede{font-size:26px}
   font-size:11px;margin:6px 14px 10px;line-height:1.5;
 }
 
+/* はじめての 人への あんない */
+.guide-back{
+  position:fixed;inset:0;z-index:135;background:rgba(6,8,18,.8);
+  display:flex;align-items:flex-end;justify-content:center;
+  padding:0 12px calc(84px + env(safe-area-inset-bottom));
+}
+body.guiding .tabbar{z-index:136}
+body.guiding .tab{pointer-events:none}
+.tab.guide-hl{color:var(--accent);background:rgba(248,208,48,.12);animation:guideBlink 1s steps(2) infinite}
+.tab.guide-hl .i{filter:drop-shadow(0 0 3px currentColor)}
+@keyframes guideBlink{ 50%{ box-shadow:inset 0 0 0 3px var(--accent) } }
+.guide-win{
+  width:100%;max-width:440px;background:var(--panel);border:3px solid var(--frame);
+  box-shadow:var(--shadow);padding:14px 16px 16px;position:relative;
+}
+.guide-top{display:flex;align-items:center;gap:12px}
+.guide-ico{width:44px;height:44px;flex:0 0 auto;color:var(--accent);display:block}
+.guide-ico svg{width:100%;height:100%}
+.guide-step{display:block;font-size:11px;color:var(--muted);letter-spacing:.08em}
+.guide-win h2{font-size:19px;color:var(--accent);margin:2px 0 0;line-height:1.4}
+.guide-win .guide-body{margin:12px 0 12px;font-size:14.5px;line-height:1.85}
+.guide-win .guide-body p{margin:0 0 6px}
+.guide-win .guide-body p::before{content:"▼ ";color:var(--accent)}
+.guide-point{font-size:12.5px;color:var(--accent-2);margin:0 0 12px}
+.guide-dots{display:flex;gap:7px;justify-content:center;margin:0 0 12px}
+.guide-dots span{width:9px;height:9px;background:var(--muted);opacity:.4;display:block}
+.guide-dots span.on{background:var(--accent);opacity:1}
+.guide-skip{position:absolute;top:10px;right:10px}
+@media (prefers-reduced-motion:reduce){ .tab.guide-hl{animation:none;box-shadow:inset 0 0 0 3px var(--accent)} }
+
 /* かくにん ウィンドウ（iPhone の そっけない ひょうじの かわり） */
 .dialog-back{
   position:fixed;inset:0;z-index:140;display:grid;place-items:center;padding:22px;
@@ -1020,9 +1050,19 @@ const KEY = {
   net:'bgl.netPlays',         /* さかばから とどいた きろく */
   gone:'bgl.gonePlays',       /* けした きろくの しるし */
   welcome:'bgl.welcomeDone',  /* さいしょの あんないを すませたか */
+  guide:'bgl.guideSeen',      /* はじめての 人への あんないを 見たか */
   frWait:'bgl.friendWait',    /* リンクで もらった ともだちコード */
   profile:'bgl.myProfile'     /* じぶんの しょうごう・いちおし */
 };
+
+/* はじめて この サイトに きた 人か（bgl. の データが ひとつも ない）。
+   ほかの ところが なにか かきこむ まえに しらべて おく。 */
+const FIRST_VISIT = (() => {
+  try{
+    for(let k = 0; k < localStorage.length; k++){ if(/^bgl\./.test(localStorage.key(k) || '')) return false; }
+    return true;
+  }catch(e){ return false; }
+})();
 
 const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
 const LOT_PURPOSES = ['さいしょの人','かたづける人','せつめいする人','おごる人'];
@@ -6925,7 +6965,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.09.26-b';
+const APP_VERSION = '2026.10.02-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -8756,6 +8796,79 @@ function applySuggestion(g, x, opt){
   g[x.field] = x.text;
   if(x.field === 'summary') g.tags = (g.tags || []).filter(t => t !== 'データみきにゅう');
 }
+/* ---------------- はじめての 人への あんない ----------------
+   はじめて きた 人に 1かいだけ だす。かんり → つかいかた から いつでも 見なおせる。
+   tab は したの タブの ばんごう（ひからせる）。-1 なら ひからせない。 */
+const GUIDE_PAGES = [
+  {icon:'chest',  tab:-1, title:'ようこそ！',
+   body:['ここは この いえに ある ボードゲームを あつめた としょかん です。',
+         '「きょう なにで あそぶ？」を きめる ところから、あそぶ ときの どうぐ まで そろって います。'],
+   point:'したの 5つの ボタンを じゅんばんに しょうかい します。'},
+  {icon:'search', tab:0, title:'さがす',
+   body:['にんずうと じかん、あそびたい きぶんを えらぶと、いま あそべる ゲームが でて きます。',
+         'なまえで さがす ことも できます。']},
+  {icon:'book',   tab:1, title:'ずかん',
+   body:['ある ゲームを しゃしんで ながめられます。',
+         'ゲームを タップすると、あそびかたや せつめいの どうがが 見られます。']},
+  {icon:'die',    tab:2, title:'おまかせ',
+   body:['まよったら ここ。ボタン ひとつで ゲームを えらんで くれます。',
+         '「さがす」で えらんだ じょうけんの 中から ひきます。']},
+  {icon:'sword',  tab:3, title:'どうぐ',
+   body:['チーム分け・てばん・あみだくじ・とうひょう・タイマー・てんすう表など、あそぶ ときに べんりな どうぐが あります。',
+         'とうひょうは QRコードで みんなの スマホから さんか できます。']},
+  {icon:'gear',   tab:4, title:'さいごに',
+   body:['せつめいの 中で <span class="term">てんせん</span> が ついた ことばを タップすると、いみが でます。',
+         '「かんり」は ゲームを とうろく する 人の ための ばしょ です。'],
+   point:'この あんないは「かんり → つかいかた」から いつでも 見なおせます。'}
+];
+let guideStep = 0;
+function openGuide(){ guideStep = 0; showGuide(); }
+function showGuide(){
+  let back = document.getElementById('guideBack');
+  if(!back){
+    back = document.createElement('div');
+    back.id = 'guideBack'; back.className = 'guide-back';
+    back.setAttribute('role', 'dialog'); back.setAttribute('aria-modal', 'true');
+    document.body.appendChild(back);
+  }
+  const n = GUIDE_PAGES.length, i = guideStep, pg = GUIDE_PAGES[i], last = i === n - 1;
+  back.innerHTML = '<div class="guide-win">' +
+    (last ? '' : '<button class="mini guide-skip" id="guideSkip">とばす</button>') +
+    '<div class="guide-top"><span class="guide-ico" data-icon="' + pg.icon + '"></span>' +
+      '<div><span class="guide-step">' + (pg.tab >= 0 ? 'したの ひかって いる ボタン' : 'つかいかた') + '　' + (i + 1) + '／' + n + '</span>' +
+      '<h2>' + pg.title + '</h2></div></div>' +
+    '<div class="guide-body">' + pg.body.map(t => '<p>' + t + '</p>').join('') + '</div>' +
+    (pg.point ? '<p class="guide-point">' + pg.point + '</p>' : '') +
+    '<div class="guide-dots">' + GUIDE_PAGES.map((_, k) => '<span' + (k === i ? ' class="on"' : '') + '></span>').join('') + '</div>' +
+    '<div class="btn-row" style="gap:10px">' +
+      (i > 0 ? '<button class="btn small" id="guidePrev" style="flex:1">◀ もどる</button>' : '') +
+      '<button class="btn primary" id="guideNext" style="flex:2">' + (last ? 'ぼうけんを はじめる' : 'つぎへ ▶') + '</button>' +
+    '</div></div>';
+  paintIcons(back);
+  document.body.classList.add('guiding');
+  document.querySelectorAll('.tabbar .tab').forEach((t, k) => t.classList.toggle('guide-hl', k === pg.tab));
+  const prev = document.getElementById('guidePrev');
+  if(prev) prev.onclick = () => { guideStep--; showGuide(); };
+  document.getElementById('guideNext').onclick = () => { if(last) closeGuide(); else { guideStep++; showGuide(); } };
+  const skip = document.getElementById('guideSkip');
+  if(skip) skip.onclick = closeGuide;
+  const nx = document.getElementById('guideNext');
+  try{ nx.focus({preventScroll:true}); }catch(e){}
+}
+function closeGuide(){
+  const back = document.getElementById('guideBack');
+  if(back) back.remove();
+  document.body.classList.remove('guiding');
+  document.querySelectorAll('.tabbar .tab').forEach(t => t.classList.remove('guide-hl'));
+  store.write(KEY.guide, true);
+}
+document.addEventListener('keydown', e => {
+  if(!document.getElementById('guideBack')) return;
+  if(e.key === 'Escape') closeGuide();
+  if(e.key === 'ArrowRight' && guideStep < GUIDE_PAGES.length - 1){ guideStep++; showGuide(); }
+  if(e.key === 'ArrowLeft' && guideStep > 0){ guideStep--; showGuide(); }
+});
+
 function helpAdminHTML(){
   const h = state.help;
   let html = '<div class="divider"></div><h2 class="sec">ずかんづくりの てつだい</h2>';
@@ -9475,6 +9588,15 @@ function viewAdmin(){
       'あそんだ きろく（かんそう・しゃしん）と、かしだし先の なまえは サイトに あげません。<br>' +
       'これらは この スマホの 中だけに のこります。</div>' +
 
+    '<div class="divider"></div><h2 class="sec">データの ひかえ</h2>' +
+    '<p class="count">この スマホの ずかんを まるごと 1つの ファイルに ほぞん します（あそんだ きろく・かしだしも 入ります）。<br>' +
+      'スマホを かえる とき・まちがえて けした ときに、その ファイルから もとに もどせます。</p>' +
+    backupNoticeHTML() +
+    '<div class="btn-row" style="margin-bottom:16px">' +
+      '<button class="btn small" id="backupBtn" style="flex:1">ひかえを ほぞん</button>' +
+      '<button class="btn small" id="importPick" style="flex:1">ひかえから もどす</button>' +
+      '<input type="file" id="importFile" accept=".json,application/json" hidden></div>' +
+
     helpAdminHTML() +
     '<div class="divider"></div><h2 class="sec">ぼうけんしゃの証・なかま</h2>' +
     '<p class="count">じぶんの ぼうけんしゃの証と なかまは「どうぐ → なかまの なまえ」に あります。</p>' +
@@ -9495,6 +9617,10 @@ function viewAdmin(){
       'したの ボタンを おすと ぜんぶ けして からっぽに し、この スマホの へんしゅうを ゆうせんする せっていが ONに なります。<br>' +
       'ここで つくった ないようは あなたの スマホの 中だけに のこり、ほかの 人の 画面は かわりません。</p>' +
     '<button class="btn danger" id="makeMineBtn" style="margin-bottom:16px">からっぽに して じぶんの ずかんを つくる</button>' +
+
+    '<div class="divider"></div><h2 class="sec">つかいかた</h2>' +
+    '<p class="count">はじめて きた 人に でる あんないを、もういちど 見られます。</p>' +
+    '<button class="btn small" id="guideOpen" style="width:100%;margin-bottom:16px">つかいかたの あんないを 見る</button>' +
 
     '<div class="divider"></div><h2 class="sec">おとの せってい</h2>' +
     '<p class="count" style="margin:0 0 8px">BGM（ぜんきょく）と ジョブの こうかおん：<span style="color:var(--accent)">イワシロ音楽素材</span>（https://iwashiro-sounds.work/）</p>' +
@@ -11014,6 +11140,10 @@ function bind(r){
   if(exportBtn) exportBtn.onclick = exportLibrary;
   const importFile = document.getElementById('importFile');
   if(importFile) importFile.onchange = importLibrary;
+  const importPick = document.getElementById('importPick');
+  if(importPick && importFile) importPick.onclick = () => importFile.click();
+  const guideOpen = document.getElementById('guideOpen');
+  if(guideOpen) guideOpen.onclick = openGuide;
   const localOnly = document.getElementById('localOnly');
   if(localOnly) localOnly.onchange = e => {
     store.write(KEY.localOnly, e.target.checked);
@@ -11506,11 +11636,22 @@ function exportLibrary(){
                          : 'ほぞんしました（かんそう・かしだし先は 入れて いません）');
 }
 /* じぶん用の ひかえ（ぜんぶ 入る。サイトには あげない） */
-function backupLibrary(){
+async function backupLibrary(){
   const payload = { version:new Date().toISOString(), backup:true, tags:state.tags, games:state.games };
-  downloadJSON(payload, 'bgl-backup-' + todayStr() + '.json');
+  const name = 'bgl-backup-' + todayStr() + '.json';
+  /* iPhone などは きょうゆうシートから「"ファイル"に ほぞん」や LINE で おくれる */
+  try{
+    const file = new File([JSON.stringify(payload, null, 2)], name, {type:'application/json'});
+    if(navigator.canShare && navigator.canShare({files:[file]}) && /iPhone|iPad|Android/i.test(navigator.userAgent)){
+      await navigator.share({files:[file], title:name});
+      store.write(KEY.backupAt, todayStr());
+      toast('じぶん用の ひかえを つくりました'); render();
+      return;
+    }
+  }catch(e){ if(e && e.name === 'AbortError') return; }
+  downloadJSON(payload, name);
   store.write(KEY.backupAt, todayStr());
-  toast('じぶん用の ひかえを ほぞんしました');
+  toast('じぶん用の ひかえを ほぞんしました'); render();
 }
 /* さいごに ひかえを つくってから 何日 たったか */
 function daysSinceBackup(){
@@ -11542,13 +11683,17 @@ function importLibrary(e){
     try{
       const data = JSON.parse(fr.result);
       if(!data || !Array.isArray(data.games)) throw new Error('format');
-      state.games = data.games;
-      if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
-      store.write(KEY.games, state.games);
-      store.write(KEY.tags, state.tags);
-      markDirty();                                  /* この端末の ないようを まもる */
-      if(data.version) store.write(KEY.pubver, String(data.version));
-      render(); toast('よみこみました（'+data.games.length+'さくひん）');
+      ask('この スマホの ずかん（' + state.games.length + 'さくひん）を、えらんだ ファイルの ないよう（' + data.games.length + 'さくひん）に いれかえます。\n' +
+          'いまの ないようは ひかえに のこすので、あとで もとに もどせます。よろしいですか？', () => {
+        keepBeforeAdopt();
+        state.games = data.games;
+        if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
+        store.write(KEY.games, state.games);
+        store.write(KEY.tags, state.tags);
+        markDirty();                                  /* この端末の ないようを まもる */
+        if(data.version) store.write(KEY.pubver, String(data.version));
+        render(); toast('よみこみました（'+data.games.length+'さくひん）');
+      });
     }catch(err){ toast('よみこめませんでした。ほぞんした データの ファイルを えらんで ください'); }
   };
   fr.readAsText(file);
@@ -11887,6 +12032,8 @@ adoptKaiFromUrl();
 catchFriendCode();
 render();
 syncPublished();
+/* はじめて きた 人には つかいかたの あんないを だす（とうひょうに よばれて きた ときは ださない） */
+if(FIRST_VISIT && !store.read(KEY.guide, false) && !/^#\/(poll|print)/.test(location.hash)) setTimeout(openGuide, 500);
 try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{}); }catch(e){}
 /* ログイン して いれば、そっと さかばと やりとり する */
 if(isOnline()){
