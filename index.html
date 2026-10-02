@@ -516,7 +516,10 @@ h2.sec::before{content:"■ ";font-size:12px}
 .dg .dg-paper{fill:#f4f0e6;stroke:var(--frame);stroke-width:2}
 .term{border-bottom:2px dotted var(--accent-2);cursor:pointer;color:inherit}
 .term:active{background:rgba(255,255,255,.12)}
-.term-tag{cursor:pointer;border-color:var(--accent-2);color:var(--accent-2)}
+/* タグの ことばも 本文と おなじ 点線で じてんに つなぐ（わくは ほかの タグと おなじ） */
+.term-tag{cursor:pointer}
+.term-tag .tw{border-bottom:2px dotted var(--accent-2)}
+.term-tag:active{background:rgba(255,255,255,.12)}
 .term-pop-back{position:fixed;inset:0;z-index:125;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;padding:0 10px calc(10px + env(safe-area-inset-bottom))}
 .term-pop-back[hidden]{display:none}
 .term-pop{width:100%;max-width:520px;max-height:80vh;overflow:auto;background:var(--panel);border:3px solid var(--accent);box-shadow:var(--shadow);padding:14px}
@@ -3332,7 +3335,7 @@ function viewDetail(id){
       '<dt>むずかしさ</dt><dd>'+stars(g.difficulty)+'</dd>' + optional.join('') +
       (playCount(g) ? '<dt>あそんだ かず</dt><dd>'+playCount(g)+'かい（さいご '+esc(dateLabel(lastPlayed(g)))+'）</dd>' : '') +
       '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+((g.tags||[]).map(t => termForTag(t)
-        ? '<span class="tag term-tag" data-term="'+termForTag(t)+'" role="button" tabindex="0">'+esc(t)+' ？</span>'
+        ? '<span class="tag term-tag" data-term="'+termForTag(t)+'" role="button" tabindex="0" aria-label="'+esc(t)+'（ことばの いみを 見る）"><span class="tw">'+esc(t)+'</span></span>'
         : '<span class="tag">'+esc(t)+'</span>').join('')||'—')+'</div></dd>' +
     '</dl></div>' +
 
@@ -6997,7 +7000,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.02-c';
+const APP_VERSION = '2026.10.02-d';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
