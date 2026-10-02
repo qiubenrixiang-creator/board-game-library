@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-02T12:07:23.289Z",
+  "version": "2026-10-02T12:39:21.682Z",
   "tags": [
     {
       "name": "初心者",
@@ -648,28 +648,33 @@
     {
       "id": "g008",
       "title": "あいうえバトル",
+      "reading": "あいうえばとる",
+      "videos": [
+        "https://youtu.be/Yx2VDWOo4Uc?si=GAPIDzNqsgBYy1ma"
+      ],
+      "wish": false,
       "images": [
         "https://imagedelivery.net/QondspN4HIUvB_R16-ddAQ/61a34bff7d278d299b0a70a2/a764753e78b87e5ae5b8.jpg/fit=cover,w=805,h=575"
       ],
-      "summary": "だんだんと明かされる文字。あの言葉はいったい何!?",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
       "playersMin": 2,
       "playersMax": 5,
       "playTime": 15,
       "age": 8,
       "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
       "tags": [
         "初心者",
         "盛り上がる",
         "対戦"
       ],
-      "reading": "あいうえばとる",
-      "videos": [
-        "https://youtu.be/Yx2VDWOo4Uc?si=GAPIDzNqsgBYy1ma"
-      ],
-      "wish": false
+      "summary": "50音から１文字ずつ攻撃して言葉を推理、相手の言葉はなんでしょう？",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "addedAt": ""
     },
     {
       "id": "g009",
