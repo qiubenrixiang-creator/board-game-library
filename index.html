@@ -437,6 +437,14 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th{color:var(--accent)}
 
 /* ---------- メモ・とうひょう ---------- */
+.memo-saved{display:flex;gap:10px;align-items:center;border:2px solid var(--muted);padding:8px 10px;margin-bottom:8px;background:var(--panel)}
+.memo-saved.on{border-color:var(--accent)}
+.memo-saved .ms-t{flex:1;min-width:0;display:grid;gap:1px}
+.memo-saved .ms-t b{font-size:14px;overflow-wrap:anywhere}
+.memo-saved .ms-kind{font-size:10.5px;color:var(--accent-2)}
+.memo-saved .ms-date{font-size:11px;color:var(--muted)}
+.memo-saved .ms-prev{font-family:var(--font-read);font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.memo-saved .ms-btns{flex:0 0 auto;display:grid;gap:6px}
 .memo-line{
   display:flex;align-items:center;gap:8px;margin-bottom:8px;
 }
@@ -1073,6 +1081,8 @@ const KEY = {
   names:'bgl.lastNames',         /* まえに いれた なまえ */
   players:'bgl.playerNames',     /* いつもの なかまの なまえ */
   memo:'bgl.memo',               /* メモ */
+  memoSaved:'bgl.memoSaved',     /* ほぞんした メモ（チェックしき・じゆうに かく） */
+  bgmBg:'bgl.bgmBackground',     /* ほかの アプリを ひらいた ときも BGMを ながすか（fg／bg） */
   vote:'bgl.vote',               /* とうひょう */
   turn:'bgl.turn',               /* てばん */
   backupAt:'bgl.lastBackup',     /* さいごに ひかえを つくった日 */
@@ -1530,8 +1540,12 @@ const sound = {
   trackId: store.read(KEY.bgmTrack, BGM_TRACKS[0].id),
   mode: store.read(KEY.bgmMode, 'one'),
   volume: Math.min(1, Math.max(0, Number(store.read(KEY.bgmVol, 0.45)))),
+  bgMode: store.read(KEY.bgmBg, 'fg') === 'bg' ? 'bg' : 'fg',   /* fg＝サイトを ひらいて いる ときだけ／bg＝うらでも ながす */
   bgmError: false
 };
+function isIOS(){
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+}
 function currentTrack(){
   return BGM_TRACKS.find(t => t.id === sound.trackId) || BGM_TRACKS[0];
 }
@@ -1599,6 +1613,25 @@ class BgmPlayer{
     this._ev = {};
     this._el = null;             /* ふつうの Audio（よび） */
     this._fallback = false;
+  }
+  /* iPhone で うらでも ながす ときは ふつうの Audio で ならす（Web Audio は うらに まわると とまる ため） */
+  useElement(on){
+    on = !!on;
+    if(on === !!this._fallback || !/^https?:$/.test(location.protocol)) return;
+    const playing = !this.paused || this._want;
+    const at = this.currentTime || 0;
+    this.pause();
+    this._fallback = on;
+    if(on){
+      const el = this._useEl();
+      if(el.src !== new URL(this._src, location.href).href) el.src = this._src;
+      el.loop = this._loop; el.volume = this._vol;
+      const seek = () => { try{ el.currentTime = at; }catch(e){} el.removeEventListener('loadedmetadata', seek); };
+      if(el.readyState >= 1) seek(); else el.addEventListener('loadedmetadata', seek);
+    }else{
+      this._pos = at;
+    }
+    if(playing){ const p = this.play(); if(p && p.catch) p.catch(() => {}); }
   }
   addEventListener(t, f){ (this._ev[t] = this._ev[t] || []).push(f); }
   _emit(t){ (this._ev[t] || []).forEach(f => { try{ f(); }catch(e){} }); }
@@ -1807,7 +1840,47 @@ document.addEventListener('visibilitychange', () => {
   if(!document.hidden && audioCtx && audioCtx.state !== 'running' && sound.bgmOn){
     try{ audioCtx.resume(); }catch(e){}
   }
+  /* 「サイトを ひらいて いる ときだけ」なら、ほかの アプリへ うつったら とめて、もどったら また ながす */
+  if(!sound.bgm) return;
+  if(document.hidden){
+    if(sound.bgMode === 'fg' && !sound.bgm.paused){ sound.bgm.pause(); sound.pausedByHide = true; }
+  }else if(sound.pausedByHide){
+    sound.pausedByHide = false;
+    if(sound.bgmOn && sound.bgm.paused){ const p = sound.bgm.play(); if(p && p.catch) p.catch(() => {}); }
+  }
 });
+/* うらで ながす ときの せってい（ロック画面の そうさ・iPhone の おとの あつかい） */
+function applyBgMode(){
+  try{ if(navigator.audioSession) navigator.audioSession.type = sound.bgMode === 'bg' ? 'playback' : 'auto'; }catch(e){}
+  if(sound.bgm && isIOS()) sound.bgm.useElement(sound.bgMode === 'bg');
+  updateMediaSession();
+}
+function setBgMode(m){
+  sound.bgMode = m === 'bg' ? 'bg' : 'fg';
+  store.write(KEY.bgmBg, sound.bgMode);
+  applyBgMode();
+}
+function updateMediaSession(){
+  if(!('mediaSession' in navigator)) return;
+  try{
+    navigator.mediaSession.metadata = new MediaMetadata({title: currentTrack().name, artist: 'BOARD GAME LIBRARY', album: 'ジュークボックス'});
+    if(!updateMediaSession._set){
+      updateMediaSession._set = true;
+      navigator.mediaSession.setActionHandler('play', () => setBgmOn(true));
+      navigator.mediaSession.setActionHandler('pause', () => setBgmOn(false));
+      navigator.mediaSession.setActionHandler('nexttrack', () => jukeStep(1));
+      navigator.mediaSession.setActionHandler('previoustrack', () => jukeStep(-1));
+    }
+  }catch(e){}
+}
+function bgModeChipsHTML(){
+  return '<div class="chips" style="margin-bottom:6px">' +
+    '<button class="chip sm" data-bgmode="fg" aria-pressed="' + (sound.bgMode !== 'bg') + '">サイトを ひらいて いる ときだけ</button>' +
+    '<button class="chip sm" data-bgmode="bg" aria-pressed="' + (sound.bgMode === 'bg') + '">ほかの アプリでも ながす</button></div>' +
+    '<p class="count" style="margin:0 0 12px">' + (sound.bgMode === 'bg'
+      ? 'ほかの アプリを ひらいたり、がめんを けしたり しても ながれます。' + (isIOS() ? 'iPhone では この あいだ おおきさの ちょうせつが きかず、スマホの 音量ボタンで かえます。' : '')
+      : 'ほかの アプリへ うつると とまり、もどって くると また ながれます。') + '</p>';
+}
 
 function initAudio(){
   sound.bgm = new BgmPlayer();
@@ -1821,6 +1894,7 @@ function initAudio(){
   });
   ['play','pause','loadedmetadata'].forEach(ev => sound.bgm.addEventListener(ev, paintJukebox));
   sound.bgm.addEventListener('timeupdate', paintJukeTime);
+  applyBgMode();
   sound.bgm.addEventListener('error', () => {
     sound.bgmError = true;
     const jn = document.getElementById('jbNote');
@@ -2001,6 +2075,7 @@ function setBgmTrack(id){
     sound.bgm.load();
   }
   paintSoundBtns();
+  updateMediaSession();
   if(sound.bgmOn && sound.unlocked || wasPlaying) syncBgm();
 }
 function setBgmOn(v){
@@ -2089,6 +2164,7 @@ function toolJukeboxHTML(){
     '<div class="catlabel" style="margin-top:14px">ながしかた</div>' +
     '<div class="chips" style="margin-bottom:12px">' + BGM_MODES.map(m =>
       '<button class="chip sm" data-jbmode="'+m.id+'" aria-pressed="'+(m.id===sound.mode)+'">'+m.label+'</button>').join('') + '</div>' +
+    '<div class="catlabel">ほかの アプリを ひらいた とき</div>' + bgModeChipsHTML() +
     '<div class="catlabel">おおきさ</div>' +
     '<div class="row" style="align-items:center;margin-bottom:14px">' +
       '<span style="flex:0 0 auto;font-size:13px;color:var(--muted)">小</span>' +
@@ -2205,7 +2281,8 @@ function loadAll(){
   const pl = store.read(KEY.players, null);
   if(Array.isArray(pl)) state.players = pl;
   const mo = store.read(KEY.memo, null);
-  if(mo && typeof mo === 'object') state.memo = {mode:mo.mode||'check', text:mo.text||'', items:Array.isArray(mo.items)?mo.items:[]};
+  if(mo && typeof mo === 'object') state.memo = {mode:mo.mode||'check', text:mo.text||'', items:Array.isArray(mo.items)?mo.items:[],
+    sids:(mo.sids && typeof mo.sids === 'object') ? mo.sids : {}, titles:(mo.titles && typeof mo.titles === 'object') ? mo.titles : {}};
   const vo = store.read(KEY.vote, null);
   if(vo && typeof vo === 'object') state.vote = vo;
   const tu = store.read(KEY.turn, null);
@@ -6048,18 +6125,20 @@ function toolMemoHTML(){
   if(m.mode === 'notes') return html + toolNotesHTML();
 
   if(m.mode === 'free'){
-    return html +
+    return html + memoHeadHTML() +
       '<textarea id="memoText" placeholder="なんでも かいて おけます。&#10;なぞときの てがかり、こうしょうの やくそく、はつげんの きろく など。" ' +
-        'style="min-height:260px">'+esc(m.text||'')+'</textarea>' +
-      '<p class="count" style="margin:8px 0 0">かいた ものは じどうで のこります。</p>' +
-      '<button class="btn small" id="memoClear" style="width:100%;margin-top:10px">ぜんぶ けす</button>';
+        'style="min-height:240px">'+esc(m.text||'')+'</textarea>' +
+      '<p class="count" style="margin:8px 0 0">かいて いる とちゅうの ものも じどうで のこります。</p>' +
+      memoSaveRowHTML() +
+      '<button class="btn small" id="memoClear" style="width:100%;margin-top:8px">かいた ないようを ぜんぶ けす</button>' +
+      memoSavedListHTML();
   }
 
   const items = m.items;
   const written = items.filter(x => x.text.trim()).length;
   const done = items.filter(x => x.done && x.text.trim()).length;
 
-  html += (written ? '<p class="count" style="margin:0 0 8px">'+done+' ／ '+written+' こ おわった</p>' : '') +
+  html += memoHeadHTML() + (written ? '<p class="count" style="margin:0 0 8px">'+done+' ／ '+written+' こ おわった</p>' : '') +
     items.map((x, i) =>
       '<div class="memo-line'+(x.done ? ' done' : '')+'">' +
         '<button class="memo-check'+(x.done?' on':'')+'" data-memotoggle="'+i+'" aria-label="チェック">'+(x.done?'✓':'')+'</button>' +
@@ -6069,9 +6148,100 @@ function toolMemoHTML(){
     '<div class="btn-row" style="margin-top:12px">' +
       '<button class="btn small" style="flex:1" id="memoMore">＋ らんを ふやす</button>' +
       '<button class="btn small" style="flex:1" id="memoClearDone">チェックした ものを けす</button></div>' +
-    '<button class="btn small" id="memoClear" style="width:100%;margin-top:8px">ぜんぶ けす</button>';
+    memoSaveRowHTML() +
+    '<button class="btn small" id="memoClear" style="width:100%;margin-top:8px">かいた ないようを ぜんぶ けす</button>' +
+    memoSavedListHTML();
 
   return html;
+}
+
+/* ---- ほぞんした メモ ----
+   チェックしき・じゆうに かく の メモを いくつでも ほぞん して、あとで ひらいたり けしたり できる。
+   いま かいて いる メモが どの ほぞんした メモか は sids に おぼえる（うわがき ほぞん できる）。 */
+function memoKind(){ return state.memo.mode === 'free' ? 'free' : 'check'; }
+function memoSavedAll(){ const l = store.read(KEY.memoSaved, []); return Array.isArray(l) ? l : []; }
+function memoSavedWrite(list){ return store.write(KEY.memoSaved, list); }
+function memoSidNow(){
+  const m = state.memo, id = (m.sids || {})[memoKind()];
+  return id && memoSavedAll().some(x => x.id === id) ? id : '';
+}
+/* いま かいて いる ないようを ひろう（画面の 入力欄から） */
+function memoGrab(){
+  /* うちおわりを まって いる ほぞんの よやくは とりけす（あとから ふるい 字で うわがき しない ように） */
+  clearTimeout(bind._memo); clearTimeout(bind._memoTxt);
+  const m = state.memo;
+  const t = document.getElementById('memoText');
+  if(t) m.text = t.value;
+  document.querySelectorAll('[data-memotext]').forEach(inp => {
+    const i = Number(inp.dataset.memotext);
+    if(m.items[i]) m.items[i].text = inp.value;
+  });
+  const ti = document.getElementById('memoTitle');
+  if(ti){ m.titles = m.titles || {}; m.titles[memoKind()] = ti.value; }
+}
+function memoContent(kind){
+  const m = state.memo;
+  return kind === 'free' ? {text:String(m.text || '')}
+    : {items:(m.items || []).filter(x => String(x.text || '').trim()).map(x => ({text:x.text, done:!!x.done}))};
+}
+function memoIsEmpty(kind){
+  const c = memoContent(kind);
+  return kind === 'free' ? !c.text.trim() : !c.items.length;
+}
+function memoAutoTitle(kind){
+  const c = memoContent(kind);
+  const first = kind === 'free' ? (c.text.split('\n').find(l => l.trim()) || '') : ((c.items[0] || {}).text || '');
+  const t = first.trim().slice(0, 20);
+  if(t) return t;
+  const d = new Date();
+  return 'メモ ' + (d.getMonth() + 1) + '/' + d.getDate();
+}
+/* ほぞんした あとに かきかえて いるか（ほぞん して いない ぶんが あるか） */
+function memoDirty(kind){
+  if(memoIsEmpty(kind)) return false;
+  const id = (state.memo.sids || {})[kind];
+  const e = id && memoSavedAll().find(x => x.id === id);
+  if(!e) return true;
+  const c = memoContent(kind);
+  const title = ((state.memo.titles || {})[kind] || '').trim();
+  return JSON.stringify(kind === 'free' ? c.text : c.items) !== JSON.stringify(kind === 'free' ? (e.text || '') : (e.items || [])) ||
+    (title && title !== e.title);
+}
+function memoFmtDate(iso){
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return '';
+  return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function memoHeadHTML(){
+  const kind = memoKind(), sid = memoSidNow();
+  const e = sid ? memoSavedAll().find(x => x.id === sid) : null;
+  const title = (state.memo.titles || {})[kind] || '';
+  return (e ? '<p class="count" style="margin:0 0 6px;color:var(--accent-2)">▶ ほぞんした メモ「' + esc(e.title) + '」を ひらいて います</p>' : '') +
+    '<input type="text" id="memoTitle" maxlength="30" placeholder="メモの なまえ（なくても OK）" value="' + esc(title) + '" style="margin-bottom:10px">';
+}
+function memoSaveRowHTML(){
+  const sid = memoSidNow();
+  return '<div class="btn-row" style="margin-top:12px">' +
+      '<button class="btn small primary" style="flex:1.4" id="memoSave">' + (sid ? 'うわがき ほぞん' : 'ほぞん する') + '</button>' +
+      '<button class="btn small" style="flex:1" id="memoNew">あたらしい メモ</button></div>' +
+    (sid ? '<button class="mini" id="memoSaveAs" style="margin-top:8px">べつの メモとして ほぞん</button>' : '');
+}
+function memoSavedListHTML(){
+  const list = memoSavedAll().slice().sort((a, b) => String(b.at || '').localeCompare(String(a.at || '')));
+  const sids = state.memo.sids || {};
+  const rows = list.map(e => {
+    const open = sids[e.kind] === e.id && memoKind() === e.kind;
+    const prev = e.kind === 'free' ? String(e.text || '').replace(/\s+/g, ' ').slice(0, 40)
+      : (e.items || []).length + 'こ（おわった ' + (e.items || []).filter(x => x.done).length + '）：' + (e.items || []).slice(0, 3).map(x => x.text).join('・').slice(0, 30);
+    return '<div class="memo-saved' + (open ? ' on' : '') + '">' +
+      '<div class="ms-t"><span class="ms-kind">' + (e.kind === 'free' ? 'じゆう' : 'チェック') + '</span>' +
+        '<b>' + esc(e.title) + '</b><span class="ms-date">' + esc(memoFmtDate(e.at)) + '</span>' +
+        '<span class="ms-prev">' + esc(prev) + '</span></div>' +
+      '<div class="ms-btns"><button class="mini" data-memoopen="' + esc(e.id) + '">' + (open ? 'ひらいて いる' : 'ひらく') + '</button>' +
+        '<button class="mini warn" data-memodel="' + esc(e.id) + '">けす</button></div></div>';
+  }).join('');
+  return '<div class="divider"></div><h2 class="sec">ほぞんした メモ（' + list.length + '）</h2>' +
+    (rows || '<p class="count">まだ ありません。かいた メモは「ほぞん する」で いくつでも のこせます。</p>');
 }
 
 
@@ -7000,7 +7170,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.02-d';
+const APP_VERSION = '2026.10.03-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -9795,7 +9965,8 @@ function viewAdmin(){
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:10px">' +
       '<input type="checkbox" id="bgmChk" '+(sound.bgmOn?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
       '<span style="font-size:13px">BGMを ならす<br>' +
-      '<span style="color:var(--muted);font-size:11.5px">どの がめんでも ずっと ながれます。</span></span></label>' +
+      '<span style="color:var(--muted);font-size:11.5px">サイトの どの がめんでも ずっと ながれます。</span></span></label>' +
+    '<div class="catlabel">ほかの アプリを ひらいた とき</div>' + bgModeChipsHTML() +
     '<div style="margin:0 0 16px">' +
       '<div class="catlabel">BGMの きょく</div>' +
       '<div class="chips">' + BGM_TRACKS.map(t =>
@@ -10548,9 +10719,91 @@ function bind(r){
     while(state.memo.items.length < 5) state.memo.items.push({text:'', done:false});
     saveMemo(); render(); toast('チェックした ものを けしました');
   };
+  /* --- BGM：ほかの アプリを ひらいた とき --- */
+  app.querySelectorAll('[data-bgmode]').forEach(b => b.onclick = () => {
+    setBgMode(b.dataset.bgmode); render();
+    toast(sound.bgMode === 'bg' ? 'ほかの アプリでも ながす ように しました' : 'サイトを ひらいて いる ときだけ ながす ように しました');
+  });
+
+  /* --- ほぞんした メモ --- */
+  const memoTitle = document.getElementById('memoTitle');
+  if(memoTitle) memoTitle.addEventListener('input', () => {
+    state.memo.titles = state.memo.titles || {};
+    state.memo.titles[memoKind()] = memoTitle.value; saveMemo();
+  });
+  const memoStore = asNew => {
+    memoGrab();
+    const kind = memoKind();
+    if(memoIsEmpty(kind)) return toast('まだ なにも かかれて いません');
+    const m = state.memo; m.sids = m.sids || {}; m.titles = m.titles || {};
+    const list = memoSavedAll();
+    const title = (m.titles[kind] || '').trim() || memoAutoTitle(kind);
+    const c = memoContent(kind);
+    const old = !asNew && m.sids[kind] ? list.find(x => x.id === m.sids[kind]) : null;
+    const e = old || {id:'m' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), kind};
+    e.title = title; e.at = new Date().toISOString();
+    if(kind === 'free') e.text = c.text; else e.items = c.items;
+    if(!old) list.push(e);
+    if(!memoSavedWrite(list)) return;
+    m.sids[kind] = e.id; m.titles[kind] = title;
+    saveMemo(); render();
+    toast(old ? '「' + title + '」を うわがき しました' : '「' + title + '」を ほぞん しました');
+  };
+  const memoSave = document.getElementById('memoSave');
+  if(memoSave) memoSave.onclick = () => memoStore(false);
+  const memoSaveAs = document.getElementById('memoSaveAs');
+  if(memoSaveAs) memoSaveAs.onclick = () => memoStore(true);
+  /* ほぞん して いない ぶんが ある ときは、けす まえに きく */
+  const memoGuard = (go) => {
+    memoGrab();
+    const kind = memoKind();
+    if(memoDirty(kind)) ask('いま かいて いる メモは、まだ ほぞん して いない ところが あります。\nけして すすみますか？', go, {yes:'けして すすむ', no:'やめる'});
+    else go();
+  };
+  const memoBlank = kind => {
+    const m = state.memo; m.sids = m.sids || {}; m.titles = m.titles || {};
+    if(kind === 'free') m.text = ''; else m.items = Array.from({length:5}, () => ({text:'', done:false}));
+    m.sids[kind] = ''; m.titles[kind] = '';
+  };
+  const memoNew = document.getElementById('memoNew');
+  if(memoNew) memoNew.onclick = () => memoGuard(() => { memoBlank(memoKind()); saveMemo(); render(); toast('あたらしい メモに しました'); });
+  app.querySelectorAll('[data-memoopen]').forEach(b => b.onclick = () => {
+    const e = memoSavedAll().find(x => x.id === b.dataset.memoopen);
+    if(!e) return;
+    const m = state.memo;
+    if((m.sids || {})[e.kind] === e.id && memoKind() === e.kind) return;
+    const open = () => {
+      m.mode = e.kind === 'free' ? 'free' : 'check';
+      m.sids = m.sids || {}; m.titles = m.titles || {};
+      if(e.kind === 'free') m.text = e.text || '';
+      else{
+        m.items = (e.items || []).map(x => ({text:x.text, done:!!x.done}));
+        while(m.items.length < 5) m.items.push({text:'', done:false});
+      }
+      m.sids[e.kind] = e.id; m.titles[e.kind] = e.title;
+      saveMemo(); render(); window.scrollTo(0, 0);
+      toast('「' + e.title + '」を ひらきました');
+    };
+    /* おなじ しゅるいの メモを うわがき する ときだけ きく */
+    memoGrab();
+    if(memoDirty(e.kind)) ask('いま かいて いる ' + (e.kind === 'free' ? 'じゆうに かく' : 'チェックしき') + ' の メモは、まだ ほぞん して いない ところが あります。\nけして「' + e.title + '」を ひらきますか？', open, {yes:'けして ひらく', no:'やめる'});
+    else open();
+  });
+  app.querySelectorAll('[data-memodel]').forEach(b => b.onclick = () => {
+    const list = memoSavedAll(), e = list.find(x => x.id === b.dataset.memodel);
+    if(!e) return;
+    ask('ほぞんした メモ「' + e.title + '」を けしますか？\n（いま かいて いる ないようは のこります）', () => {
+      memoGrab();
+      memoSavedWrite(list.filter(x => x.id !== e.id));
+      const m = state.memo;
+      if(m.sids && m.sids[e.kind] === e.id) m.sids[e.kind] = '';
+      saveMemo(); render(); toast('けしました');
+    }, {yes:'けす', no:'やめる'});
+  });
+
   const memoClear = document.getElementById('memoClear');
   if(memoClear) memoClear.onclick = () => {
-    ask('メモを ぜんぶ けしますか？', () => {
+    ask('いま かいて いる ないようを ぜんぶ けしますか？\n（ほぞんした メモは のこります）', () => {
       if(state.memo.mode === 'free') state.memo.text = '';
       else state.memo.items = Array.from({length:5}, () => ({text:'', done:false}));
       saveMemo(); render(); toast('けしました');
