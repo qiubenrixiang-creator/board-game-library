@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-03T16:06:23.754Z",
+  "version": "2026-10-03T16:10:32.475Z",
   "tags": [
     {
       "name": "初心者",
@@ -3095,23 +3095,6 @@
         "家族向け",
         "頭脳戦"
       ]
-    },
-    {
-      "id": "g123",
-      "title": "フェッチクエスト",
-      "images": [
-        "https://image-bodoge.cdn-hoobby.net/small_light(dw=auto,dh=517,cw=690,ch=517,da=l,ds=s,q=70,cc=FFFFFF)/picture_af0683ed-ab2d-4813-90f1-cc8c3db0bd15.jpeg"
-      ],
-      "summary": "犬たちの冒険を描く、協力型のデッキ構築ゲーム。",
-      "quickRule": "",
-      "detailRule": "",
-      "recommendation": "",
-      "playersMin": 3,
-      "playersMax": 6,
-      "playTime": 75,
-      "age": 12,
-      "difficulty": 2,
-      "tags": []
     },
     {
       "id": "g124",
