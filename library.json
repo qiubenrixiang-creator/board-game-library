@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-05T03:44:59.948Z",
+  "version": "2026-10-08T00:59:02.330Z",
   "tags": [
     {
       "name": "初心者",
@@ -111,6 +111,31 @@
     }
   ],
   "games": [
+    {
+      "id": "gmuytw1jqlq5ko",
+      "title": "ど平民",
+      "reading": "どへいみん",
+      "videos": [],
+      "wish": true,
+      "images": [
+        "https://item-shopping.c.yimg.jp/i/n/hbst-store_4517163881002"
+      ],
+      "playersMin": 2,
+      "playersMax": 5,
+      "playTime": 10,
+      "age": 12,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [],
+      "summary": "勝ちたきゃルールを変えろ。\n新感覚、ルール構築型大富豪！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "addedAt": ""
+    },
     {
       "id": "gmup067uoe9smu",
       "title": "マジカル・アスリート",
