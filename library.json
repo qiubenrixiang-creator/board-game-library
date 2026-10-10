@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-08T00:59:02.330Z",
+  "version": "2026-10-10T05:00:35.623Z",
   "tags": [
     {
       "name": "初心者",
@@ -111,6 +111,39 @@
     }
   ],
   "games": [
+    {
+      "id": "gmv1xda62uib7w",
+      "title": "Q.●▲★■",
+      "reading": "くいず まるさんかくほししかく",
+      "videos": [
+        "https://youtu.be/Z_EHcWWuHYQ"
+      ],
+      "wish": false,
+      "images": [
+        "https://shop.tokiqil.com/cdn/shop/files/HIcAPRpbQAAh70M.jpg?v=1779277125&width=416"
+      ],
+      "playersMin": 3,
+      "playersMax": 12,
+      "playTime": 10,
+      "age": 8,
+      "difficulty": 2,
+      "strategy": 0,
+      "excitement": 0,
+      "luck": 0,
+      "replay": 0,
+      "tags": [
+        "軽量級",
+        "初心者",
+        "記憶",
+        "未プレイ",
+        "頭脳戦"
+      ],
+      "summary": "バラバラになったクイズ文を復元して答える、早押し感覚のパーティクイズゲーム！",
+      "quickRule": "",
+      "detailRule": "",
+      "recommendation": "",
+      "addedAt": "2026-10-10"
+    },
     {
       "id": "gmuytw1jqlq5ko",
       "title": "ど平民",
