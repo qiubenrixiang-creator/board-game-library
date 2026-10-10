@@ -437,6 +437,15 @@ h2.sec::before{content:"■ ";font-size:12px}
 .print-table th{color:var(--accent)}
 
 /* ---------- メモ・とうひょう ---------- */
+.quick-rec{border:3px solid var(--accent);background:var(--panel);padding:10px 12px;margin:0 0 16px}
+.quick-rec.done{border-color:var(--accent-2)}
+.lv-help{margin:10px 0 12px;border:2px dashed var(--muted);padding:6px 10px}
+.lv-help summary{font-size:13px;color:var(--accent-2);cursor:pointer}
+.lv-help-body{font-family:var(--font-read);font-size:13.5px;line-height:1.75;margin-top:6px;word-break:keep-all;overflow-wrap:anywhere}
+.lv-help-body p{margin:0}
+.lv-help-body ol{margin:0;padding-left:1.4em}
+.lv-help-body li{margin-bottom:4px}
+.lv-help-body b{color:var(--accent)}
 .memo-saved{display:flex;gap:10px;align-items:center;border:2px solid var(--muted);padding:8px 10px;margin-bottom:8px;background:var(--panel)}
 .memo-saved.on{border-color:var(--accent)}
 .memo-saved .ms-t{flex:1;min-width:0;display:grid;gap:1px}
@@ -3374,11 +3383,13 @@ function randomResultHTML(g){
     '</div>' +
     '<div class="btn-row" style="margin-top:12px">' +
       '<button class="btn" id="rollBtn">もう一度行う</button>' +
-      '<button class="btn primary" data-open="'+esc(g.id)+'">くわしく みる</button></div></div>';
+      '<button class="btn primary" data-open="'+esc(g.id)+'">くわしく みる</button></div>' +
+    '<div id="randomQuick" style="margin-top:12px">' + quickRecordHTML(g, true) + '</div></div>';
 }
 
 function viewDetail(id){
   const g = state.games.find(x => x.id === id);
+  if(g) state.lastGame = g.id;
   const termSeen = {};   /* おなじ ことばは さいしょの 1かい だけ しるしを つける */
   if(!g) return '<section class="page"><div class="empty"><span class="mark" data-icon="search"></span>その ゲームは みつからなかった…' +
     '<div style="margin-top:16px"><button class="btn small" data-go2="#/list">ずかんへ もどる</button></div></div></section>';
@@ -3399,7 +3410,7 @@ function viewDetail(id){
     '<button class="mini" data-go2="#/list" style="margin-bottom:14px">◀ ずかんへ もどる</button>' +
     '<h1 class="detail-title">'+esc(g.title)+newBadge(g)+'</h1>' +
     (isNewArrival(g) ? '<p class="count" style="margin:-6px 0 12px">'+esc(dateLabel(g.addedAt))+' に ずかんへ くわわりました。</p>' : '') +
-    gallery + favBoxHTML(g) + reqBoxHTML(g) + noteLinkHTML(g) + helpBoxHTML(g) +
+    gallery + quickRecordHTML(g) + favBoxHTML(g) + reqBoxHTML(g) + noteLinkHTML(g) + helpBoxHTML(g) +
 
     '<div class="section"><h2>ひとことで いうと</h2><p class="summary-lead">'+linkTerms(esc(g.summary||'（みきにゅう）'), termSeen)+'</p></div>' +
     (g.quickRule ? '<div class="section"><h2>30びょうルール</h2><div class="body">'+linkTerms(esc(g.quickRule), termSeen)+'</div></div>' : '') +
@@ -3423,7 +3434,7 @@ function viewDetail(id){
     /* --- この ゲームの あそんだ きろく（たたんで おく） --- */
     (playCount(g) ?
       '<div class="section"><h2>あそんだ きろく（'+playCount(g)+'かい）</h2>' +
-        '<details><summary>きろくと かんそうを みる</summary>' +
+        '<details id="recDetails"' + (String(state.recEdit || '').indexOf(g.id + '|') === 0 ? ' open' : '') + '><summary>きろくと かんそうを みる</summary>' +
           '<div style="margin-top:10px">' +
           playsOf(g).map((pl, i) => ({pl:pl, i:i}))
             .sort((a,b) => String(b.pl.d||'').localeCompare(String(a.pl.d||'')))
@@ -3804,7 +3815,9 @@ function viewPlayLog(){
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
     '<h1 class="lede">きょう あそんだ ゲーム</h1>' +
     '<p class="sub">あそんだ ゲームを えらんで、まとめて きろく できます。<br>' +
-      'もって いない ゲーム（ほしい ゲーム）も えらべます。</p>' +
+      'もって いない ゲーム（ほしい ゲーム）も えらべます。<br>' +
+      'なかま どうしなら、だれか 1人が きろく すれば みんなの カードに とどきます。</p>' +
+    levelHelpHTML(false) +
 
     '<div class="win" style="margin-bottom:14px">' +
       '<div class="row" style="margin-bottom:8px">' +
@@ -4404,6 +4417,7 @@ function viewCard(param){
         '<div class="adv-exp" title="つぎの レベルまで"><div style="width:'+expPct+'%"></div></div>' +
         (lv < 99 ? '<small style="margin-top:3px">つぎの レベルまで あと '+Math.max(0, next - a.plays)+'かい</small>' : '') +
       '</div>' +
+      levelHelpHTML(false) +
       '<div class="adv-info">' +
         '<span>あそんだ かず</span><b>'+a.plays+'かい</b>' +
         '<span>かった かず</span><b>'+a.wins+'かい</b>' +
@@ -4938,6 +4952,99 @@ function chosenToday(){
   return out;
 }
 
+/* ---------------- かんたん きろく ----------------
+   ゲームの ページ・おまかせの けっか から 1タップで「きょう あそんだ」を のこす。
+   メンバーは きょうの メンバー（どうぐで えらんだ 人）＋ じぶん。あとから「なおす」で かえられる。 */
+function quickMembers(){
+  const list = chosenToday().slice();
+  const me = account();
+  if(me && me.name && list.indexOf(me.name) < 0) list.unshift(me.name);
+  return list;
+}
+function myLevelInfo(){
+  const me = account();
+  if(!me || !me.name) return null;
+  const n = advPlays(me.name).length, lv = advLevel(n);
+  return {name:me.name, n, lv, left:lv >= 99 ? 0 : Math.max(0, advNextLevelAt(lv) - n)};
+}
+/* きろくした あとの ひとこと（レベルが あがったら おいわい） */
+function recordedToast(before, extra){
+  const after = myLevelInfo();
+  if(before && after && after.lv > before.lv){
+    toast('レベル アップ！ ' + after.name + ' は Lv.' + after.lv + ' に なった！');
+    try{ playFanfare(); }catch(e){}
+  }else if(after){
+    toast((extra || 'きろく しました') + '（つぎの レベルまで あと ' + after.left + 'かい）');
+  }else{
+    toast(extra || 'きろく しました');
+  }
+}
+function quickRecord(gid){
+  const g = state.games.find(x => x.id === gid);
+  if(!g) return null;
+  const before = myLevelInfo();
+  const u = quickMembers();
+  const pl = {d: todayStr(), n: u.length || undefined, u: u.length ? u : undefined, share: 'friends'};
+  g.plays = playsOf(g).concat([pl]);
+  saveGames(); autoSync();
+  state.quickDone = {gid, i: g.plays.length - 1, at: Date.now()};
+  recordedToast(before);
+  return pl;
+}
+function undoQuickRecord(){
+  const q = state.quickDone;
+  if(!q) return false;
+  const g = state.games.find(x => x.id === q.gid);
+  const pl = g ? playsOf(g)[q.i] : null;
+  state.quickDone = null;
+  if(!pl) return false;
+  forgetPlay(g.id, pl);
+  g.plays.splice(q.i, 1);
+  saveGames(); autoSync();
+  toast('きろくを とりけしました');
+  return true;
+}
+function quickDoneFor(gid){
+  const q = state.quickDone;
+  return q && q.gid === gid && Date.now() - q.at < 30 * 60000 ? q : null;
+}
+/* ゲームの ページ・おまかせ に おく「あそんだ！」 */
+function quickRecordHTML(g, inRandom){
+  const q = quickDoneFor(g.id);
+  if(q){
+    const pl = playsOf(g)[q.i] || {};
+    return '<div class="quick-rec done">' +
+      '<p style="margin:0 0 8px">✓ きょう あそんだ ことを きろく しました' +
+        (Array.isArray(pl.u) && pl.u.length ? '<br><span class="count">メンバー：' + esc(pl.u.join('・')) + '</span>' : '') + '</p>' +
+      '<div class="btn-row" style="gap:8px">' +
+        '<button class="btn small" data-quickundo style="flex:1">とりけす</button>' +
+        (inRandom ? '<button class="btn small" data-open="' + esc(g.id) + '" style="flex:1.6">メンバー・かった人を たす</button>'
+                  : '<button class="btn small" data-editrec="' + esc(g.id) + '|' + q.i + '" style="flex:1.6">メンバー・かった人を たす</button>') +
+      '</div></div>';
+  }
+  const u = quickMembers(), me = myLevelInfo();
+  return '<div class="quick-rec">' +
+    '<button class="btn primary" data-quickrec="' + esc(g.id) + '" style="width:100%">▶ あそんだ！ きろくする</button>' +
+    '<p class="count" style="margin:6px 0 0">きょう・' + (u.length ? esc(u.join('・')) : 'メンバー なし') + ' で 1タップ きろく。' +
+      (me ? 'きろくすると レベルが あがります（Lv.' + me.lv + '・つぎまで あと ' + me.left + 'かい）。' : '') + '</p>' +
+  '</div>';
+}
+/* レベルの あげかた（どこからでも よめる せつめい） */
+function levelHelpHTML(open){
+  return '<details class="lv-help"' + (open ? ' open' : '') + '><summary>レベルの あげかた</summary>' +
+    '<div class="lv-help-body">' +
+      '<p>あそんだ ゲームを <b>きろく</b> すると、その きろくに 入って いる 人 みんなの レベルが あがります。きろく 1かいが けいけんち 1かい ぶん です。</p>' +
+      '<p style="margin:8px 0 4px;color:var(--accent-2)">きろくの しかたは 3つ。すきな ものを つかって ください。</p>' +
+      '<ol>' +
+        '<li><b>1タップ</b>：ゲームの ページや おまかせの けっかの「あそんだ！」を おすだけ。メンバーは きょうの メンバーと じぶんが 入ります。</li>' +
+        '<li><b>てんすう表から</b>：あそび おわったら「この てんすう表を きろくする」。メンバーと かった人も じどうで 入ります。</li>' +
+        '<li><b>まとめて</b>：どうぐ →「あそんだ きろく」→「きょう あそんだ」。いくつかの ゲームを いっしょに、しゃしんや かんそうも つけられます。</li>' +
+      '</ol>' +
+      '<p style="margin:8px 0 0">なかま どうしなら、<b>だれか 1人が きろく すれば</b> いっしょに あそんだ 人の ぼうけんしゃカードにも とどきます。みんなが それぞれ きろく する ひつようは ありません。</p>' +
+      '<p style="margin:8px 0 0" class="count">いちばん たかい ステータスと レベルで、しょうごうも かわって いきます。</p>' +
+    '</div></details>';
+}
+
 /* きろくに でて くるが、まだ とうろく して いない なまえ */
 function unknownPlayers(){
   const known = rosterNames();
@@ -5123,7 +5230,34 @@ function scoreHTML(){
     '<div class="btn-row">' +
       '<button class="btn small" style="flex:1" id="scoreAddRow">＋ かいを ふやす</button>' +
       '<button class="btn small" style="flex:1" id="scoreClear">さいしょから</button></div>' +
+    scoreRecordHTML(totals) +
     '</div></div>';
+}
+/* あそび おわったら、てんすう表を そのまま きろくに する */
+function scoreWinner(totals){
+  const best = Math.max.apply(null, totals);
+  if(!(best > 0) && !(best < 0)) return '';
+  const tops = state.score.names.filter((_, i) => totals[i] === best);
+  return tops.length === 1 ? tops[0] : '';
+}
+function scoreRecordHTML(totals){
+  const sc = state.score;
+  if(state.scoreRecorded && state.scoreRecorded.sig === JSON.stringify(sc)){
+    const g = state.games.find(x => x.id === state.scoreRecorded.gid);
+    return '<div class="quick-rec done" style="margin-top:14px"><p style="margin:0">✓ 「' + esc(g ? g.title : '') + '」の きろくに しました</p></div>';
+  }
+  const last = state.scoreGame || state.lastGame || '';
+  const list = state.games.slice().sort((a, b) => (b.id === last) - (a.id === last) || String(a.reading || a.title).localeCompare(String(b.reading || b.title), 'ja'));
+  const w = scoreWinner(totals);
+  return '<div class="quick-rec" style="margin-top:14px">' +
+    '<p class="count" style="margin:0 0 8px">あそび おわったら、この てんすう表を そのまま きろく できます。' +
+      'メンバー（' + esc(sc.names.join('・')) + '）' + (w ? 'と かった人（' + esc(w) + '）' : '') + 'も じどうで 入ります。</p>' +
+    '<select id="scoreGame" style="width:100%;margin-bottom:8px">' +
+      '<option value="">あそんだ ゲームを えらぶ</option>' +
+      list.map(g => '<option value="' + esc(g.id) + '"' + (g.id === last ? ' selected' : '') + '>' + esc(g.title) + (g.wish ? '（ほしい）' : '') + '</option>').join('') +
+    '</select>' +
+    '<button class="btn small primary" id="scoreRecord" style="width:100%">この てんすう表を きろくする</button>' +
+  '</div>';
 }
 
 /* --- カウンター --- */
@@ -5152,6 +5286,26 @@ function counterHTML(){
 function bindScore(){
   const box = document.getElementById('scoreBox');
   if(!box) return;
+  const scoreGame = document.getElementById('scoreGame');
+  if(scoreGame) scoreGame.onchange = () => { state.scoreGame = scoreGame.value; };
+  const scoreRecord = document.getElementById('scoreRecord');
+  if(scoreRecord) scoreRecord.onclick = () => {
+    const gid = scoreGame ? scoreGame.value : '';
+    const g = state.games.find(x => x.id === gid);
+    if(!g) return toast('あそんだ ゲームを えらんで ください');
+    const sc = state.score;
+    const totals = sc.names.map((_, i) => sc.rows.reduce((a, r) => a + (Number(r[i]) || 0), 0));
+    const w = scoreWinner(totals);
+    const before = myLevelInfo();
+    const u = sc.names.slice();
+    const memo = sc.names.map((n, i) => n + ' ' + totals[i] + 'てん').join('　');
+    g.plays = playsOf(g).concat([{d: todayStr(), n: u.length || undefined, w: w || undefined, u, m: memo, share: 'friends'}]);
+    saveGames(); autoSync();
+    state.scoreGame = gid;
+    state.scoreRecorded = {gid, sig: JSON.stringify(sc)};
+    recordedToast(before, '「' + g.title + '」を きろく しました');
+    render();
+  };
 
   /* さいしょの「はじめる」ボタン。
      けした あと ここを つなぎ直さないと、もう一度 はじめられなく なる。 */
@@ -5712,6 +5866,7 @@ function toolTeamHTML(){
 }
 function toolLogHTML(){
   return '<p class="count" style="margin:0 0 10px">あそんだ ゲームの きろくを つけたり、これまでの きろくを よんだり できます。</p>' +
+    levelHelpHTML(false) +
     '<div class="btn-row">' +
       '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button>' +
       '<button class="btn small" style="flex:1" data-go2="#/records">きろくを みる' +
@@ -7170,7 +7325,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.03-a';
+const APP_VERSION = '2026.10.10-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -10377,6 +10532,22 @@ function bind(r){
     });
   };
 
+  app.querySelectorAll('[data-quickrec]').forEach(b => b.onclick = () => {
+    const gid = b.dataset.quickrec;
+    if(!quickRecord(gid)) return;
+    const slot = b.closest('#randomQuick');
+    const g = state.games.find(x => x.id === gid);
+    if(slot && g){ slot.innerHTML = quickRecordHTML(g, true); bind(currentRoute()); }   /* おまかせの けっかは けさない */
+    else render();
+  });
+  app.querySelectorAll('[data-quickundo]').forEach(b => b.onclick = () => {
+    const q = state.quickDone;
+    const slot = b.closest('#randomQuick');
+    undoQuickRecord();
+    const g = q && state.games.find(x => x.id === q.gid);
+    if(slot && g){ slot.innerHTML = quickRecordHTML(g, true); bind(currentRoute()); }
+    else render();
+  });
   app.querySelectorAll('[data-editrec]').forEach(b => b.onclick = () => {
     state.recEdit = b.dataset.editrec;
     const parts = String(b.dataset.editrec).split('|');
