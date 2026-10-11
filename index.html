@@ -870,6 +870,14 @@ html[data-theme="day"] .guide-win{--g-green:#2E8A4E}
   .guide-tabs .gt.on{animation:none;box-shadow:inset 0 0 0 2px var(--accent)}
 }
 
+/* 右上の ？（さいしょは ひからせて 気づいて もらう） */
+#helpBtn{color:var(--accent);border-color:var(--accent)}
+#helpBack .guide-step{flex:1;min-width:0}
+#helpClose{flex:0 0 auto;white-space:nowrap}
+#helpBtn.blink{animation:helpBlink 1.2s steps(2) infinite}
+@keyframes helpBlink{ 50%{ box-shadow:0 0 0 3px rgba(248,208,48,.45) } }
+@media (prefers-reduced-motion:reduce){ #helpBtn.blink{animation:none} }
+
 /* かくにん ウィンドウ（iPhone の そっけない ひょうじの かわり） */
 .dialog-back{
   position:fixed;inset:0;z-index:140;display:grid;place-items:center;padding:22px;
@@ -1003,6 +1011,7 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
     <button class="icon-btn snd" id="bgmBtn" aria-pressed="true">♪</button>
     <button class="icon-btn snd" id="seBtn" aria-pressed="true">SE</button>
     <button class="icon-btn" id="themeBtn">よる</button>
+    <button class="icon-btn snd" id="helpBtn" aria-label="この 画面の せつめい">？</button>
   </div>
 </header>
 
@@ -1105,6 +1114,7 @@ const KEY = {
   gone:'bgl.gonePlays',       /* けした きろくの しるし */
   welcome:'bgl.welcomeDone',  /* さいしょの あんないを すませたか */
   guide:'bgl.guideSeen',      /* はじめての 人への あんないを 見たか */
+  helpSeen:'bgl.helpSeen',    /* 右上の ？ を おした ことが あるか */
   frWait:'bgl.friendWait',    /* リンクで もらった ともだちコード */
   profile:'bgl.myProfile'     /* じぶんの しょうごう・いちおし */
 };
@@ -3817,7 +3827,6 @@ function viewPlayLog(){
     '<p class="sub">あそんだ ゲームを えらんで、まとめて きろく できます。<br>' +
       'もって いない ゲーム（ほしい ゲーム）も えらべます。<br>' +
       'なかま どうしなら、だれか 1人が きろく すれば みんなの カードに とどきます。</p>' +
-    levelHelpHTML(false) +
 
     '<div class="win" style="margin-bottom:14px">' +
       '<div class="row" style="margin-bottom:8px">' +
@@ -4417,7 +4426,7 @@ function viewCard(param){
         '<div class="adv-exp" title="つぎの レベルまで"><div style="width:'+expPct+'%"></div></div>' +
         (lv < 99 ? '<small style="margin-top:3px">つぎの レベルまで あと '+Math.max(0, next - a.plays)+'かい</small>' : '') +
       '</div>' +
-      levelHelpHTML(false) +
+      '<p class="count" style="margin:-4px 0 12px;font-size:11.5px">レベルの あげかたは 右上の ？ で 見られます。</p>' +
       '<div class="adv-info">' +
         '<span>あそんだ かず</span><b>'+a.plays+'かい</b>' +
         '<span>かった かず</span><b>'+a.wins+'かい</b>' +
@@ -5865,8 +5874,8 @@ function toolTeamHTML(){
     '<div id="teamResult"></div>';
 }
 function toolLogHTML(){
-  return '<p class="count" style="margin:0 0 10px">あそんだ ゲームの きろくを つけたり、これまでの きろくを よんだり できます。</p>' +
-    levelHelpHTML(false) +
+  return '<p class="count" style="margin:0 0 10px">あそんだ ゲームの きろくを つけたり、これまでの きろくを よんだり できます。<br>' +
+      'きろく すると レベルが あがります。くわしくは 右上の ？ へ。</p>' +
     '<div class="btn-row">' +
       '<button class="btn small" style="flex:1" data-go2="#/playlog">きょう あそんだ</button>' +
       '<button class="btn small" style="flex:1" data-go2="#/records">きろくを みる' +
@@ -7325,7 +7334,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.10-a';
+const APP_VERSION = '2026.10.11-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -9296,7 +9305,7 @@ const GUIDE_PAGES = [
   {tab:4, title:'さいごに', pic:guidePicTerm,
    body:['せつめいの 中で てんせんが ついた ことばは、タップすると いみが でます。',
          '「かんり」は ゲームを とうろく する 人の ための ばしょ です。'],
-   point:'この あんないは「かんり → つかいかた」から いつでも 見なおせます。'}
+   point:'わからない ときは 右上の ？ を おすと、その 画面の せつめいが でます。'}
 ];
 let guideStep = 0;
 function openGuide(){ guideStep = 0; showGuide(); }
@@ -9358,6 +9367,480 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape') closeGuide();
   if(e.key === 'ArrowRight' && guideStep < GUIDE_PAGES.length - 1){ guideStep++; showGuide(); }
   if(e.key === 'ArrowLeft' && guideStep > 0){ guideStep--; showGuide(); }
+});
+
+
+/* ---------------- この 画面の せつめい（右上の ？） ----------------
+   ひらいて いる 画面に あわせて、絵つきの せつめいを まん中に だす。
+   どうぐには それぞれ せつめいが ある。ほかの 画面は「はじめての あんない」の その ページを だす。 */
+const gUp = (x,y,f) => '<polygon points="'+x+','+(y+7)+' '+(x+7)+','+y+' '+(x+14)+','+(y+7)+'" fill="'+(f||'var(--accent)')+'"/>';
+const gCrown = (x,y) => '<polygon points="'+x+','+(y+10)+' '+x+','+y+' '+(x+5)+','+(y+5)+' '+(x+9)+','+(y-1)+' '+(x+13)+','+(y+5)+' '+(x+18)+','+y+' '+(x+18)+','+(y+10)+'" fill="var(--accent)"/>';
+const gLine = (x1,y1,x2,y2,c,dash) => '<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="'+(c||'var(--muted)')+'" stroke-width="2"'+(dash ? ' stroke-dasharray="4 3"' : '')+'/>';
+const gDot = (x,y,r,f) => '<circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="'+f+'"/>';
+function gCard(x, y, name, lv, col){
+  return gB(x,y,46,64,col||'var(--frame)','var(--panel)') + gT(x+23,y+18,name,10,'var(--text)') +
+    gT(x+23,y+38,'Lv.'+lv,12,'var(--accent)') + gUp(x+16,y+46,'var(--g-green)');
+}
+function gPhone(x, y, inner, col){
+  return gB(x,y,34,54,col||'var(--accent-2)','var(--panel)') + gR(x+12,y+48,10,2,col||'var(--accent-2)') + (inner||'');
+}
+/* サイコロ（めの かず つき） */
+function gDie(x, y, s, n, col){
+  const P = {1:[[.5,.5]],2:[[.25,.25],[.75,.75]],3:[[.25,.25],[.5,.5],[.75,.75]],4:[[.25,.25],[.75,.25],[.25,.75],[.75,.75]],
+             5:[[.25,.25],[.75,.25],[.5,.5],[.25,.75],[.75,.75]],6:[[.25,.22],[.75,.22],[.25,.5],[.75,.5],[.25,.78],[.75,.78]]};
+  return gB(x,y,s,s,col||'var(--frame)','var(--panel)') + P[n].map(([a,b]) => gDot(x+a*s, y+b*s, s/11, col||'var(--text)')).join('');
+}
+const gChip = (x,y,w,t,on) => gB(x,y,w,20,on ? 'var(--accent)' : 'var(--frame)') + gT(x+w/2,y+14,t,10,on ? 'var(--accent)' : 'var(--text)');
+const gBtn = (x,y,w,t) => gB(x,y,w,22,'var(--accent)','var(--panel)') + gT(x+w/2,y+15,t,10,'var(--accent)');
+const gBars = (x,y,ws) => ws.map((w,i) => gR(x,y+i*10,w,5,i ? 'var(--muted)' : 'var(--text)')).join('');
+const gQR = (x,y,k) => ['#######..#','#.....#.##','#.###.#..#','#.###.#.#.','#.....#..#','#######.#.','..#..#.###','#.##..#..#','.#.#.##.#.','##..#.#.##']
+  .map((row,yy) => row.split('').map((c,xx) => c === '#' ? gR(x+xx*k, y+yy*k, k, k, 'var(--text)') : '').join('')).join('');
+
+/* --- あそんだ きろく --- */
+function hpLv1(){
+  let s = gR(16,34,48,48,G_BOX[1]) + gR(22,40,36,10,'rgba(10,14,36,.5)') + gT(40,98,'あそんだ',10,'var(--muted)');
+  s += gArrow(70,58) + gIcon('scroll', 86, 40, 36, 'var(--accent)') + gT(104,98,'きろく',10,'var(--accent)') + gArrow(128,58);
+  s += gCard(146,24,'じぶん',4) + gCard(196,24,'たろう',3) + gCard(246,24,'はなこ',6);
+  return gSvg(s + gT(220,112,'みんなの レベルが あがる',11,'var(--accent)'));
+}
+function hpLv2(){
+  let s = gB(10,8,124,124,'var(--muted)','var(--panel)') + gR(18,16,108,40,G_BOX[3]);
+  s += gB(18,64,108,26,'var(--accent)','var(--panel)',3) + gT(60,82,'▶ あそんだ！',11,'var(--accent)') + gTap(114,77);
+  s += gR(18,98,80,5,'var(--muted)') + gR(18,108,60,5,'var(--muted)') + gArrow(142,70);
+  s += gB(160,26,134,88,'var(--accent-2)','var(--panel)',3) + gT(170,48,'✓ きろく しました',11,'var(--text)','start');
+  s += gChip(170,60,52,'じぶん') + gChip(228,60,58,'たろう') + gT(227,102,'きょうの メンバーも',10,'var(--accent-2)');
+  return gSvg(s);
+}
+function hpLv3(){
+  let s = gB(8,12,136,104,'var(--muted)','var(--panel)');
+  ['じぶん','たろう','はなこ'].forEach((n,i) => { const x = 14 + i*43;
+    s += gT(x+20,30,n,10,'var(--muted)') + gB(x,36,40,24,'var(--frame)') + gT(x+20,53,String([24,31,18][i]),12,i === 1 ? 'var(--accent)' : 'var(--text)'); });
+  s += gCrown(68,66) + gT(76,96,'いちばん たかい 人が',9,'var(--muted)') + gT(76,108,'かった人に',9,'var(--muted)') + gArrow(150,64);
+  s += gB(166,22,128,92,'var(--accent)','var(--panel)',3) + gT(176,44,'きろく',11,'var(--accent)','start');
+  s += gT(176,64,'メンバー：3人',10,'var(--text)','start') + gT(176,82,'かち：たろう',10,'var(--text)','start') + gCrown(256,72);
+  return gSvg(s + gT(176,100,'てんすうも のこる',9,'var(--muted)','start'));
+}
+function hpLv4(){
+  let s = '';
+  for(let k = 0; k < 6; k++){
+    const x = 10 + (k%3)*42, y = 10 + Math.floor(k/3)*48, on = k % 2 === 0;
+    s += gB(x,y,38,42,on ? 'var(--accent)' : 'var(--muted)','var(--panel)') + gR(x+5,y+5,28,22,G_BOX[k]) + (on ? gT(x+30,y+40,'✓',11,'var(--accent)') : '');
+  }
+  s += gT(70,124,'いくつでも えらべる',10,'var(--muted)') + gArrow(140,62);
+  s += gB(158,14,136,98,'var(--frame)','var(--panel)') + gT(168,36,'3ほんを きろく',11,'var(--text)','start');
+  s += gR(168,48,36,28,G_BOX[5]) + gR(170,50,32,24,'#2B3A78') + gDot(186,60,5,'#F8D030') + gT(212,66,'しゃしん',10,'var(--muted)','start');
+  s += gR(168,86,110,5,'var(--muted)') + gR(168,96,80,5,'var(--muted)');
+  return gSvg(s + gT(226,128,'かんそうも つけられる',10,'var(--accent-2)'));
+}
+function hpLv5(){
+  let s = gT(8,16,'なかまの カードにも',10,'var(--accent-2)','start') + gT(8,30,'とどく',10,'var(--accent-2)','start');
+  s += gPhone(20,46,gT(37,72,'✓',14,'var(--accent)')) + gT(37,116,'1人が',10,'var(--accent)') + gT(37,128,'きろく',10,'var(--accent)');
+  [36,70,104].forEach(y => s += gLine(58,72,128,y,'var(--accent-2)',true));
+  return gSvg(s + gCard(130,4,'じぶん',4,'var(--accent)') + gCard(186,38,'たろう',3) + gCard(242,72,'はなこ',6));
+}
+/* --- とうひょう --- */
+function hpV1(){
+  let s = gB(6,6,140,128,'var(--muted)','var(--panel)') + gT(76,24,'この スマホで',11,'var(--accent)') + gPhone(59,38);
+  s += '<path d="M44 88 Q76 120 108 88" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="4 3"/>';
+  [[34,90],[76,108],[118,90]].forEach(([x,y]) => s += gDot(x,y,7,'var(--muted)'));
+  s += gT(76,132,'1台を まわす',9,'var(--muted)');
+  s += gB(154,6,140,128,'var(--accent)','var(--panel)') + gT(224,24,'みんなの スマホで',11,'var(--accent)');
+  [0,1,2].forEach(i => { const x = 164 + i*43; s += gPhone(x,44,gT(x+17,72,'✓',13,'var(--g-green)')); });
+  return gSvg(s + gT(224,122,'それぞれ とうひょう',9,'var(--accent-2)'));
+}
+function hpV2(){
+  let s = gT(14,22,'こうほ',10,'var(--accent-2)','start');
+  [0,1,2].forEach(i => { const x = 14 + i*40; s += gB(x,28,34,34,'var(--frame)') + gR(x+5,33,24,24,G_BOX[[1,4,5][i]]); });
+  s += gT(140,46,'＋',16,'var(--muted)') + gT(14,84,'つくる 人が きめる',10,'var(--accent-2)','start');
+  s += gB(14,90,128,22,'var(--accent)') + gT(78,105,'きめい',10,'var(--accent)') + gB(150,90,136,22,'var(--frame)') + gT(218,105,'むきめい',10,'var(--muted)');
+  s += gB(14,116,128,22,'var(--frame)') + gT(78,131,'1人1ぴょう',10,'var(--muted)') + gB(150,116,136,22,'var(--accent)') + gT(218,131,'いくつでも',10,'var(--accent)');
+  return gSvg(s);
+}
+function hpV3(){
+  let s = gQR(16,22,5) + gT(41,92,'QRコード',10,'var(--muted)') + gT(41,106,'フレンドで ない',9,'var(--muted)') + gT(41,118,'人も さんか',9,'var(--muted)');
+  s += gArrow(80,46,'var(--muted)') + gPhone(98,20,gT(115,48,'✓',13,'var(--g-green)')) + gLine(150,8,150,132);
+  s += gB(164,22,128,58,'var(--accent)','var(--panel)',3) + gT(174,44,'とうひょうに',11,'var(--accent)','start') + gT(174,64,'よばれて います',11,'var(--accent)','start');
+  s += gDot(280,24,7,'var(--danger)');
+  return gSvg(s + gT(228,106,'フレンドは えらぶと',10,'var(--accent-2)') + gT(228,120,'おしらせが とどく',10,'var(--accent-2)'));
+}
+function hpV4(){
+  let s = gT(70,18,'とちゅうは ひみつ',10,'var(--muted)');
+  [0,1,2].forEach(i => { const y = 28 + i*30; s += gR(14,y,22,22,G_BOX[[1,4,5][i]]) + gB(42,y+3,92,16,'var(--muted)','var(--panel)') + gT(88,y+15,'？',11,'var(--muted)'); });
+  s += gB(138,48,44,24,'var(--accent)','var(--panel)') + gT(160,64,'しめきる',9,'var(--accent)') + gArrow(186,60) + gT(246,18,'けっか はっぴょう',10,'var(--accent)');
+  [0,1,2].forEach(i => { const y = 28 + i*30; s += gR(200,y,22,22,G_BOX[[1,4,5][i]]) + gR(226,y+4,[52,32,18][i],14,i === 0 ? 'var(--accent)' : 'var(--muted)'); });
+  return gSvg(s + gCrown(280,32) + gT(150,128,'みんなの 画面に いっせいに でる',10,'var(--accent-2)'));
+}
+/* --- タイマー --- */
+function hpTimer1(){
+  let s = gB(10,10,170,120,'var(--muted)','var(--panel)') + gT(95,58,'29:59',30,'var(--accent)');
+  s += gB(20,74,150,20,'var(--frame)') + gT(95,88,'この じかんに セットする',9,'var(--text)');
+  s += gBtn(20,100,46,'はじめる') + gChip(72,100,46,'とめる') + gChip(124,100,46,'もどす');
+  return gSvg(s + gIcon('hourglass', 206, 28, 64, 'var(--accent-2)') + gT(238,116,'分と 秒を いれる',10,'var(--muted)'));
+}
+function hpTimer2(){
+  let s = gB(10,8,130,124,'var(--muted)','var(--panel)') + gBars(20,20,[100,70,90]) + gBars(20,56,[80,96]);
+  s += gB(84,96,50,26,'var(--accent)','var(--panel)') + gT(109,113,'12:34',11,'var(--accent)') + gT(70,92,'みぎしたに でる',9,'var(--muted)','end');
+  s += gArrow(150,70);
+  s += gIcon('hourglass', 174, 34, 40, 'var(--accent)');
+  ['M226 44 q10 10 0 20','M236 38 q16 16 0 32','M246 32 q22 22 0 44'].forEach(d => s += '<path d="'+d+'" fill="none" stroke="var(--accent-2)" stroke-width="3"/>');
+  return gSvg(s + gT(222,112,'0に なると おとで',10,'var(--accent-2)') + gT(222,126,'しらせる',10,'var(--accent-2)'));
+}
+/* --- サイコロ --- */
+function hpDice1(){
+  let s = gT(14,22,'ふる かず',10,'var(--accent-2)','start');
+  [1,2,3,4,5,6].forEach((n,i) => s += gChip(14+i*21,28,19,String(n),n === 3));
+  s += gT(76,66,'1〜12こ',10,'var(--muted)') + gBtn(30,80,92,'▶ ふる') + gArrow(140,70);
+  s += gDie(160,34,38,4,'var(--text)') + gDie(204,34,38,2,'var(--text)') + gDie(248,34,38,5,'var(--text)');
+  return gSvg(s + gT(226,104,'ごうけい 11',13,'var(--accent)'));
+}
+/* --- てんすう表 --- */
+function hpScore1(){
+  let s = gT(14,22,'あそぶ 人の なまえ',10,'var(--accent-2)','start') + gB(14,28,170,24,'var(--frame)') + gT(22,44,'たろう はなこ じろう',10,'var(--text)','start');
+  s += gBtn(192,28,94,'はじめる') + gArrow(140,74,'var(--muted)');
+  s += gB(60,92,180,38,'var(--frame)','var(--panel)');
+  ['たろう','はなこ','じろう'].forEach((n,i) => s += gT(90+i*60,108,n,10,'var(--muted)') + gT(90+i*60,124,'0',10,'var(--text)'));
+  return gSvg(s);
+}
+function hpScore2(){
+  let s = '';
+  ['たろう','はなこ','じろう'].forEach((n,i) => { const x = 14 + i*46;
+    s += gT(x+21,18,n,9,'var(--muted)') + gB(x,24,42,22,i === 1 ? 'var(--accent)' : 'var(--frame)') + gT(x+21,40,['8','12','5'][i],11,i === 1 ? 'var(--accent)' : 'var(--text)');
+    s += gB(x,50,42,22,'var(--frame)') + gT(x+21,66,['6','9','11'][i],11,'var(--text)');
+    s += gT(x+21,92,['14','21','16'][i],12,i === 1 ? 'var(--accent)' : 'var(--text)'); });
+  s += gTap(78,35) + gCrown(56,98) + gT(10,92,'計',10,'var(--muted)','start');
+  [['-5',160],['-1',196],['+1',232],['+5',268]].forEach(([t,x]) => s += gChip(x,30,30,t));
+  s += gB(160,62,138,20,'var(--frame)') + gT(229,76,'すうじで いれる',9,'var(--text)');
+  return gSvg(s + gT(229,108,'えらんだ マスを',10,'var(--accent-2)') + gT(229,122,'ふやす・へらす',10,'var(--accent-2)'));
+}
+/* --- カウンター --- */
+function hpCounter1(){
+  let s = '';
+  [['ライフ','12'],['コイン','5'],['はなこ','30']].forEach(([n,v],i) => { const y = 14 + i*40;
+    s += gB(10,y,280,34,'var(--muted)','var(--panel)') + gT(22,y+22,n,11,'var(--text)','start');
+    s += gChip(112,y+7,30,'-5') + gChip(146,y+7,30,'-1') + gT(196,y+23,v,15,'var(--accent)') + gChip(218,y+7,30,'+1') + gChip(252,y+7,30,'+5'); });
+  return gSvg(s);
+}
+/* --- くじ引き --- */
+function hpLot1(){
+  let s = gT(14,20,'1. なにを きめる？',10,'var(--accent-2)','start');
+  s += gChip(14,26,82,'さいしょの人',true) + gChip(102,26,90,'かたづける人') + gChip(198,26,90,'せつめいする人');
+  s += gT(14,70,'2. だれで ひく？',10,'var(--accent-2)','start');
+  ['たろう','はなこ','じろう','しろう'].forEach((n,i) => s += gChip(14+i*62,76,56,n));
+  return gSvg(s + gBtn(70,108,160,'▶ ちゅうせんを はじめる'));
+}
+function hpLot2(){
+  let s = '';
+  ['たろう','じろう','しろう'].forEach((n,i) => s += gB(14,14+i*36,90,28,'var(--muted)','var(--panel)') + gT(59,32+i*36,n,10,'var(--muted)'));
+  s += gArrow(116,64);
+  s += gB(140,30,150,70,'var(--accent)','var(--panel)',3) + gT(215,58,'さいしょの人は…',10,'var(--muted)') + gT(215,84,'はなこ！',16,'var(--accent)');
+  [[146,22],[282,26],[150,104],[278,100]].forEach(([x,y]) => s += gR(x,y,5,5,'var(--accent)'));
+  return gSvg(s);
+}
+/* --- チーム分け --- */
+function hpTeam1(){
+  let s = '';
+  const cs = ['#E2574C','#5CD6FF','#F8D030','#7BD88F','#B48CFF','#FF9F43'];
+  cs.forEach((c,i) => s += gDot(24 + (i%3)*30, 44 + Math.floor(i/3)*34, 11, c));
+  s += gT(54,118,'なまえを いれる',10,'var(--muted)');
+  s += gChip(110,14,60,'2チーム',true) + gChip(110,40,60,'3チーム') + gChip(110,66,60,'4チーム') + gArrow(178,64);
+  s += gB(196,10,96,56,'var(--accent)','var(--panel)') + gT(206,26,'チームA',10,'var(--accent)','start');
+  s += gB(196,72,96,56,'var(--accent-2)','var(--panel)') + gT(206,88,'チームB',10,'var(--accent-2)','start');
+  [0,3,4].forEach((k,i) => s += gDot(214+i*28,46,9,cs[k]));
+  [1,2,5].forEach((k,i) => s += gDot(214+i*28,108,9,cs[k]));
+  return gSvg(s);
+}
+/* --- あみだくじ --- */
+function hpAmidaLadder(path){
+  let s = '';
+  const xs = [50,110,170,230], names = ['たろう','はなこ','じろう','しろう'];
+  names.forEach((n,i) => s += gB(xs[i]-24,6,48,18,'var(--accent)','var(--panel)') + gT(xs[i],19,n,9,'var(--accent)'));
+  xs.forEach(x => s += gR(x-1,24,3,88,'var(--frame)'));
+  [[0,44],[1,64],[2,40],[0,84],[2,92]].forEach(([c,y]) => s += gR(xs[c],y,60,3,'var(--frame)'));
+  if(path) s += path;
+  return s;
+}
+function hpAmida1(){
+  let s = gT(14,20,'うえ：あそぶ 人',10,'var(--accent-2)','start');
+  ['たろう','はなこ','じろう'].forEach((n,i) => s += gChip(14+i*58,26,52,n));
+  s += gT(14,70,'した：ならべる もの',10,'var(--accent-2)','start');
+  s += gChip(14,76,82,'じゅんばん',true) + gChip(102,76,82,'あたり ひとつ') + gChip(190,76,96,'じぶんで かく');
+  return gSvg(s + gT(150,124,'したの けっかは ばらばらに ならぶ',10,'var(--muted)'));
+}
+function hpAmida2(){
+  let s = hpAmidaLadder('');
+  [[50,64],[110,84],[170,64],[50,104],[110,104],[170,104]].forEach(([x,y]) => s += gB(x+24,y-5,12,12,'var(--muted)','var(--panel)'));
+  s += gR(110,104,60,3,'var(--accent)') + gTap(140,105);
+  return gSvg(s + gT(150,132,'てんを タップで よこ線',10,'var(--accent-2)'));
+}
+function hpAmida3(){
+  const p = '<polyline points="110,24 110,64 170,64 170,92 230,92 230,112" fill="none" stroke="var(--accent)" stroke-width="5"/>';
+  let s = hpAmidaLadder(p);
+  ['3ばん','？','？','1ばん'].forEach((t,i) => s += gB([50,110,170,230][i]-24,114,48,18,i === 3 ? 'var(--accent)' : 'var(--muted)','var(--panel)') + gT([50,110,170,230][i],127,t,9,i === 3 ? 'var(--accent)' : 'var(--muted)'));
+  return gSvg(s);
+}
+/* --- メモ --- */
+function hpMemo1(){
+  let s = gB(6,10,92,110,'var(--accent)','var(--panel)') + gT(52,28,'チェックしき',10,'var(--accent)');
+  [0,1,2].forEach(i => s += gB(14,38+i*24,14,14,'var(--frame)') + (i === 0 ? gT(21,50,'✓',10,'var(--accent)') : '') + gR(34,44+i*24,54,5,'var(--muted)'));
+  s += gB(104,10,92,110,'var(--accent-2)','var(--panel)') + gT(150,28,'じゆうに かく',10,'var(--accent-2)') + gBars(114,42,[70,60,72,50,66]);
+  s += gB(202,10,92,110,'var(--g-green)','var(--panel)') + gT(248,28,'ノート',10,'var(--g-green)');
+  s += gR(212,40,72,46,G_BOX[1]) + '<path d="M222 76 q14 -20 28 -6 t26 -10" fill="none" stroke="#E2574C" stroke-width="3"/>' + gR(212,94,60,5,'var(--muted)');
+  return gSvg(s);
+}
+function hpMemo2(){
+  let s = gB(8,10,120,120,'var(--muted)','var(--panel)') + gB(16,18,104,20,'var(--frame)') + gT(22,32,'かいもの',10,'var(--text)','start');
+  s += gBars(16,48,[90,70,80]) + gBtn(16,96,104,'ほぞん する') + gArrow(136,70);
+  s += gT(156,20,'ほぞんした メモ',10,'var(--accent-2)','start');
+  [['かいもの','チェック'],['てがかり','じゆう']].forEach(([t,k],i) => { const y = 28 + i*50;
+    s += gB(156,y,138,44,i === 0 ? 'var(--accent)' : 'var(--muted)','var(--panel)') + gT(164,y+16,k,8,'var(--accent-2)','start') + gT(164,y+34,t,11,'var(--text)','start');
+    s += gChip(244,y+4,44,'ひらく') + gB(244,y+24,44,16,'var(--danger)') + gT(266,y+36,'けす',9,'var(--danger)'); });
+  return gSvg(s);
+}
+function hpMemo3(){
+  let s = gB(10,10,140,120,'var(--g-green)','var(--panel)') + gT(20,28,'なぞときの ノート',10,'var(--g-green)','start');
+  s += gR(20,36,120,56,G_BOX[4]) + '<path d="M30 80 q20 -30 40 -8 t40 -14" fill="none" stroke="#E2574C" stroke-width="3"/>' + '<circle cx="110" cy="56" r="10" fill="none" stroke="#F8D030" stroke-width="3"/>';
+  s += gR(20,100,100,5,'var(--muted)') + gR(20,112,70,5,'var(--muted)');
+  s += gArrow(160,70) + gPhone(184,40,gT(201,68,'✉',14,'var(--accent)'));
+  return gSvg(s + gT(226,48,'なかまに',10,'var(--accent-2)','start') + gT(226,62,'おくれる',10,'var(--accent-2)','start') +
+    gT(184,114,'しゃしんに',9,'var(--muted)','start') + gT(184,127,'かきこみも OK',9,'var(--muted)','start'));
+}
+/* --- てばん --- */
+function hpTurn1(){
+  let s = '';
+  ['はなこ','たろう','じろう','しろう'].forEach((n,i) => { const y = 10 + i*30;
+    s += gB(14,y,150,26,'var(--frame)') + gT(26,y+17,(i+1)+'. '+n,10,'var(--text)','start') + gT(140,y+17,'▲▼',10,'var(--muted)'); });
+  return gSvg(s + gChip(186,28,100,'ランダムに する',true) + gBtn(186,66,100,'かんりょう') + gT(236,112,'ならべる',10,'var(--muted)'));
+}
+function hpTurn2(){
+  let s = gT(150,22,'2しゅうめ',10,'var(--muted)');
+  s += gB(50,30,200,50,'var(--accent)','var(--panel)',3) + gT(150,52,'いまの てばん',9,'var(--muted)') + gT(150,72,'たろう',16,'var(--accent)');
+  s += gT(150,96,'つぎは じろう',10,'var(--text)');
+  return gSvg(s + gBtn(80,108,140,'▶ つぎの人へ'));
+}
+/* --- なかまの なまえ --- */
+function hpNames1(){
+  let s = gT(14,20,'とうろく した なかま',10,'var(--accent-2)','start');
+  ['たろう','はなこ','じろう','しろう'].forEach((n,i) => s += gChip(14+(i%2)*62,26+Math.floor(i/2)*26,56,n));
+  s += gArrow(148,52);
+  s += gB(168,14,124,84,'var(--frame)','var(--panel)') + gT(178,32,'どうぐで えらぶ',10,'var(--accent-2)','start');
+  s += gChip(178,40,50,'たろう',true) + gChip(234,40,50,'はなこ',true) + gTap(206,50) + gT(230,86,'タップだけ',10,'var(--muted)');
+  return gSvg(s + gT(150,124,'まいかい なまえを うたなくて いい',10,'var(--muted)'));
+}
+function hpNames2(){
+  let s = gB(10,10,170,120,'var(--accent)','var(--panel)',3) + gT(20,30,'▶ じぶん',11,'var(--text)','start') + gT(170,30,'Lv.8',12,'var(--accent)','end');
+  s += gT(20,52,'しょうごう：たつじん',10,'var(--accent-2)','start') + gB(20,60,150,10,'var(--muted)','var(--panel)') + gR(22,62,90,6,'var(--accent)');
+  s += gBars(20,82,[120,90,104]);
+  return gSvg(s + gT(238,58,'じぶんの',11,'var(--accent)') + gT(238,76,'ぼうけんしゃ',11,'var(--accent)') + gT(238,94,'カード',11,'var(--accent)'));
+}
+function hpNames3(){
+  let s = gPhone(30,30) + gPhone(236,30) + gLine(70,56,230,56,'var(--accent-2)',true);
+  s += gB(96,40,108,32,'var(--accent)','var(--panel)') + gT(150,61,'AB12CD',13,'var(--accent)');
+  return gSvg(s + gT(150,104,'ともだちコードで つながる',10,'var(--accent-2)') + gT(150,120,'きろく・ノート・とうひょうを やりとり',9,'var(--muted)'));
+}
+/* --- ジュークボックス --- */
+function hpJuke1(){
+  let s = gB(10,10,130,120,'var(--accent)','var(--panel)',3) + gT(75,34,'♪ オレンジヒル',10,'var(--accent)') + gB(22,44,106,8,'var(--muted)','var(--panel)') + gR(24,46,50,4,'var(--accent)');
+  s += gChip(22,62,32,'◀◀') + gBtn(58,61,34,'▶') + gChip(96,62,32,'▶▶');
+  s += gT(150,22,'ながしかた',10,'var(--accent-2)','start');
+  s += gChip(150,28,140,'1きょく くりかえし',true) + gChip(150,54,68,'じゅんばん') + gChip(222,54,68,'シャッフル');
+  return gSvg(s + gT(150,96,'おおきさ',10,'var(--accent-2)','start') + gB(150,104,140,8,'var(--muted)','var(--panel)') + gR(152,106,80,4,'var(--accent)'));
+}
+function hpJuke2(){
+  let s = gB(6,10,140,120,'var(--muted)','var(--panel)') + gT(76,28,'サイトだけ',10,'var(--text)');
+  s += gPhone(24,40,gT(41,66,'♪',13,'var(--accent)')) + gArrow(64,66,'var(--muted)') + gPhone(84,40,gT(101,68,'Ⅱ',12,'var(--muted)'));
+  s += gT(76,116,'ほかの アプリで とまる',9,'var(--muted)');
+  s += gB(154,10,140,120,'var(--accent)','var(--panel)') + gT(224,28,'ほかの アプリでも',10,'var(--accent)');
+  s += gPhone(172,40,gT(189,66,'♪',13,'var(--accent)')) + gArrow(212,66,'var(--accent)') + gPhone(232,40,gT(249,66,'♪',13,'var(--accent)'));
+  return gSvg(s + gT(224,116,'ずっと ながれる',9,'var(--accent)'));
+}
+/* --- しゅくやの ちょうぼ --- */
+function hpChoubo1(){
+  let s = gT(14,20,'つかった おかね',10,'var(--accent-2)','start') + gT(286,20,'はらった 人',10,'var(--accent-2)','end');
+  [['かいじょう','3000円','はなこ'],['おかし','1200円','たろう'],['のみもの','600円','じろう']].forEach(([a,b,c],i) => { const y = 28 + i*34;
+    s += gB(14,y,272,28,'var(--muted)','var(--panel)') + gT(24,y+18,a,10,'var(--text)','start') + gT(180,y+18,b,11,'var(--accent)','end') + gT(276,y+18,c,10,'var(--text)','end'); });
+  return gSvg(s);
+}
+function hpChoubo2(){
+  let s = gT(150,18,'せいさん',11,'var(--accent)');
+  [['じろう','はなこ','800円'],['たろう','はなこ','400円']].forEach(([a,b,c],i) => { const y = 30 + i*40;
+    s += gChip(20,y,64,a) + gArrow(96,y+10,'var(--accent)') + gR(84,y+9,12,3,'var(--accent)') + gChip(112,y,64,b) + gT(196,y+15,c,13,'var(--accent)','start'); });
+  return gSvg(s + gB(70,112,160,22,'var(--frame)') + gT(150,127,'けっかを コピー（LINE用）',9,'var(--text)'));
+}
+/* --- さかばの うわさばなし --- */
+function hpTalk1(){
+  let s = gB(14,12,272,64,'var(--accent)','var(--panel)',3) + gT(150,36,'うわさ',9,'var(--muted)') + gT(150,60,'さいきん ハマって いる ことは？',12,'var(--text)');
+  s += gT(150,96,'▶ こたえる人：はなこ',11,'var(--accent-2)');
+  return gSvg(s + gBtn(90,108,120,'▶ つぎの うわさ'));
+}
+/* --- ことばじてん --- */
+function hpDict1(){
+  let s = gChip(10,8,52,'すべて',true) + gChip(68,8,66,'★はじめに') + gChip(140,8,70,'じゅんび') + gChip(216,8,74,'すすめかた');
+  [['★ ワーカープレイスメント','ず'],['  デッキ構築','ず'],['★ 手番','']].forEach(([w,d],i) => { const y = 36 + i*34;
+    s += gB(10,y,280,28,'var(--muted)','var(--panel)') + gT(20,y+18,w,11,'var(--text)','start') + (d ? gB(250,y+5,28,18,'var(--accent-2)') + gT(264,y+18,d,10,'var(--accent-2)') : ''); });
+  return gSvg(s);
+}
+function hpDict2(){
+  let s = gB(8,8,284,40,'var(--muted)','var(--panel)') + gR(18,26,82,6,'var(--text)') + gT(150,33,'ドラフト',13,'var(--text)');
+  s += '<line x1="122" y1="39" x2="178" y2="39" stroke="var(--accent-2)" stroke-width="2" stroke-dasharray="2 2"/>' + gR(212,26,70,6,'var(--text)') + gTap(192,30);
+  s += '<polygon points="140,58 150,48 160,58" fill="var(--accent)"/>' + gB(40,58,220,74,'var(--accent)','var(--panel)',3);
+  s += gT(54,80,'ドラフト',13,'var(--accent)','start') + gT(54,96,'どらふと',9,'var(--muted)','start');
+  return gSvg(s + gR(54,104,190,5,'var(--text)') + gR(54,114,150,5,'var(--text)') + gT(250,80,'いみが でる',10,'var(--accent-2)','end'));
+}
+function hpDict3(){
+  let s = gB(8,8,170,124,'var(--muted)','var(--panel)') + gT(18,26,'この いみの ことばは？',10,'var(--accent-2)','start') + gBars(18,34,[140,110]);
+  s += gChip(18,58,150,'デッキ構築') + gChip(18,82,150,'ドラフト',true) + gT(160,96,'✓',12,'var(--accent)') + gChip(18,106,150,'トリック');
+  s += gArrow(184,70);
+  s += gB(200,40,94,60,'var(--accent)','var(--panel)',3) + gT(247,62,'しょうごう',9,'var(--muted)') + gT(247,84,'ことばの',10,'var(--accent)') + gT(247,96,'みならい',10,'var(--accent)');
+  return gSvg(s);
+}
+/* --- ずかんづくり --- */
+function hpHelp1(){
+  let s = gB(10,10,120,120,'var(--frame)','var(--panel)') + gT(20,28,'せつめいを かく',10,'var(--accent-2)','start') + gBars(20,38,[96,80,90,70]);
+  s += gR(20,82,40,30,G_BOX[2]) + gT(68,102,'がぞう・どうが',8,'var(--muted)','start');
+  s += gArrow(138,70) + gIcon('gear', 158, 46, 40, 'var(--accent)') + gT(178,104,'かんりにん',9,'var(--muted)');
+  s += gArrow(206,70) + gIcon('book', 226, 46, 40, 'var(--accent-2)');
+  return gSvg(s + gT(246,104,'ずかんに のる',9,'var(--accent-2)'));
+}
+
+/* どうぐ ごとの せつめい */
+const SCREEN_HELP = {
+  log: {name:'あそんだ きろく', pages:[
+    {title:'あそぶと レベルが あがる', pic:hpLv1, body:['あそんだ ゲームを きろく すると、きろくに 入った 人 みんなの レベルが あがります。','きろく 1かいで、けいけんち 1かい ぶん。']},
+    {title:'1タップで きろく', pic:hpLv2, body:['ゲームの ページや おまかせの「あそんだ！」を おすだけ。','きょうの メンバーと じぶんが 入ります。あとから たせます。']},
+    {title:'てんすう表から きろく', pic:hpLv3, body:['あそび おわったら「この てんすう表を きろくする」。','メンバーと かった人が じどうで 入ります。']},
+    {title:'まとめて きろく', pic:hpLv4, body:['「きょう あそんだ」なら、いくつかの ゲームを いっしょに きろく できます。','しゃしんや かんそうも つけられます。']},
+    {title:'だれか 1人が きろく すれば OK', pic:hpLv5, body:['なかま どうしなら、1人の きろくが みんなの ぼうけんしゃカードに とどきます。','それぞれ きろく する ひつようは ありません。']}
+  ]},
+  vote: {name:'とうひょう', pages:[
+    {title:'2つの やりかた', pic:hpV1, body:['「この スマホで」は 1台を まわして とうひょう。','「みんなの スマホで」は それぞれの スマホから とうひょう できます。']},
+    {title:'とうひょうを つくる', pic:hpV2, body:['こうほを えらび、なまえを 出すか（きめい）と、1人 何ぴょうかを きめます。']},
+    {title:'みんなを よぶ', pic:hpV3, body:['フレンドは えらぶと おしらせが とどきます。','フレンドで ない 人は、QRコードを よみとれば さんか できます。']},
+    {title:'けっかは しめきって から', pic:hpV4, body:['とちゅうの けっかは ひみつ。','つくった 人が「しめきる」を おすと、みんなの 画面に けっかが でます。']}
+  ]},
+  timer: {name:'タイマー', pages:[
+    {title:'じかんを はかる', pic:hpTimer1, body:['分と 秒を いれて「この じかんに セットする」→「はじめる」。','「もどす」で さいしょの じかんに もどります。']},
+    {title:'ほかの 画面でも うごく', pic:hpTimer2, body:['ほかの 画面に いっても うごきつづけ、みぎしたに のこり じかんが でます。','0に なると おとで しらせます。']}
+  ]},
+  dice: {name:'サイコロ', pages:[
+    {title:'サイコロを ふる', pic:hpDice1, body:['ふる かず（1〜12こ）を えらんで「ふる」。','でた めと ごうけいが でます。']}
+  ]},
+  score: {name:'てんすう表', pages:[
+    {title:'なまえを いれて はじめる', pic:hpScore1, body:['あそぶ 人の なまえを いれて「はじめる」。','とうろく した なかまは タップで えらべます。']},
+    {title:'マスを えらんで いれる', pic:hpScore2, body:['マスを タップして、＋や−の ボタンで てんすうを いれます。','「すうじで いれる」も OK。ごうけいは じどうで でます。']},
+    {title:'そのまま きろくに', pic:hpLv3, body:['あそび おわったら ゲームを えらんで「この てんすう表を きろくする」。','メンバーと かった人が 入り、レベルも あがります。']}
+  ]},
+  counter: {name:'カウンター', pages:[
+    {title:'なんでも かぞえる', pic:hpCounter1, body:['ライフ・コイン・のこりかず など、かぞえたい ものや なまえを いれて「つくる」。','＋−の ボタンで ふやしたり へらしたり できます。']}
+  ]},
+  lot: {name:'くじ引き', pages:[
+    {title:'なにを きめる？', pic:hpLot1, body:['きめたい こと（さいしょの人 など）を えらぶか、じぶんで かきます。','つぎに くじを ひく 人の なまえを いれます。']},
+    {title:'1人を えらぶ', pic:hpLot2, body:['「ちゅうせんを はじめる」で、だれか 1人が えらばれます。']}
+  ]},
+  team: {name:'チーム分け', pages:[
+    {title:'チームに わける', pic:hpTeam1, body:['なまえを いれて、チームの かず（2〜4）を おすだけ。','ランダムに わけます。もう一度 おすと わけなおし。']}
+  ]},
+  amida: {name:'あみだくじ', pages:[
+    {title:'なまえと けっかを きめる', pic:hpAmida1, body:['うえに ならべる なまえと、したに ならべる もの（じゅんばん・あたり・じぶんで かく）を えらびます。','したの けっかは ばらばらに ならびます。']},
+    {title:'よこ線を ひく', pic:hpAmida2, body:['てんを タップすると よこ線を ひけます。もう一度 タップで けせます。','「ランダムに ひく」も あります。']},
+    {title:'はっぴょう', pic:hpAmida3, body:['なまえを おすと 1人ずつ 線を たどります。','「ぜんいん いっせいに」で まとめて はっぴょう。']}
+  ]},
+  memo: {name:'メモ', pages:[
+    {title:'3つの かきかた', pic:hpMemo1, body:['「チェックしき」は 1つずつ けしこむ リスト。「じゆうに かく」は ながい ぶんしょう。','「ノート」は しゃしんつきの メモです。']},
+    {title:'ほぞんして あとで ひらく', pic:hpMemo2, body:['なまえを つけて「ほぞん する」。','下の いちらんから いつでも ひらいたり けしたり できます。']},
+    {title:'ノート', pic:hpMemo3, body:['ゲームごとに しゃしんと メモを のこせます。','しゃしんに かきこんだり、なかまに おくったりも できます。']}
+  ]},
+  turn: {name:'てばん', pages:[
+    {title:'じゅんばんを きめる', pic:hpTurn1, body:['あそぶ 人を いれて「じゅんばんを きめる」。','▲▼ で ならべかえるか「ランダムに する」。おわったら「かんりょう」。']},
+    {title:'いまは だれの ばん？', pic:hpTurn2, body:['「つぎの人へ」で てばんが すすみます。','なんしゅうめ かも わかるので「だれの ばん？」が なくなります。']}
+  ]},
+  names: {name:'なかまの なまえ', pages:[
+    {title:'なかまを とうろく', pic:hpNames1, body:['いっしょに あそぶ 人を とうろく すると、どうぐや きろくで タップで えらべます。']},
+    {title:'ぼうけんしゃの証', pic:hpNames2, body:['じぶんの なまえで とうろく すると、ぼうけんしゃカードが できます。','きろくで レベルが あがり、しょうごうも てに はいります。']},
+    {title:'ともだちと つながる', pic:hpNames3, body:['ともだちコードで つながると、きろく・ノート・とうひょうを やりとり できます。']}
+  ]},
+  jukebox: {name:'ジュークボックス', pages:[
+    {title:'きょくを えらぶ', pic:hpJuke1, body:['すきな きょくを えらび、ながしかた（くりかえし・じゅんばん・シャッフル）と おおきさを きめます。']},
+    {title:'ほかの アプリを ひらいた とき', pic:hpJuke2, body:['「サイトを ひらいて いる ときだけ」か「ほかの アプリでも ながす」を えらべます。','右上の ♪ で いつでも とめられます。']}
+  ]},
+  choubo: {name:'しゅくやの ちょうぼ', pages:[
+    {title:'つかった おかねを かく', pic:hpChoubo1, body:['さんかした 人と、つかった おかね・はらった 人を いれます。']},
+    {title:'せいさん', pic:hpChoubo2, body:['だれが だれに いくら はらえば いいかを けいさん します。','けっかは LINE用に コピー できます。']}
+  ]},
+  talk: {name:'さかばの うわさばなし', pages:[
+    {title:'おだいで トーク', pic:hpTalk1, body:['「うわさを きく」で トークの おだいと、こたえる 人が でます。','じぶんで おだいを ついか する ことも できます。']}
+  ]},
+  dict: {name:'ことばじてん', pages:[
+    {title:'ことばを しらべる', pic:hpDict1, body:['ボードゲームで よく つかう ことばを、しゅるい べつや なまえで しらべられます。','★は はじめに おぼえたい ことば、「ず」は 図つきです。']},
+    {title:'てんせんの ことば', pic:hpDict2, body:['ゲームの せつめいで てんせんが ついた ことばを タップすると、いみが でます。']},
+    {title:'クイズで おぼえる', pic:hpDict3, body:['ことばクイズで せいかい すると「おぼえた」に なります。','おぼえた かずで しょうごうも もらえます。']}
+  ]},
+  help: {name:'ずかんづくり', pages:[
+    {title:'せつめいを おくる', pic:hpHelp1, body:['ゲームの せつめい・にんずう・タグ・がぞう・どうがを おくれます。','かんりにんが みて、ずかんに とりこみます。']}
+  ]}
+};
+/* いまの 画面に あう せつめい（なければ はじめての あんないの その ページ） */
+function screenHelpFor(r){
+  const name = r.name, p = r.param;
+  if(name === 'tool' && SCREEN_HELP[p]) return SCREEN_HELP[p];
+  if(name === 'playlog' || name === 'records' || name === 'card') return SCREEN_HELP.log;
+  if(name === 'poll') return SCREEN_HELP.vote;
+  if(name === 'suggest') return SCREEN_HELP.help;
+  const gi = {home:1, list:2, game:2, random:3, tools:4, tool:4, admin:5}[name];
+  const k = gi === undefined ? 0 : gi, pg = GUIDE_PAGES[k];
+  const label = ['ようこそ','さがす','ずかん','おまかせ','どうぐ','かんり'][k];
+  return {name: label, guide:true, pages:[{title: k === 5 ? 'かんり' : pg.title, pic:pg.pic, body:pg.body}]};
+}
+let helpStep = 0, helpNow = null;
+function openScreenHelp(){
+  helpNow = screenHelpFor(currentRoute()); helpStep = 0;
+  store.write(KEY.helpSeen, true);
+  const b = document.getElementById('helpBtn');
+  if(b) b.classList.remove('blink');
+  showScreenHelp();
+}
+function showScreenHelp(){
+  let back = document.getElementById('helpBack');
+  if(!back){
+    back = document.createElement('div');
+    back.id = 'helpBack'; back.className = 'guide-back';
+    back.setAttribute('role', 'dialog'); back.setAttribute('aria-modal', 'true');
+    back.setAttribute('aria-label', 'この 画面の せつめい');
+    back.addEventListener('click', e => { if(e.target === back) closeScreenHelp(); });
+    document.body.appendChild(back);
+  }
+  const h = helpNow, n = h.pages.length, pg = h.pages[helpStep], last = helpStep === n - 1;
+  back.innerHTML = '<div class="guide-win" id="guideWin">' +
+    '<div class="guide-head"><span class="guide-step">この 画面の せつめい：' + esc(h.name) + (n > 1 ? '　' + (helpStep + 1) + '／' + n : '') + '</span>' +
+      '<button class="mini" id="helpClose">とじる</button></div>' +
+    '<h2 style="margin-top:6px">' + pg.title + '</h2>' +
+    '<div class="guide-pic" id="guidePic">' + pg.pic() + '</div>' +
+    '<div class="guide-body">' + pg.body.map(t => '<p>' + t + '</p>').join('') + '</div>' +
+    (n > 1 ? '<div class="guide-dots">' + h.pages.map((_, k) => '<span' + (k === helpStep ? ' class="on"' : '') + '></span>').join('') + '</div>' : '<div style="height:10px"></div>') +
+    (h.guide ? '<button class="mini" id="helpGuide" style="margin:0 0 10px;align-self:center">はじめての あんないを ぜんぶ 見る</button>' : '') +
+    '<div class="guide-btns">' +
+      (helpStep > 0 ? '<button class="btn small" id="helpPrev" style="flex:1">◀ もどる</button>' : '') +
+      '<button class="btn primary" id="helpNext" style="flex:2">' + (last ? 'わかった！' : 'つぎへ ▶') + '</button>' +
+    '</div></div>';
+  const prev = document.getElementById('helpPrev');
+  if(prev) prev.onclick = () => { helpStep--; showScreenHelp(); };
+  document.getElementById('helpNext').onclick = () => { if(last) closeScreenHelp(); else { helpStep++; showScreenHelp(); } };
+  document.getElementById('helpClose').onclick = closeScreenHelp;
+  const gg = document.getElementById('helpGuide');
+  if(gg) gg.onclick = () => { closeScreenHelp(); openGuide(); };
+  fitGuide();
+  try{ document.getElementById('helpNext').focus({preventScroll:true}); }catch(e){}
+}
+function closeScreenHelp(){
+  const back = document.getElementById('helpBack');
+  if(back) back.remove();
+}
+/* 画面が かわったら（もどる ボタン など）とじる */
+window.addEventListener('hashchange', closeScreenHelp);
+document.addEventListener('keydown', e => {
+  if(!document.getElementById('helpBack')) return;
+  if(e.key === 'Escape') closeScreenHelp();
+  if(e.key === 'ArrowRight' && helpNow && helpStep < helpNow.pages.length - 1){ helpStep++; showScreenHelp(); }
+  if(e.key === 'ArrowLeft' && helpStep > 0){ helpStep--; showScreenHelp(); }
 });
 
 function helpAdminHTML(){
@@ -12616,6 +13099,12 @@ document.addEventListener('click', e => {
     '.tool-card, .gtile, .score-cell, .lb-nav, #timerBadge, summary, .jb-track')) playClick();
 });
 initTheme();
+(function setupHelpBtn(){
+  const b = document.getElementById('helpBtn');
+  if(!b) return;
+  b.onclick = openScreenHelp;
+  if(!store.read(KEY.helpSeen, false)) b.classList.add('blink');
+})();
 loadAll();
 loadNotes().then(() => { const rt = currentRoute(); if(rt.name === 'game' || (rt.name === 'tool' && rt.param === 'memo')) render(); });
 adoptKaiFromUrl();
