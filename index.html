@@ -209,6 +209,17 @@ img{image-rendering:auto}
 .chip[aria-pressed="true"]{background:var(--text);color:var(--panel);border-color:var(--text);font-weight:400}
 .chip[aria-pressed="true"]::before{content:"▶"}
 .chip.sm{font-size:12.5px;padding:5px 9px}
+.chip .cnt{margin-left:6px;font-size:11px;color:var(--muted)}
+.chip[aria-pressed="true"] .cnt{color:inherit;opacity:.7}
+.chip.zero{opacity:.38;border-style:dashed;cursor:default}
+/* さがす画面：したに ついて くる けっかの まど */
+.search-dock{position:sticky;bottom:calc(66px + env(safe-area-inset-bottom));z-index:30;
+  background:var(--panel);border:3px solid var(--frame);box-shadow:var(--shadow);padding:10px 12px;margin-top:6px}
+.search-dock .btn{margin:0;padding-top:9px;padding-bottom:9px}
+.dock-cond{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--text)}
+.dock-cond span{min-width:0}
+.dock-num{font-size:12.5px;color:var(--muted);margin:4px 0 8px}
+.dock-num b{color:var(--accent);font-weight:400;font-size:15px}
 .chip.sm.today{border-color:var(--accent-2);color:var(--accent-2)}
 
 .tagline{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
@@ -3065,20 +3076,38 @@ function chipGroup(name, options, selected, multi){
   }).join('') + '</div>';
 }
 
+/* タグの ボタンに「いま えらべる ゲームの かず」を つける。
+   にんずう・じかんを えらんで いれば、それに あう ゲームの なかで かぞえる。
+   0の タグは うすく して おし にくく する（えらんでも でて こないため） */
+function tagChipGroup(list, f){
+  const af = activeFilters();
+  const base = poolGames().filter(g =>
+    (!af.players || playersOk(g, af)) && (!af.time || timeScore(g.playTime, af.time) > 0));
+  return '<div class="chips">' + list.map(tg => {
+    const on = f.tags.includes(tg.name);
+    const n = base.filter(g => (g.tags||[]).includes(tg.name)).length;
+    const zero = !n && !on;
+    return '<button class="chip'+(zero ? ' zero' : '')+'" data-chip="tags" data-val="'+esc(tg.name)+'" aria-pressed="'+on+'"' +
+      (zero ? ' aria-disabled="true"' : '') + '>'+esc(tg.name)+'<span class="cnt">'+n+'</span></button>';
+  }).join('') + '</div>';
+}
+
 function viewHome(){
   const f = state.filters;
   const cats = TAG_CATEGORIES.map(cat => {
     const list = state.tags.filter(t => t.category === cat);
     if(!list.length) return '';
     return '<div style="margin-bottom:11px"><div class="catlabel">'+esc(cat)+'</div>' +
-      chipGroup('tags', list.map(t=>({id:t.name,label:t.name})), f.tags, true) + '</div>';
+      tagChipGroup(list, f) + '</div>';
   }).join('');
   const uncat = state.tags.filter(t => !TAG_CATEGORIES.includes(t.category));
   const uncatHTML = uncat.length ? '<div><div class="catlabel">その他</div>' +
-    chipGroup('tags', uncat.map(t=>({id:t.name,label:t.name})), f.tags, true) + '</div>' : '';
+    tagChipGroup(uncat, f) + '</div>' : '';
 
   const af = activeFilters();
-  const n = hasFilter(af) ? search(af).ranked.length : poolGames().length;
+  const res = hasFilter(af) ? search(af) : null;
+  const nAll = res ? res.perfect.length : poolGames().length;
+  const nNear = res ? res.ranked.length - res.perfect.length : 0;
   const todayBar = state.today
     ? '<div class="win" style="margin-bottom:14px;padding:10px 12px">' +
         '<span style="color:var(--accent)">▶ きょうは '+state.today+'人</span>' +
@@ -3094,7 +3123,6 @@ function viewHome(){
     '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>' +
       (kaiOn() ? 'きょうの たなには '+poolGames().length+'さくひんが ある。' : 'ずかんには '+ownedGames().length+'さくひんが とうろく されている。') + '</p>' +
 
-    '<div class="field"><h2>どのくらい あそべる？<em>ひとつ</em></h2>' + chipGroup('time', TIME_OPTIONS, f.time, false) + '</div>' +
     '<div class="field"><h2>なんにんで あそぶ？<em>ひとつ</em></h2>' + chipGroup('players', PLAYER_OPTIONS, f.players, false) +
       (f.players === '6' ?
         '<div class="row" style="margin-top:10px;align-items:center">' +
@@ -3120,13 +3148,20 @@ function viewHome(){
       (f.players && !state.today ? '<p class="count" style="margin:8px 0 0">' +
         '<button class="mini" id="setToday">この にんずうを きょうの メンバーに する</button></p>' : '') +
       '</div>' +
+    '<div class="field"><h2>どのくらい あそべる？<em>ひとつ</em></h2>' + chipGroup('time', TIME_OPTIONS, f.time, false) + '</div>' +
     '<div class="field"><h2>どんな ゲームが いい？<em>いくつでも</em></h2>' +
       '<p class="count" style="margin:-4px 0 10px">ぜんぶ あわなくても だいじょうぶ。あう ものが おおい じゅんに ならべます。</p>' +
       cats + uncatHTML + '</div>' +
 
-    (hasFilter(f) ? '<p class="count">えらんだ じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '') +
-
-    '<button class="btn primary" id="searchBtn" style="margin-bottom:11px">▶ おすすめを みる（'+n+'）</button>' +
+    /* した に ついて くる「けっか」の まど。えらぶ たびに かずが かわる */
+    '<div class="search-dock">' +
+      (hasFilter(f)
+        ? '<div class="dock-cond"><span>'+esc(condText(f))+'</span><button class="mini" id="clearFilter">けす</button></div>' +
+          '<p class="dock-num">ぜんぶ あう <b>'+nAll+'</b>さくひん' + (nNear ? '・ちかい '+nNear+'さくひん' : '') + '</p>'
+        : '<p class="dock-num">じょうけんを えらぶと、あう じゅんに ならびます</p>') +
+      '<button class="btn primary" id="searchBtn">▶ おすすめを みる</button>' +
+    '</div>' +
+    '<div style="height:11px"></div>' +
     '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
     '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、いちばん よく あう ゲームの なかから ひきます。</p>' +
   '</section>';
@@ -10969,6 +11004,7 @@ function bind(r){
 
   app.querySelectorAll('[data-chip]').forEach(b => {
     b.onclick = () => {
+      if(b.classList.contains('zero')) return;   /* あう ゲームが 0の タグは えらばない */
       const kind = b.dataset.chip, val = b.dataset.val;
       if(kind === 'tags'){
         const i = state.filters.tags.indexOf(val);
