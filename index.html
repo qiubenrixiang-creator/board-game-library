@@ -346,6 +346,9 @@ img{image-rendering:auto}
 .summary-lead{font-size:17px;line-height:1.8;margin:0}
 .kv{display:grid;grid-template-columns:7em 1fr;gap:5px 10px;font-size:14px;margin:0}
 .kv dt{color:var(--muted);font-size:13px}
+.match-row{margin:2px 0 4px}
+.match{display:inline-block;font-size:11.5px;line-height:1.4;padding:1px 6px;border:2px solid var(--muted);color:var(--muted)}
+.match.full{border-color:var(--accent);color:var(--accent)}
 .kv dd{margin:0}
 
 /* ---------- フォーム ---------- */
@@ -2762,30 +2765,46 @@ function playersOk(g, f){
   const n = playersCount(f);
   return g.playersMin <= n && n <= g.playersMax;
 }
+/* じょうけんの あいかた
+   ・にんずう … あそべない ゲームは だせないので、かならず あう ものだけ
+   ・じかん／タグ … ぜんぶ あわなくても よい。あう かずが おおい じゅんに ならべる
+   （むかしは ぜんぶ あう ものだけ だしていて、0けんに なりやすかった） */
 function scoreGame(g, f){
-  let got = 0, max = 0, hardOk = true;
-  if(f.players){ max += 1; if(playersOk(g, f)) got += 1; else hardOk = false; }
+  let got = 0, max = 0, met = 0, conds = 0;
+  const playersFit = f.players ? playersOk(g, f) : true;
+  const hitTags = [];
   if(f.time){
-    max += 1;
+    conds += 1; max += 1;
     const s = timeScore(g.playTime, f.time);
     got += s;
-    if(s === 0) hardOk = false;
+    if(s > 0) met += 1;
   }
   if(f.tags.length){
-    max += f.tags.length;
-    const hit = f.tags.filter(t => (g.tags||[]).includes(t)).length;
-    got += hit;
-    if(hit < f.tags.length) hardOk = false;
+    f.tags.forEach(t => { if((g.tags||[]).includes(t)) hitTags.push(t); });
+    conds += f.tags.length; max += f.tags.length;
+    got += hitTags.length; met += hitTags.length;
   }
-  return { game:g, rate: max === 0 ? 1 : got/max, perfect:hardOk };
+  return { game:g, playersFit, met, conds, hitTags,
+           rate: max === 0 ? 1 : got/max,
+           perfect: playersFit && met === conds };
 }
 function search(f){
   const scored = poolGames().map(g => scoreGame(g, f));
-  const by = (a,b) => b.rate - a.rate || (a.game.difficulty||0) - (b.game.difficulty||0);
-  return {
-    perfect: scored.filter(s=>s.perfect).sort(by).map(s=>s.game),
-    near: scored.filter(s=>!s.perfect && s.rate >= 0.5).sort(by).map(s=>s.game)
-  };
+  const by = (a,b) => (b.perfect - a.perfect) || (b.met - a.met) || (b.rate - a.rate) ||
+                      (a.game.difficulty||0) - (b.game.difficulty||0);
+  const fit = scored.filter(s => s.playersFit);
+  /* じかん・タグを えらんで いれば、どれか ひとつは あう ものだけ */
+  let ranked = fit.filter(s => s.conds === 0 || s.met > 0).sort(by);
+  const loose = !ranked.length && fit.length > 0;
+  if(loose) ranked = fit.sort(by);        /* どれも あわない ときは にんずうが あう ものを ぜんぶ */
+  return { ranked, loose, perfect: ranked.filter(s => s.perfect).map(s => s.game) };
+}
+/* 「3つの うち 2つ あう」の しるし */
+function matchLabelHTML(s){
+  if(!s || !s.conds) return '';
+  return s.perfect
+    ? '<span class="match full">◎ ぜんぶ あう</span>'
+    : '<span class="match">○ '+s.conds+'つの うち '+s.met+'つ あう</span>';
 }
 function hasFilter(f){ return !!(f.time || f.players || f.tags.length); }
 function condText(f){
@@ -3059,7 +3078,7 @@ function viewHome(){
     chipGroup('tags', uncat.map(t=>({id:t.name,label:t.name})), f.tags, true) + '</div>' : '';
 
   const af = activeFilters();
-  const n = hasFilter(af) ? search(af).perfect.length : poolGames().length;
+  const n = hasFilter(af) ? search(af).ranked.length : poolGames().length;
   const todayBar = state.today
     ? '<div class="win" style="margin-bottom:14px;padding:10px 12px">' +
         '<span style="color:var(--accent)">▶ きょうは '+state.today+'人</span>' +
@@ -3101,18 +3120,20 @@ function viewHome(){
       (f.players && !state.today ? '<p class="count" style="margin:8px 0 0">' +
         '<button class="mini" id="setToday">この にんずうを きょうの メンバーに する</button></p>' : '') +
       '</div>' +
-    '<div class="field"><h2>どんな ゲームが いい？<em>いくつでも</em></h2>' + cats + uncatHTML + '</div>' +
+    '<div class="field"><h2>どんな ゲームが いい？<em>いくつでも</em></h2>' +
+      '<p class="count" style="margin:-4px 0 10px">ぜんぶ あわなくても だいじょうぶ。あう ものが おおい じゅんに ならべます。</p>' +
+      cats + uncatHTML + '</div>' +
 
     (hasFilter(f) ? '<p class="count">えらんだ じょうけん：'+esc(condText(f))+' <button class="mini" id="clearFilter" style="margin-left:6px">けす</button></p>' : '') +
 
     '<button class="btn primary" id="searchBtn" style="margin-bottom:11px">▶ おすすめを みる（'+n+'）</button>' +
     '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
-    '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、それに あう ゲームだけから ひきます。</p>' +
+    '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、いちばん よく あう ゲームの なかから ひきます。</p>' +
   '</section>';
 }
 
 /* しゃしんを 大きく ならべる かたち（たなを ながめる かんじ） */
-function gameTile(g){
+function gameTile(g, matchHTML){
   const marks = newBadge(g) + reqBadge(g) + sleepBadge(g, true) +
     (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
     (isLent(g) ? '<span class="badge">かしだし中</span>' : '');
@@ -3121,11 +3142,15 @@ function gameTile(g){
     '<span class="gtile-name">'+esc(g.title)+'</span>' +
     '<span class="gtile-meta">'+playersText(g)+'・'+(Number(g.playTime)||0)+'分</span>' +
     (marks ? '<span class="gtile-marks">'+marks+'</span>' : '') +
+    (matchHTML ? '<span class="gtile-marks">'+matchHTML+'</span>' : '') +
   '</button>';
 }
 
-function gameCard(g, hitTags){
-  const tags = (g.tags||[]).slice(0,4).map(t =>
+function gameCard(g, hitTags, matchHTML){
+  /* あった タグを さきに ならべて、なぜ でて きたか わかる ように する */
+  const hit = hitTags || [];
+  const ordered = (g.tags||[]).filter(t => hit.includes(t)).concat((g.tags||[]).filter(t => !hit.includes(t)));
+  const tags = ordered.slice(0, Math.max(4, ordered.filter(t => hit.includes(t)).length)).map(t =>
     '<span class="tag'+((hitTags||[]).includes(t)?' hit':'')+'">'+esc(t)+'</span>').join('');
   const beginner = (g.tags||[]).includes('初心者') ? '<span class="badge">しょしんしゃ○</span>' : '';
   const fresh = newBadge(g);
@@ -3136,6 +3161,7 @@ function gameCard(g, hitTags){
     (playCount(g) ? '<span class="badge">'+playCount(g)+'かい</span>' : '');
   return '<button class="gcard" data-open="'+esc(g.id)+'">' + thumbHTML(g) +
     '<div><h3>'+esc(g.title)+fresh+reqBadge(g)+sleepBadge(g)+beginner+marks+'</h3>' +
+    (matchHTML ? '<div class="match-row">'+matchHTML+'</div>' : '') +
     '<div class="meta"><span><b>'+playersText(g)+'</b></span><span><b>'+(Number(g.playTime)||0)+'分</b></span>' +
     '<span>むずかしさ '+stars(g.difficulty)+'</span></div>' +
     '<p class="summary">'+esc(g.summary||'')+'</p>' +
@@ -3260,7 +3286,7 @@ function listComputed(){
   else if(mode === 'wish') list = state.games.filter(isWish);
   else if(mode === 'lent') list = ownedGames().filter(isLent);
   else if(mode === 'sleep') list = sleepingGames();
-  else                     list = filtered ? res.perfect.slice() : poolGames();
+  else                     list = filtered ? res.ranked.map(s => s.game) : poolGames();
   list = list.slice();
 
   const q = normalizeText(state.listQuery);
@@ -3287,23 +3313,33 @@ function listResultsHTML(){
   const f = c.f, list = c.list, res = c.res;
 
   let html = '<p class="count">' +
-    (c.filtered ? esc(condText(f)) + ' の じょうけんで ' + list.length + 'さくひん'
+    (c.filtered ? esc(condText(f)) + ' に あう じゅんに ' + list.length + 'さくひん'
                 : 'ぜんぶで ' + list.length + 'さくひん') +
     (c.q ? '（「' + esc(state.listQuery) + '」で けんさく中）' : '') +
     (c.filtered ? ' <button class="mini" id="clearFilter" style="margin-left:6px">じょうけんを けす</button>' : '') +
     '</p>';
 
-  if(!list.length && !res.near.length){
+  if(!list.length){
     html += '<div class="empty"><span class="mark" data-icon="search"></span>' +
       (c.q ? 'その なまえの ゲームは みつからない！<br><span style="font-size:12px">べつの よみかたや、みじかい ことばで ためして みてください。</span>'
-           : 'じょうけんに あう ゲームが みつからない！<br><span style="font-size:12px">じょうけんを ひとつ へらすと みつかりやすい。</span>') +
+           : 'その にんずうで あそべる ゲームが みつからない！<br><span style="font-size:12px">にんずうを かえて ためして みてください。</span>') +
       '<div style="margin-top:16px"><button class="btn small" data-go2="#/">じょうけんを えらびなおす</button></div></div>';
     return html;
   }
 
+  /* じょうけんで さがした ときは「いくつ あうか」の しるしを つける */
+  const sc = {};
+  if(c.filtered && !c.q) res.ranked.forEach(s => { sc[s.game.id] = s; });
   const block = arr => (state.listView === 'grid')
-      ? '<div class="tile-grid">' + arr.map(g => gameTile(g)).join('') + '</div>'
-      : '<div class="card-list">' + arr.map(g => gameCard(g, f.tags)).join('') + '</div>';
+      ? '<div class="tile-grid">' + arr.map(g => gameTile(g, matchLabelHTML(sc[g.id]))).join('') + '</div>'
+      : '<div class="card-list">' + arr.map(g => gameCard(g, f.tags, matchLabelHTML(sc[g.id]))).join('') + '</div>';
+  if(c.filtered && !c.q && list.length){
+    const nPerfect = res.perfect.length;
+    html += '<p class="count" style="margin:-4px 0 12px">' +
+      (res.loose ? 'えらんだ タイプに あう ゲームは なかったので、この にんずうで あそべる ゲームを ならべて います。'
+       : nPerfect ? 'ぜんぶ あう ゲームが ' + nPerfect + 'さくひん。そのあとに、あう ものが おおい じゅんで つづきます。'
+       : 'ぜんぶ あう ゲームは なかったので、あう ものが おおい じゅんに ならべて います。') + '</p>';
+  }
   if(state.listMode === 'sleep' && list.length){
     html += '<p class="count" style="margin:-4px 0 12px">' + SLEEP_DAYS + '日いじょう あそんで いない ゲームです。' +
       'さいごに あそんだ 日が ふるい じゅんに、そのあと まだ いちども あそんで いない ゲームを ならべて います。</p>';
@@ -3326,13 +3362,6 @@ function listResultsHTML(){
         block(gr.items)).join('');
   }else if(list.length){
     html += block(list);
-  }
-  else html += '<div class="note" style="margin-bottom:14px">ぴったりの ゲームは いなかった。ちかい ゲームを だします。</div>';
-
-  if(c.filtered && res.near.length && !c.q){
-    html += '<div class="divider"></div><h2 class="sec">じょうけんに ちかい ゲーム</h2>' +
-      '<p class="count">じょうけんを ひとつ はずすと こうほに なります。</p>' +
-      '<div class="card-list">' + res.near.slice(0,6).map(g => gameCard(g, f.tags)).join('') + '</div>';
   }
   return html;
 }
@@ -7411,7 +7440,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.12-a';
+const APP_VERSION = '2026.10.13-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -12669,9 +12698,14 @@ function bind(r){
 function roll(){
   const f = state.filters;
   const res = search(f);
-  let pool = hasFilter(f) ? res.perfect : poolGames();
+  /* じょうけんが ある ときは、いちばん よく あう グループの なかから ひく */
+  let pool = poolGames();
   let fallback = false;
-  if(!pool.length && res.near.length){ pool = res.near; fallback = true; }
+  if(hasFilter(f)){
+    const top = res.ranked[0];
+    pool = top ? res.ranked.filter(s => s.perfect === top.perfect && s.met === top.met).map(s => s.game) : [];
+    fallback = !!(top && !top.perfect);
+  }
 
   const slot = document.getElementById('randomSlot');
   if(!slot) return;
@@ -12691,7 +12725,7 @@ function roll(){
   paintIcons(slot);
 
   setTimeout(() => {
-    slot.innerHTML = (fallback ? '<div class="note" style="margin-bottom:12px">ぴったりの 1本が いなかったので、ちかい ゲームから えらびました。</div>' : '')
+    slot.innerHTML = (fallback ? '<div class="note" style="margin-bottom:12px">ぜんぶ あう ゲームが なかったので、いちばん ちかい ゲームから えらびました。</div>' : '')
       + randomResultHTML(pick);
     paintIcons(slot); bind(currentRoute());
     playFanfare();
