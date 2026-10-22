@@ -3497,7 +3497,7 @@ function detailTagRows(g){
   const rest = tags.filter(t => play.indexOf(t) < 0 && mech.indexOf(t) < 0);
   const row = (label, list, f) => list.length ? '<dt>'+label+'</dt><dd><div class="tagline" style="margin:0">'+list.map(f).join('')+'</div></dd>' : '';
   return (play.length || mech.length)
-    ? row('あそびかた', play, t => '<span class="tag">'+esc(t)+'</span>') +
+    ? row('タグ', play, t => '<span class="tag">'+esc(t)+'</span>') +
       row('しくみ', mech, chip) +
       (mech.length ? '<dt></dt><dd class="count" style="margin:-2px 0 0">ことばを タップすると、いみが 見られます。</dd>' : '') +
       row('そのた', rest, chip)
@@ -7497,7 +7497,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.22-c';
+const APP_VERSION = '2026.10.22-d';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
