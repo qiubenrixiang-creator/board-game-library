@@ -956,6 +956,13 @@ html[data-theme="day"] .guide-win{--g-green:#2E8A4E}
 #memoBadge.dragging{opacity:1;box-shadow:0 0 0 3px var(--accent-2)}
 /* おすすめボタンが 下に いる 画面では、メモと タイマーを すこし 上に */
 body.has-gobar #memoBadge:not([style*="top"]), body.has-gobar #timerBadge:not([style*="top"]){bottom:calc(150px + env(safe-area-inset-bottom))}
+/* さがす画面は 下に「けっか」の まどが あるので、その上に */
+body.has-dock #memoBadge:not([style*="top"]), body.has-dock #timerBadge:not([style*="top"]){bottom:calc(260px + env(safe-area-inset-bottom))}
+/* さがす画面では、メモが からっぽの ときは かくす（けっかの まどと かさならない ように） */
+body.has-dock #memoBadge:not(.has){display:none}
+/* 右上の ボタンの 文字が 2行に ならない ように */
+.icon-btn{white-space:nowrap}
+@media (max-width:400px){ .icon-btn.snd{font-size:11px;padding:5px 5px;min-width:0} }
 #memoBadge.has::after{
   content:"";position:absolute;top:-5px;right:-5px;width:10px;height:10px;
   background:var(--accent);border:2px solid var(--panel);
@@ -982,9 +989,10 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
   max-width:88vw;text-align:center;
 }
 #toast.show{opacity:1}
-.searchbar{display:flex;gap:8px;margin:0 0 14px}
-.searchbar input{flex:2;min-width:0}
-.searchbar select{flex:1.2;min-width:0}
+.searchbar{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
+.searchbar input{flex:1 1 100%;min-width:0}
+.searchbar select{flex:1 1 0;min-width:0}
+.searchbar #listViewBtn{flex:1 1 0}
 .listopts{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 14px}
 .listopts .chips{flex:1 1 auto}
 .listopts select{flex:0 1 170px;min-width:130px}
@@ -1039,9 +1047,9 @@ body.big-tool #timerBadge{bottom:calc(14px + env(safe-area-inset-bottom))}
   <div class="topbar-in">
     <a class="brand" href="#/"><span class="ico" data-icon="chest"></span><span class="txt txt-long">BOARD GAME LIBRARY</span><span class="txt txt-short">BOARD GAME LIBRARY</span></a>
     <div class="spacer"></div>
-    <button class="icon-btn snd" id="bgmBtn" aria-pressed="true">♪</button>
-    <button class="icon-btn snd" id="seBtn" aria-pressed="true">SE</button>
-    <button class="icon-btn" id="themeBtn">よる</button>
+    <button class="icon-btn snd" id="bgmBtn" aria-pressed="true">BGM</button>
+    <button class="icon-btn snd" id="seBtn" aria-pressed="true">こうか</button>
+    <button class="icon-btn" id="themeBtn">☾</button>
     <button class="icon-btn snd" id="helpBtn" aria-label="この 画面の せつめい">？</button>
   </div>
 </header>
@@ -2082,14 +2090,14 @@ function paintDirtyDot(){
 function paintSoundBtns(){
   const b = document.getElementById('bgmBtn');
   if(b){
-    b.textContent = '♪';
+    b.textContent = 'BGM';
     b.classList.toggle('off', !sound.bgmOn);
     b.setAttribute('aria-pressed', String(sound.bgmOn));
     b.setAttribute('aria-label', 'BGM ' + (sound.bgmOn ? 'ON' : 'OFF'));
   }
   const e = document.getElementById('seBtn');
   if(e){
-    e.textContent = 'SE';
+    e.textContent = 'こうか';
     e.classList.toggle('off', !sound.seOn);
     e.setAttribute('aria-pressed', String(sound.seOn));
     e.setAttribute('aria-label', 'こうかおん ' + (sound.seOn ? 'ON' : 'OFF'));
@@ -2807,7 +2815,8 @@ function search(f){
                       (a.game.difficulty||0) - (b.game.difficulty||0);
   const fit = scored.filter(s => s.playersFit);
   /* じかん・タグを えらんで いれば、どれか ひとつは あう ものだけ */
-  let ranked = fit.filter(s => s.conds === 0 || s.met > 0).sort(by);
+  /* タグを えらんだ ときは、タグが 1つ いじょう あう ものだけ（じかんだけ あう ものは だかない） */
+  let ranked = fit.filter(s => s.conds === 0 || (f.tags.length ? s.hitTags.length > 0 : s.met > 0)).sort(by);
   const loose = !ranked.length && fit.length > 0;
   if(loose) ranked = fit.sort(by);        /* どれも あわない ときは にんずうが あう ものを ぜんぶ */
   return { ranked, loose, perfect: ranked.filter(s => s.perfect).map(s => s.game) };
@@ -2874,6 +2883,7 @@ function currentRoute(){
 }
 const app = document.getElementById('app');
 
+function views_isHome(name){ return !name || name === 'home'; }
 function render(){
   const r = currentRoute();
   const routeKey = r.name + '/' + (r.param || '');
@@ -2885,6 +2895,7 @@ function render(){
   }
   /* どうぐの 画面に いる あいだは、よこ むきの ならべかたを つかう */
   document.body.classList.toggle('tool-page', r.name === 'tool' || r.name === 'tools');
+  document.body.classList.toggle('has-dock', !views_isHome(r.name) ? false : true);
   /* おなじ画面の 中での さいびょうが（じょうけんを えらんだ ときなど）は、
      いま見ている いちを そのまま たもつ。画面が かわった ときだけ 上に もどす。 */
   const sameScreen = (render._routeKey === routeKey);
@@ -3121,7 +3132,7 @@ function viewHome(){
     (newArrivals().length ? '<button class="btn small" id="newArrivalBtn" style="width:100%;margin-bottom:12px">' +
       '▶ 新入荷（'+newArrivals().length+'）を みる</button>' : '') +
     siteUpdateNoticeHTML() + homeNoticeHTML() +
-    '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>' +
+    '<p class="sub">にんずう・じかん・あそびかたを えらぶだけ。<br>' +
       (kaiOn() ? 'きょうの たなには '+poolGames().length+'さくひんが ある。' : 'ずかんには '+ownedGames().length+'さくひんが とうろく されている。') + '</p>' +
 
     '<div class="field"><h2>なんにんで あそぶ？<em>ひとつ</em></h2>' + chipGroup('players', PLAYER_OPTIONS, f.players, false) +
@@ -3268,6 +3279,7 @@ function sleepDays(g){
   if(!last) return null;          /* まだ いちども あそんで いない */
   return daysAgo(last);
 }
+function hasPlayRecords(){ return state.games.some(g => playCount(g) > 0); }
 function sleepingGames(){
   return poolGames().filter(g => {
     if(isLent(g) || isNewArrival(g)) return false;
@@ -3407,6 +3419,10 @@ function listResultsHTML(){
 }
 
 function viewList(){
+  /* はずした ならびじゅんや、きろくが ない スマホでの「しばらく あそんで いない」は もとに もどす */
+  if(['replay','excitement'].indexOf(state.listSort) >= 0 ||
+     (!hasPlayRecords() && ['plays','recent','sleeping'].indexOf(state.listSort) >= 0)) state.listSort = 'title';
+  if(state.listMode === 'sleep' && !hasPlayRecords()) state.listMode = 'own';
   const filtered = hasFilter(state.filters);
   return '<section class="page">' +
     '<h1 class="lede">' + (filtered ? 'おすすめの ゲーム' : 'ボードゲーム ずかん') + '</h1>' +
@@ -3417,18 +3433,19 @@ function viewList(){
       [['own','もっている'],['wish','ほしい'],['lent','かしだし中']]
         .concat(newArrivals().length ? [['new','新入荷（'+newArrivals().length+'）']] : [])
         .concat(requestedGames().length ? [['req','遊んでみたい（'+requestedGames().length+'）']] : [])
-        .concat(sleepingGames().length ? [['sleep','最近遊んでいない（'+sleepingGames().length+'）']] : []).map(m =>
+        /* あそんだ きろくは この スマホの 中だけ。きろくが ある ときだけ だす */
+        .concat(hasPlayRecords() && sleepingGames().length ? [['sleep','しばらく あそんで いない（'+sleepingGames().length+'）']] : []).map(m =>
         '<button class="chip sm" data-listmode="'+m[0]+'" aria-pressed="'+(state.listMode===m[0])+'">'+m[1]+'</button>').join('') +
     '</div>' +
 
     '<div class="searchbar">' +
       '<input type="search" id="listQ" placeholder="なまえで さがす" ' +
         'value="' + esc(state.listQuery) + '" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search">' +
-      '<button class="mini" id="listViewBtn" style="flex:0 0 auto" aria-label="ならべかたを かえる">' + listViewLabel() + '</button>' +
+      '<button class="mini" id="listViewBtn" aria-label="ならべかたを かえる">' + listViewLabel() + '</button>' +
       '<select id="listSort" aria-label="ならびじゅん">' +
-        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順',
-         'replay:また あそびたい順','excitement:もりあがる順','plays:あそんだ かず順',
-         'recent:さいきん あそんだ順','sleeping:あそんで ない順'].map(o => {
+        ['title:なまえ順','time:じかん順','players:にんずう順','difficulty:むずかしさ順']
+         .concat(hasPlayRecords() ? ['plays:あそんだ かず順','recent:さいきん あそんだ順','sleeping:あそんで ない順'] : [])
+         .map(o => {
           const parts = o.split(':');
           return '<option value="' + parts[0] + '"' + (state.listSort === parts[0] ? ' selected' : '') + '>' + parts[1] + '</option>';
         }).join('') +
@@ -3487,6 +3504,7 @@ function randomResultHTML(g){
 }
 
 /* くわしい 画面の タグ：あそびかた／しくみ（タップで ことば じてん）／そのた */
+const ADMIN_ONLY_TAGS = ['未プレイ','データみきにゅう'];
 function detailTagRows(g){
   const tags = g.tags || [];
   const chip = t => termForTag(t)
@@ -3494,7 +3512,9 @@ function detailTagRows(g){
     : '<span class="tag">'+esc(t)+'</span>';
   const play = tags.filter(t => tagCategory(t) === SEARCH_CATEGORY);
   const mech = tags.filter(t => tagCategory(t) === 'しくみ');
-  const rest = tags.filter(t => play.indexOf(t) < 0 && mech.indexOf(t) < 0);
+  /* 「未プレイ」などの かんり用の しるしは、かんりにんの スマホでだけ みせる */
+  const rest = tags.filter(t => play.indexOf(t) < 0 && mech.indexOf(t) < 0 &&
+    (isPublisher() || ADMIN_ONLY_TAGS.indexOf(t) < 0));
   const row = (label, list, f) => list.length ? '<dt>'+label+'</dt><dd><div class="tagline" style="margin:0">'+list.map(f).join('')+'</div></dd>' : '';
   return (play.length || mech.length)
     ? row('タグ', play, t => '<span class="tag">'+esc(t)+'</span>') +
@@ -3518,10 +3538,7 @@ function viewDetail(id){
       '</div>' +
       '<p class="count" style="margin:-6px 0 14px">しゃしんを タップすると 大きく みられます。</p>' : '';
   const optional = [];
-  if(g.replay) optional.push('<dt>また あそびたい</dt><dd>'+stars(g.replay)+'</dd>');
-  if(g.strategy) optional.push('<dt>せんりゃく性</dt><dd>'+stars(g.strategy)+'</dd>');
-  if(g.excitement) optional.push('<dt>もりあがり</dt><dd>'+stars(g.excitement)+'</dd>');
-  if(g.luck) optional.push('<dt>うんの要素</dt><dd>'+stars(g.luck)+'</dd>');
+  /* 「また あそびたい・せんりゃく性・もりあがり・うんの要素」は タグと やくわりが かさなるので ださない（データは のこす） */
 
   return '<section class="page">' +
     '<button class="mini" data-go2="#/list" style="margin-bottom:14px">◀ ずかんへ もどる</button>' +
@@ -3646,11 +3663,7 @@ function viewForm(id){
 
     '<div class="form-group"><label class="lbl">むずかしさ</label>'+starRow('difficulty', Number(v('difficulty',2)))+'</div>' +
 
-    '<details style="margin:0 0 16px"><summary>その他の ひょうか（にんい）</summary>' +
-      '<div style="margin-top:12px"><label class="lbl">また あそびたい<span class="hint">リプレイ性</span></label>'+starRow('replay', Number(v('replay',0)))+'</div>' +
-      '<div style="margin-top:12px"><label class="lbl">せんりゃく性</label>'+starRow('strategy', Number(v('strategy',0)))+'</div>' +
-      '<div style="margin-top:12px"><label class="lbl">もりあがり</label>'+starRow('excitement', Number(v('excitement',0)))+'</div>' +
-      '<div style="margin-top:12px"><label class="lbl">うんの要素</label>'+starRow('luck', Number(v('luck',0)))+'</div></details>' +
+
 
     '<div class="form-group"><label class="lbl">タグ</label>'+tagChips+'</div>' +
 
@@ -5984,7 +5997,6 @@ function viewTools(){
 
     '<div class="divider"></div>' +
     '<div class="btn-row">' +
-      '<button class="btn small" style="flex:1" data-go2="#/random">おまかせで きめる</button>' +
       '<button class="btn small" style="flex:1" data-go2="#/stats">とうけいを みる</button></div>' +
   '</section>';
 }
@@ -7497,7 +7509,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.22-d';
+const APP_VERSION = '2026.10.22-e';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -10777,7 +10789,7 @@ function viewAdmin(){
     '<div class="divider"></div><h2 class="sec">おとの せってい</h2>' +
     '<p class="count" style="margin:0 0 8px">BGM（ぜんきょく）と ジョブの こうかおん：<span style="color:var(--accent)">イワシロ音楽素材</span>（https://iwashiro-sounds.work/）</p>' +
     '<p class="count" style="margin:0 0 8px">アプリの バージョン：<span style="color:var(--accent)">'+APP_VERSION+'</span></p>' +
-    '<p class="count">がめん右上の ♪ と SE でも きりかえ られます。せっていは この スマホに ほぞん されます。</p>' +
+    '<p class="count">がめん右上の BGM と こうか でも きりかえ られます。せっていは この スマホに ほぞん されます。</p>' +
     '<label class="row" style="align-items:flex-start;gap:10px;margin-bottom:10px">' +
       '<input type="checkbox" id="bgmChk" '+(sound.bgmOn?'checked':'')+' style="flex:0 0 auto;width:20px;height:20px;margin-top:4px">' +
       '<span style="font-size:13px">BGMを ならす<br>' +
@@ -12843,8 +12855,10 @@ function saveFormGo(id, title){
     images: state.formImages.slice(),
     playersMin: pmin, playersMax: pmax,
     playTime: Math.max(1,num('f-time')), age: num('f-age'),
-    difficulty: hidden('difficulty'), strategy: hidden('strategy'),
-    excitement: hidden('excitement'), luck: hidden('luck'), replay: hidden('replay'),
+    difficulty: hidden('difficulty'),
+    /* 画面から はずした ひょうかは、まえの あたいを そのまま のこす */
+    strategy: before ? (Number(before.strategy)||0) : 0, excitement: before ? (Number(before.excitement)||0) : 0,
+    luck: before ? (Number(before.luck)||0) : 0, replay: before ? (Number(before.replay)||0) : 0,
     tags: state.formTags.slice(),
     summary: val('f-summary').trim(),
     quickRule: val('f-quick'), detailRule: val('f-detail'), recommendation: val('f-reco')
@@ -12960,7 +12974,10 @@ function importLibrary(e){
 /* ---------------- theme ---------------- */
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme', t);
-  document.getElementById('themeBtn').textContent = t === 'day' ? 'ひる' : 'よる';
+  /* いまの モードを マークで しめす（☀ ひる／☾ よる） */
+  const tb = document.getElementById('themeBtn');
+  tb.textContent = t === 'day' ? '☀' : '☾';
+  tb.setAttribute('aria-label', t === 'day' ? 'いまは ひるモード。おすと よるモードに します' : 'いまは よるモード。おすと ひるモードに します');
   const meta = document.querySelector('meta[name="theme-color"]');
   if(meta) meta.setAttribute('content', t === 'day' ? '#DCD6C4' : '#141C3A');
 }
@@ -12980,6 +12997,7 @@ function initTheme(){
   document.getElementById('themeBtn').onclick = () => {
     const next = document.documentElement.getAttribute('data-theme') === 'day' ? 'night' : 'day';
     applyTheme(next); store.write(KEY.theme, next);
+    toast(next === 'day' ? '☀ ひるモードに しました' : '☾ よるモードに しました');
   };
 }
 
