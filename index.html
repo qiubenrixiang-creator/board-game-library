@@ -360,6 +360,7 @@ img{image-rendering:auto}
 .match-row{margin:2px 0 4px}
 .match{display:inline-block;font-size:11.5px;line-height:1.4;padding:1px 6px;border:2px solid var(--muted);color:var(--muted)}
 .match.full{border-color:var(--accent);color:var(--accent)}
+.badge.heavy{border-color:var(--danger);color:var(--danger)}
 .kv dd{margin:0}
 
 /* ---------- フォーム ---------- */
@@ -1158,34 +1159,25 @@ const FIRST_VISIT = (() => {
   }catch(e){ return false; }
 })();
 
-const TAG_CATEGORIES = ['難易度','ジャンル','雰囲気'];
+/* タグの しゅるい
+   あそびかた … 「さがす」で えらべる、はじめての人にも つたわる ことば
+   しくみ     … 専門用語。さがすには ださず、くわしい 画面から ことば じてんへ つなぐ */
+const TAG_CATEGORIES = ['あそびかた','しくみ'];
+const SEARCH_CATEGORY = 'あそびかた';
+const PLAY_TAGS = ['わいわい盛り上がる','じっくり考える','みんなで協力','だまし合い・推理','運でドキドキ','手先・はやさ勝負','こどもと一緒に'];
+const MECH_TAGS = ['正体隠匿','ブラフ','推理','ドラフト','デッキ構築','ワーカープレイスメント','トリックテイキング','エンジンビルド','セットコレクション','チキンレース','競り','アブストラクト','リアルタイム','記憶'];
 const LOT_PURPOSES = ['さいしょの人','かたづける人','せつめいする人','おごる人'];
 const FAV_TAG = '★おきにいり';   /* 「その他」に つくる おすすめの タグ */
 
 const DEFAULT_TAGS = [
-  {name:'初心者', category:'難易度'},
-  {name:'中級者', category:'難易度'},
-  {name:'重量級', category:'難易度'},
-  {name:'軽量級', category:'難易度'},
-  {name:'協力', category:'ジャンル'},
-  {name:'対戦', category:'ジャンル'},
-  {name:'正体隠匿', category:'ジャンル'},
-  {name:'ドラフト', category:'ジャンル'},
-  {name:'デッキ構築', category:'ジャンル'},
-  {name:'ワーカープレイスメント', category:'ジャンル'},
-  {name:'トリックテイキング', category:'ジャンル'},
-  {name:'パーティー', category:'ジャンル'},
-  {name:'盛り上がる', category:'雰囲気'},
-  {name:'静か', category:'雰囲気'},
-  {name:'頭脳戦', category:'雰囲気'},
-  {name:'運要素', category:'雰囲気'},
-  {name:'家族向け', category:'雰囲気'}
+  ...PLAY_TAGS.map(name => ({name, category:'あそびかた'})),
+  ...MECH_TAGS.map(name => ({name, category:'しくみ'}))
 ];
 
 const SEED_GAMES = [
   {
     id:'seed-ito', title:'ito（イト）', images:[], playersMin:2, playersMax:10, playTime:30, age:8, difficulty:2,
-    tags:['初心者','協力','盛り上がる','家族向け'],
+    tags:['みんなで協力','わいわい盛り上がる','こどもと一緒に'],
     summary:'数字を言葉に置きかえて、みんなで小さい順に並べる協力ゲーム。',
     quickRule:'1. 1〜100のカードを1枚ずつ配る（自分だけ見る）\n2. お題（例：好きな食べ物の人気度）に沿って、数字の大きさを言葉で表現する\n3. 話し合って小さい順に出す\n4. 最後まで順番を間違えなければ成功',
     recommendation:'・初対面でも一気に距離が縮まる\n・4〜6人がちょうどいい\n・ルール説明は3分で終わる',
@@ -1193,7 +1185,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-nanjamonja', title:'ナンジャモンジャ', images:[], playersMin:2, playersMax:6, playTime:15, age:4, difficulty:1,
-    tags:['初心者','家族向け','盛り上がる','運要素','軽量級'],
+    tags:['わいわい盛り上がる','こどもと一緒に','記憶'],
     summary:'謎の生き物に名前をつけて、出てきたら早く呼ぶだけの記憶ゲーム。',
     quickRule:'1. カードを1枚めくる\n2. 初めて出た生き物なら好きな名前をつける\n3. 見たことのある生き物なら、その名前を早く叫ぶ\n4. 一番早く言えた人が場のカードをもらう',
     recommendation:'・小さい子から大人まで一緒に遊べる\n・待ち時間ゼロ、1ゲーム10分\n・変な名前をつけるほど盛り上がる',
@@ -1201,7 +1193,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-codenames', title:'コードネーム', images:[], playersMin:4, playersMax:8, playTime:15, age:10, difficulty:2,
-    tags:['初心者','協力','対戦','頭脳戦'],
+    tags:['わいわい盛り上がる','じっくり考える'],
     summary:'ひとことのヒントで、味方の単語カードだけを当ててもらうチーム戦。',
     quickRule:'1. チームに分かれ、各チーム1人がヒントを出す役になる\n2. ヒント役は「単語＋数字」だけを言う\n3. 仲間は場の25枚から味方の単語を選ぶ\n4. 先に自分の色を全部当てたチームの勝ち',
     recommendation:'・4人以上いるときの鉄板\n・話し合いが自然に生まれる\n・ヒント役をやると一気にハマる',
@@ -1209,7 +1201,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-hannin', title:'犯人は踊る', images:[], playersMin:3, playersMax:8, playTime:15, age:8, difficulty:2,
-    tags:['初心者','正体隠匿','パーティー','盛り上がる','軽量級'],
+    tags:['だまし合い・推理','わいわい盛り上がる','正体隠匿'],
     summary:'手札を渡し合ううちに犯人が入れ替わる、追いかけっこの推理ゲーム。',
     quickRule:'1. カードを配る。犯人カードを持つ人が犯人\n2. 手番でカードを1枚出して効果を使う\n3. 犯人カードは他人に渡ることがある\n4. 探偵カードで犯人を指名できれば市民の勝ち、犯人が最後まで逃げ切れば犯人の勝ち',
     recommendation:'・カード1組で遊べて持ち運びが楽\n・脱落なしで最後まで全員参加\n・5〜6人が一番おもしろい',
@@ -1217,7 +1209,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-skull', title:'スカル', images:[], playersMin:3, playersMax:6, playTime:20, age:10, difficulty:2,
-    tags:['初心者','対戦','頭脳戦','静か'],
+    tags:['だまし合い・推理','わいわい盛り上がる','ブラフ'],
     summary:'花を伏せるか、ドクロを混ぜるか。度胸で読み合うブラフゲーム。',
     quickRule:'1. 手持ちのコースターを裏向きに置いていく\n2. 「何枚めくれるか」を宣言して競り合う\n3. 勝った人は宣言した枚数だけめくる\n4. 花だけをめくれれば成功。2回成功で勝ち',
     recommendation:'・コンポーネントが渋くて雰囲気がいい\n・ルールは2分、駆け引きは無限\n・静かに熱くなりたい夜に',
@@ -1225,7 +1217,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-splendor', title:'スプレンダー', images:[], playersMin:2, playersMax:4, playTime:30, age:10, difficulty:3,
-    tags:['中級者','対戦','頭脳戦','静か'],
+    tags:['じっくり考える','エンジンビルド'],
     summary:'宝石を集めてカードを買い、割引を増やしていく発展ゲーム。',
     quickRule:'1. 宝石チップを取る\n2. カードを買う\n3. 買ったカードが次の割引になる\n4. 先に15点に到達した人の勝ち',
     recommendation:'・「拡大再生産」の入門として最適\n・2人でも4人でも成立する\n・言葉が少なくても遊べる',
@@ -1233,7 +1225,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-dominion', title:'ドミニオン', images:[], playersMin:2, playersMax:4, playTime:30, age:13, difficulty:3,
-    tags:['中級者','デッキ構築','対戦','頭脳戦'],
+    tags:['じっくり考える','デッキ構築'],
     summary:'カードを買って自分の山札を強くしていく、デッキ構築の元祖。',
     quickRule:'1. 手札5枚でアクションを1回使う\n2. 財宝を出してカードを1枚買う\n3. 使ったカードは捨て札にして5枚引く\n4. 終了時に勝利点が最も多い人の勝ち',
     recommendation:'・毎回使うカードが変わるので飽きない\n・慣れると1ゲーム25分\n・じっくり考えたい人向け',
@@ -1241,7 +1233,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-catan', title:'カタンの開拓者たち', images:[], playersMin:3, playersMax:4, playTime:75, age:10, difficulty:4,
-    tags:['中級者','重量級','対戦','頭脳戦','運要素'],
+    tags:['じっくり考える','運でドキドキ'],
     summary:'資源を集めて交渉し、島に開拓地を広げていく王道ゲーム。',
     quickRule:'1. サイコロを振って資源をもらう\n2. 他のプレイヤーと交渉して交換する\n3. 道・開拓地・都市を建てる\n4. 先に10点に到達した人の勝ち',
     recommendation:'・交渉が始まると一気に盛り上がる\n・時間があるときの本命\n・初回は説明15分＋プレイ60分を見込んで',
@@ -1249,7 +1241,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-onenight', title:'ワンナイト人狼', images:[], playersMin:3, playersMax:7, playTime:10, age:8, difficulty:2,
-    tags:['初心者','正体隠匿','パーティー','盛り上がる','軽量級'],
+    tags:['だまし合い・推理','わいわい盛り上がる','正体隠匿'],
     summary:'夜は一度きり、朝の話し合いだけで人狼を追放する短時間人狼。',
     quickRule:'1. 役職カードを配り、夜の行動を1回だけ行う\n2. 朝になったら3〜5分話し合う\n3. せーので指を差し、最多票の人を追放\n4. 人狼を追放できれば村人の勝ち',
     recommendation:'・脱落者が出ないので気まずくならない\n・1回10分、何度も遊べる\n・人狼が苦手な人の入り口に',
@@ -1257,7 +1249,7 @@ const SEED_GAMES = [
   },
   {
     id:'seed-gokiburi', title:'ごきぶりポーカー', images:[], playersMin:2, playersMax:6, playTime:20, age:8, difficulty:1,
-    tags:['初心者','対戦','運要素','盛り上がる','家族向け','軽量級'],
+    tags:['だまし合い・推理','わいわい盛り上がる','こどもと一緒に','ブラフ'],
     summary:'「これはカエルだよ」の一言を、信じるか疑うかだけのブラフ合戦。',
     quickRule:'1. 手札から1枚を裏向きで誰かに渡し、生き物の名前を宣言する\n2. 渡された人は「当たり」か「はずれ」を答える\n3. 外した方がそのカードを引き取る\n4. 同じ生き物を4枚集めてしまった人の負け',
     recommendation:'・ルール説明1分、すぐ始められる\n・表情の読み合いだけで盛り上がる\n・待ち時間の遊びとして優秀',
@@ -2348,6 +2340,7 @@ function loadAll(){
       playersTo: f.playersTo || null,
       tags:Array.isArray(f.tags)?f.tags:[] };
   }
+  cleanFilterTags();
 }
 /* この端末で へんしゅう した しるし。
    これが ついて いる あいだは、サイト側の データで かってに 上書き しない。 */
@@ -2381,6 +2374,13 @@ function isPublisher(){
 }
 
 function saveGames(){ store.write(KEY.games, state.games); markDirty(); }
+/* むかしの タグ（初心者・対戦 など）が えらばれた まま のこらない ように */
+function cleanFilterTags(){
+  const ok = state.tags.some(t => t.category === SEARCH_CATEGORY)
+    ? new Set(state.tags.filter(t => t.category === SEARCH_CATEGORY).map(t => t.name))
+    : new Set(state.tags.map(t => t.name));
+  state.filters.tags = (state.filters.tags || []).filter(n => ok.has(n));
+}
 function saveTags(){ store.write(KEY.tags, state.tags); markDirty(); }
 function saveFilters(){ store.write(KEY.filters, state.filters); }
 
@@ -2395,6 +2395,7 @@ function keepBeforeAdopt(){
 function adoptSiteData(data){
   state.games = mergePrivate(data.games);
   if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
+  cleanFilterTags(); saveFilters();
   store.write(KEY.games, state.games);
   store.write(KEY.tags, state.tags);
   store.write(KEY.pubver, String(data.version || ''));
@@ -3094,15 +3095,14 @@ function tagChipGroup(list, f){
 
 function viewHome(){
   const f = state.filters;
-  const cats = TAG_CATEGORIES.map(cat => {
-    const list = state.tags.filter(t => t.category === cat);
-    if(!list.length) return '';
-    return '<div style="margin-bottom:11px"><div class="catlabel">'+esc(cat)+'</div>' +
-      tagChipGroup(list, f) + '</div>';
-  }).join('');
-  const uncat = state.tags.filter(t => !TAG_CATEGORIES.includes(t.category));
-  const uncatHTML = uncat.length ? '<div><div class="catlabel">その他</div>' +
-    tagChipGroup(uncat, f) + '</div>' : '';
+  /* さがすで えらべるのは「あそびかた」の タグだけ。
+     （じぶんで タグを つくった 人など、あそびかたが ない ときは これまでどおり ぜんぶ だす） */
+  const playList = state.tags.filter(t => t.category === SEARCH_CATEGORY);
+  const cats = playList.length ? tagChipGroup(playList, f)
+    : [...new Set(state.tags.map(t => t.category))].map(cat =>
+        '<div style="margin-bottom:11px"><div class="catlabel">'+esc(cat)+'</div>' +
+        tagChipGroup(state.tags.filter(t => t.category === cat), f) + '</div>').join('');
+  const uncatHTML = '';
 
   const af = activeFilters();
   const res = hasFilter(af) ? search(af) : null;
@@ -3149,7 +3149,7 @@ function viewHome(){
         '<button class="mini" id="setToday">この にんずうを きょうの メンバーに する</button></p>' : '') +
       '</div>' +
     '<div class="field"><h2>どのくらい あそべる？<em>ひとつ</em></h2>' + chipGroup('time', TIME_OPTIONS, f.time, false) + '</div>' +
-    '<div class="field"><h2>どんな ゲームが いい？<em>いくつでも</em></h2>' +
+    '<div class="field"><h2>どんな あそびが したい？<em>いくつでも</em></h2>' +
       '<p class="count" style="margin:-4px 0 10px">ぜんぶ あわなくても だいじょうぶ。あう ものが おおい じゅんに ならべます。</p>' +
       cats + uncatHTML + '</div>' +
 
@@ -3170,6 +3170,7 @@ function viewHome(){
 /* しゃしんを 大きく ならべる かたち（たなを ながめる かんじ） */
 function gameTile(g, matchHTML){
   const marks = newBadge(g) + reqBadge(g) + sleepBadge(g, true) +
+    ((Number(g.difficulty)||0) >= 4 ? '<span class="badge heavy">じっくり向け</span>' : '') +
     (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
     (isLent(g) ? '<span class="badge">かしだし中</span>' : '');
   return '<button class="gtile" data-open="'+esc(g.id)+'">' +
@@ -3181,13 +3182,16 @@ function gameTile(g, matchHTML){
   '</button>';
 }
 
+function tagCategory(name){ const x = state.tags.find(t => t.name === name); return x ? x.category : ''; }
 function gameCard(g, hitTags, matchHTML){
   /* あった タグを さきに ならべて、なぜ でて きたか わかる ように する */
   const hit = hitTags || [];
-  const ordered = (g.tags||[]).filter(t => hit.includes(t)).concat((g.tags||[]).filter(t => !hit.includes(t)));
+  /* カードには「あそびかた」の タグだけ（専門用語は くわしい 画面で） */
+  const shown = (g.tags||[]).filter(t => tagCategory(t) === SEARCH_CATEGORY || !state.tags.some(x => x.category === SEARCH_CATEGORY));
+  const ordered = shown.filter(t => hit.includes(t)).concat(shown.filter(t => !hit.includes(t)));
   const tags = ordered.slice(0, Math.max(4, ordered.filter(t => hit.includes(t)).length)).map(t =>
     '<span class="tag'+((hitTags||[]).includes(t)?' hit':'')+'">'+esc(t)+'</span>').join('');
-  const beginner = (g.tags||[]).includes('初心者') ? '<span class="badge">しょしんしゃ○</span>' : '';
+  const beginner = (Number(g.difficulty)||0) >= 4 ? '<span class="badge heavy">じっくり向け</span>' : '';
   const fresh = newBadge(g);
   const marks =
     (isWish(g) ? '<span class="badge">ほしい</span>' : '') +
@@ -3481,6 +3485,24 @@ function randomResultHTML(g){
     '<div id="randomQuick" style="margin-top:12px">' + quickRecordHTML(g, true) + '</div></div>';
 }
 
+/* くわしい 画面の タグ：あそびかた／しくみ（タップで ことば じてん）／そのた */
+function detailTagRows(g){
+  const tags = g.tags || [];
+  const chip = t => termForTag(t)
+    ? '<span class="tag term-tag" data-term="'+termForTag(t)+'" role="button" tabindex="0" aria-label="'+esc(t)+'（ことばの いみを 見る）"><span class="tw">'+esc(t)+'</span></span>'
+    : '<span class="tag">'+esc(t)+'</span>';
+  const play = tags.filter(t => tagCategory(t) === SEARCH_CATEGORY);
+  const mech = tags.filter(t => tagCategory(t) === 'しくみ');
+  const rest = tags.filter(t => play.indexOf(t) < 0 && mech.indexOf(t) < 0);
+  const row = (label, list, f) => list.length ? '<dt>'+label+'</dt><dd><div class="tagline" style="margin:0">'+list.map(f).join('')+'</div></dd>' : '';
+  return (play.length || mech.length)
+    ? row('あそびかた', play, t => '<span class="tag">'+esc(t)+'</span>') +
+      row('しくみ', mech, chip) +
+      (mech.length ? '<dt></dt><dd class="count" style="margin:-2px 0 0">ことばを タップすると、いみが 見られます。</dd>' : '') +
+      row('そのた', rest, chip)
+    : '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+(tags.map(chip).join('')||'—')+'</div></dd>';
+}
+
 function viewDetail(id){
   const g = state.games.find(x => x.id === id);
   if(g) state.lastGame = g.id;
@@ -3516,9 +3538,7 @@ function viewDetail(id){
       '<dt>たいしょう年齢</dt><dd>'+(g.age ? esc(g.age)+'さい〜' : '—')+'</dd>' +
       '<dt>むずかしさ</dt><dd>'+stars(g.difficulty)+'</dd>' + optional.join('') +
       (playCount(g) ? '<dt>あそんだ かず</dt><dd>'+playCount(g)+'かい（さいご '+esc(dateLabel(lastPlayed(g)))+'）</dd>' : '') +
-      '<dt>タグ</dt><dd><div class="tagline" style="margin:0">'+((g.tags||[]).map(t => termForTag(t)
-        ? '<span class="tag term-tag" data-term="'+termForTag(t)+'" role="button" tabindex="0" aria-label="'+esc(t)+'（ことばの いみを 見る）"><span class="tw">'+esc(t)+'</span></span>'
-        : '<span class="tag">'+esc(t)+'</span>').join('')||'—')+'</div></dd>' +
+      detailTagRows(g) +
     '</dl></div>' +
 
     (g.detailRule ? '<div class="section"><h2>くわしい ルール</h2><div class="body">'+linkTerms(esc(g.detailRule), termSeen)+'</div></div>' : '') +
@@ -3756,7 +3776,7 @@ function viewBulk(){
   const g = targets[state.bulkIndex];
   state.formImages = (g.images || []).slice();   /* 画像は 編集画面と おなじ しくみを つかう */
   state.formVideos = videosOf(g);
-  const quick = ['初心者','家族向け','盛り上がる','パーティー','対戦','協力','頭脳戦','運要素','軽量級','ブラフ','ワードゲーム','アクション'];
+  const quick = PLAY_TAGS.slice();
 
   return '<section class="page">' +
     '<button class="mini" data-go2="#/admin" style="margin-bottom:14px">◀ かんりへ もどる</button>' +
@@ -4169,7 +4189,7 @@ const advScale = (x, k) => Math.round(99 * (1 - Math.exp(-x / k)));
 function adventurer(name){
   const ps = advPlays(name);
   const wins = ps.filter(r => r.pl.w === name);
-  const vs = ps.filter(r => !hasTag(r.g,'協力'));
+  const vs = ps.filter(r => !hasTag(r.g,'みんなで協力') && !hasTag(r.g,'協力'));
   const vsWins = vs.filter(r => r.pl.w === name).length;
   const games = {}, mates = {}, winsBy = {}, days = {};
   let minutes = 0;
@@ -4184,12 +4204,13 @@ function adventurer(name){
   const raw = {
     /* かちは 勝率に 回数の おもみを かける（1かい 1しょう で 99 に ならない） */
     atk:   vs.length ? (vsWins / vs.length) * Math.min(1, vs.length / 8) * 3 + vsWins * 0.15 : 0,
-    int:   cnt(g => hasTag(g,'頭脳戦') || hasTag(g,'重量級') || (Number(g.difficulty)||0) >= 4) + wins.filter(r => hasTag(r.g,'頭脳戦')).length,
-    bond:  cnt(g => hasTag(g,'協力')),
-    trick: cnt(g => hasTag(g,'正体隠匿')) + wins.filter(r => hasTag(r.g,'正体隠匿')).length,
-    luck:  cnt(g => hasTag(g,'運要素')) + wins.filter(r => hasTag(r.g,'運要素')).length * 0.5,
-    party: cnt(g => hasTag(g,'盛り上がる') || hasTag(g,'パーティー')),
-    spd:   cnt(g => hasTag(g,'軽量級') || ((Number(g.playTime)||99) <= 15)),
+    /* タグは あたらしい「あそびかた」と、むかしの タグの りょうほうを みる */
+    int:   cnt(g => hasTag(g,'じっくり考える') || hasTag(g,'頭脳戦') || (Number(g.difficulty)||0) >= 4) + wins.filter(r => hasTag(r.g,'じっくり考える') || hasTag(r.g,'頭脳戦')).length,
+    bond:  cnt(g => hasTag(g,'みんなで協力') || hasTag(g,'協力')),
+    trick: cnt(g => hasTag(g,'だまし合い・推理') || hasTag(g,'正体隠匿')) + wins.filter(r => hasTag(r.g,'だまし合い・推理') || hasTag(r.g,'正体隠匿')).length,
+    luck:  cnt(g => hasTag(g,'運でドキドキ') || hasTag(g,'運要素')) + wins.filter(r => hasTag(r.g,'運でドキドキ') || hasTag(r.g,'運要素')).length * 0.5,
+    party: cnt(g => hasTag(g,'わいわい盛り上がる') || hasTag(g,'盛り上がる') || hasTag(g,'パーティー')),
+    spd:   cnt(g => hasTag(g,'手先・はやさ勝負') || hasTag(g,'軽量級') || ((Number(g.playTime)||99) <= 15)),
     hp:    minutes,
     know:  Object.keys(games).length,
     charm: Object.keys(mates).length
@@ -4209,7 +4230,7 @@ function adventurer(name){
   ps.forEach(r => { if(r.pl.w === name){ streak++; best = Math.max(best, streak); } else if(r.pl.w){ streak = 0; } });
   const genres = {};
   ps.forEach(r => (r.g.tags || []).forEach(t => {
-    if(state.tags.some(x => x.name === t && x.category === 'ジャンル')) genres[t] = 1;
+    if(state.tags.some(x => x.name === t && (x.category === SEARCH_CATEGORY || x.category === 'ジャンル'))) genres[t] = 1;
   }));
   const maxDay = Math.max(0, ...Object.values(days));
 
@@ -4220,11 +4241,11 @@ function adventurer(name){
     {name:'ベテラン ぼうけんしゃ', ok: ps.length >= 50, hint:'50かい あそぶ'},
     {name:'3れんしょう',         ok: best >= 3,        hint:'3かい つづけて かつ'},
     {name:'10しゅるい せいは',   ok: Object.keys(games).length >= 10, hint:'10しゅるいの ゲームで あそぶ'},
-    {name:'ジャンル マスター',   ok: Object.keys(genres).length >= 5, hint:'5つの ジャンルで あそぶ'},
+    {name:'ジャンル マスター',   ok: Object.keys(genres).length >= 5, hint:'5つの あそびかたで あそぶ'},
     {name:'ゆうじょうの あかし', ok: raw.bond >= 10,   hint:'協力ゲームを 10かい'},
     {name:'さかばの なかまたち', ok: raw.charm >= 5,   hint:'5人と いっしょに あそぶ'},
     {name:'あそびつくしの 1にち', ok: maxDay >= 5,     hint:'1日に 5ゲーム あそぶ'},
-    {name:'じゅうりょうきゅうの ちょうせん', ok: Object.keys(games).some(id => { const g = state.games.find(x => x.id === id); return g && hasTag(g,'重量級'); }), hint:'重量級で あそぶ'}
+    {name:'じゅうりょうきゅうの ちょうせん', ok: Object.keys(games).some(id => { const g = state.games.find(x => x.id === id); return g && ((Number(g.difficulty)||0) >= 4 || hasTag(g,'重量級')); }), hint:'むずかしさ ★4いじょうの ゲームで あそぶ'}
   ];
 
   return {
@@ -4242,15 +4263,15 @@ function adventurer(name){
       （あそびかたの タグ ＞ パーティー ＞ ふんいきの タグ の じゅんに おもく みる）
    2. 3つの ゲームで たすうけつ。ぜんぶ ちがえば「ゆうしゃ」 */
 const JOBS = [
-  {id:'thief',    name:'とうぞく',     tags:{'正体隠匿':3}, desc:'うそと かけひきで しょうぶ する（正体隠匿・ブラフ）'},
-  {id:'priest',   name:'そうりょ',     tags:{'協力':3}, desc:'みんなで ちからを あわせる（協力）'},
-  {id:'merchant', name:'しょうにん',   tags:{'デッキ構築':3,'ドラフト':3}, desc:'くみたてて ふやして いく（デッキ構築・ドラフト）'},
+  {id:'thief',    name:'とうぞく',     tags:{'正体隠匿':3,'ブラフ':2,'だまし合い・推理':1}, desc:'うそと かけひきで しょうぶ する（だまし合い・推理）'},
+  {id:'priest',   name:'そうりょ',     tags:{'みんなで協力':3}, desc:'みんなで ちからを あわせる（みんなで協力）'},
+  {id:'merchant', name:'しょうにん',   tags:{'デッキ構築':3,'ドラフト':3,'エンジンビルド':3,'セットコレクション':1}, desc:'くみたてて ふやして いく（デッキ構築・ドラフト など）'},
   {id:'seer',     name:'うらないし',   tags:{'トリックテイキング':3}, desc:'カードの ながれを よむ（トリックテイキング）'},
-  {id:'mage',     name:'まほうつかい', tags:{'ワーカープレイスメント':3,'頭脳戦':1,'重量級':1}, desc:'じっくり かんがえて かつ（頭脳戦・重量級）'},
-  {id:'dancer',   name:'おどりこ',     tags:{'パーティー':2,'盛り上がる':1}, desc:'その場を もりあげる（パーティー）'},
-  {id:'jester',   name:'あそびにん',   tags:{'運要素':1}, desc:'うんと ハプニングを たのしむ（運要素）'},
-  {id:'warrior',  name:'せんし',       tags:{'対戦':1}, desc:'まっこうから ぶつかる（対戦）'},
-  {id:'traveler', name:'たびびと',     tags:{'家族向け':1,'軽量級':1}, desc:'だれとでも きがるに あそぶ（家族向け・軽量級）'}
+  {id:'mage',     name:'まほうつかい', tags:{'ワーカープレイスメント':3,'じっくり考える':1}, desc:'じっくり かんがえて かつ（じっくり考える）'},
+  {id:'dancer',   name:'おどりこ',     tags:{'わいわい盛り上がる':2}, desc:'その場を もりあげる（わいわい盛り上がる）'},
+  {id:'jester',   name:'あそびにん',   tags:{'運でドキドキ':1,'チキンレース':1}, desc:'うんと ハプニングを たのしむ（運でドキドキ）'},
+  {id:'warrior',  name:'せんし',       tags:{'手先・はやさ勝負':1,'アブストラクト':2}, desc:'まっこうから ぶつかる（手先・はやさ勝負）'},
+  {id:'traveler', name:'たびびと',     tags:{'こどもと一緒に':1}, desc:'だれとでも きがるに あそぶ（こどもと一緒に）'}
 ];
 const HERO_JOB = {id:'hero', name:'ゆうしゃ', desc:'なんでも こなす（いろいろな ゲームが すき）'};
 function jobById(id){ return id === 'hero' ? HERO_JOB : (JOBS.find(j => j.id === id) || null); }
@@ -7475,7 +7496,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.22-a';
+const APP_VERSION = '2026.10.22-b';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -7696,7 +7717,7 @@ const DICT = [
    d:'手がかりから、答えや犯人を導き出すゲーム。',
    m:'少しずつ集まる情報を組み合わせて、正解を当てます。1人ずつ質問して答えを絞り込むもの、カードの動きから犯人を追いかけるものなど、いろいろあります。',
    e:'「推理が好きなら、犯人探しのゲームがおすすめ」',
-   r:['hidden','bluff'], k:['推理','犯人','探偵']},
+   r:['hidden','bluff'], k:['推理','犯人','探偵'], t:['推理']},
   {id:'word', w:'ワードゲーム', y:'わーどげーむ', a:['言葉あそび'], c:'kind', s:false,
    d:'言葉を使って遊ぶゲーム。',
    m:'お題を別の言葉で言い換えたり、連想したり、言葉のヒントで仲間に伝えたりします。ルールが分かりやすいものが多く、初心者にも遊びやすいジャンルです。',
@@ -7758,7 +7779,7 @@ const DICT = [
    d:'決められた組み合わせのカードなどを集めて、得点を得る仕組み。',
    m:'「同じ種類を3枚そろえる」「違う色を1枚ずつ集める」など、決められた組み合わせでそろえると高い得点になります。トランプの「ポーカー」の役も、セットコレクションの考え方に近いです。',
    e:'「同じ絵を3枚そろえると10点！」',
-   r:['draft','vp','handmgmt'], k:['セットコレクション','そろえ']},
+   r:['draft','vp','handmgmt'], k:['セットコレクション','そろえ'], t:['セットコレクション']},
   {id:'majority', w:'エリアマジョリティ', y:'えりあまじょりてぃ', a:['マジョリティ','エリアコントロール'], c:'mech', s:false,
    d:'場所（エリア）ごとに、いちばん多くコマを置いた人が得点などを得る仕組み。',
    m:'「マジョリティ」は「多数派」という意味です。1位の人が多く得点し、2位は少し、3位以下はなし、というように差がつくものが多いです。陣取りゲームの代表的な仕組みです。',
@@ -7768,12 +7789,12 @@ const DICT = [
    d:'続けるほど得をするが、やりすぎると失敗してそれまでの分を失う、「どこでやめるか」が勝負の仕組み。',
    m:'失敗してしまうことを「バースト」と言います（トランプの「ブラックジャック」で21を超えて負けるのもバーストです）。まだ行けるか、ここでやめて確実に取るかを決める、ドキドキ感が魅力です。カードの持てる枚数などの上限を超えて失敗することをバーストと呼ぶゲームもあります。',
    e:'代表例：『キャント・ストップ』『ダイヤモンド（インカの黄金）』',
-   r:['luck','dice'], k:['バースト','チキンレース']},
+   r:['luck','dice'], k:['バースト','チキンレース'], t:['チキンレース']},
   {id:'auction', w:'競り', y:'せり', a:['オークション','入札','ビッド'], c:'mech', s:false,
    d:'欲しいものに値段をつけ合って、いちばん高く出した人が手に入れる仕組み。',
    m:'「オークション」とも言います。順番に値段を上げていくもの、全員がこっそり金額を決めて一斉に見せるものなど、やり方はいろいろです。高く出しすぎると後で苦しくなるので、ものの値打ちを見きわめる力が大事です。',
    e:'代表例：『モダンアート』、ずかんの中なら ハゲタカのえじき など',
-   r:['simul','interaction'], k:['競り','オークション','入札']},
+   r:['simul','interaction'], k:['競り','オークション','入札'], t:['競り']},
   {id:'handmgmt', w:'ハンドマネジメント', y:'はんどまねじめんと', a:['手札管理','手札のやりくり'], c:'mech', s:false,
    d:'手札を、いつ・どの順番で・どう使うかをやりくりする仕組み。',
    m:'「今使うか、あとのために取っておくか」を考えるのが中心になります。カードゲームの多くに入っている、基本的な考え方です。',
@@ -7788,7 +7809,7 @@ const DICT = [
    d:'資源やお金を生み出す仕組み（エンジン）を作り、どんどん効率よく大きくしていく仕組み。',
    m:'序盤は小さなことしかできませんが、カードなどを組み合わせて「何かをすると、別の得が生まれる」流れを作ると、後半になるほど一度にたくさんのことができるようになります。日本では「拡大再生産」と呼ばれることもあります。',
    e:'代表例：『宝石の煌き（スプレンダー）』『ウイングスパン』',
-   r:['deckbuild','draft','weight'], k:['エンジンビルド','拡大再生産']},
+   r:['deckbuild','draft','weight'], k:['エンジンビルド','拡大再生産'], t:['エンジンビルド']},
   {id:'simul', w:'同時手番', y:'どうじてばん', a:['同時プレイ','一斉公開'], c:'mech', s:false,
    d:'全員が同時に行動を決めて進める仕組み。',
    m:'カードを裏向きに出して一斉に表にする、などのやり方があります。順番を待たなくてよいので、人数が多くても待ち時間（ダウンタイム）が少ないのが良いところです。',
@@ -8141,7 +8162,7 @@ const DICT = [
    d:'運や隠れた情報がなく、読み合いと考える力だけで勝負するゲーム。',
    m:'サイコロやカードの引きがなく、すべての情報が公開されています。将棋・囲碁・オセロのような昔からのゲームもこの仲間です。テーマ（世界観）がないか、とても薄いものが多いです。',
    e:'「アブストラクトは運がないから、負けても言い訳できない！」',
-   r:['duel','info','luck'], k:['アブストラクト']},
+   r:['duel','info','luck'], k:['アブストラクト'], t:['アブストラクト']},
   {id:'duel', w:'2人専用ゲーム', y:'ふたりせんようげーむ', a:['2人用','ふたり用','タイマン'], c:'kind', s:false,
    d:'2人で遊ぶために作られたゲーム。',
    m:'2人で向かい合って、じっくり読み合うものが多いです。「2〜4人用」のゲームを2人で遊ぶより、遊びやすく作られています。',
