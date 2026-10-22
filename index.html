@@ -2436,7 +2436,8 @@ async function syncPublished(){
      上書き しない。かんり画面で えらべる ように して おく。 */
   if(isPublisher() && isDirty()){
     pendingSiteData = data;
-    if(inAdmin()) render();
+    /* かんり画面だけで なく「さがす」画面にも おしらせを だす */
+    if(inAdmin() || currentRoute().name === 'home') render();
     return;
   }
   /* それ いがいの 端末は、サイトの あたらしい ずかんに そろえる（まえの ないようは ひかえに のこす） */
@@ -3119,7 +3120,7 @@ function viewHome(){
     '<h1 class="lede">きょうは なにで あそぶ？</h1>' + kaiBarHTML() + todayBar +
     (newArrivals().length ? '<button class="btn small" id="newArrivalBtn" style="width:100%;margin-bottom:12px">' +
       '▶ 新入荷（'+newArrivals().length+'）を みる</button>' : '') +
-    homeNoticeHTML() +
+    siteUpdateNoticeHTML() + homeNoticeHTML() +
     '<p class="sub">にんずうと じかん、あそびたい きぶんを えらぶだけ。<br>' +
       (kaiOn() ? 'きょうの たなには '+poolGames().length+'さくひんが ある。' : 'ずかんには '+ownedGames().length+'さくひんが とうろく されている。') + '</p>' +
 
@@ -7496,7 +7497,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.22-b';
+const APP_VERSION = '2026.10.22-c';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -10582,6 +10583,19 @@ function isIosSafariTab(){
 }
 function hasOwnData(){
   return !!account() || state.games.some(g => playsOf(g).length) || (state.players || []).length > 0;
+}
+/* かんりにんの スマホに、サイトの あたらしい ずかんが まだ はいって いない ときの おしらせ。
+   この スマホに サイトへ だして いない へんしゅうが あると、じどうでは いれかえない ため。 */
+function siteUpdateNoticeHTML(){
+  if(!pendingSiteData || store.read(KEY.localOnly, false)) return '';
+  const n = (pendingSiteData.games || []).length;
+  const v = fmtVer(pendingSiteData.version);
+  return '<div class="note" style="margin-bottom:14px;border-style:solid;border-color:var(--accent);color:var(--text)">' +
+    '<b style="color:var(--accent)">▶ サイトの ずかんが あたらしく なって います</b>' + (v ? '（' + esc(v) + ' こうしん）' : '') + '<br>' +
+    'この スマホには、まだ サイトに だして いない へんしゅうが ある ため、じどうでは いれかえて いません。<br>' +
+    'サイトと おなじ ないように する ときは したの ボタンを おして ください。' +
+    '<span style="color:var(--muted);font-size:12px">（あそんだ きろく・かしだしは のこります。いまの ないようは ひかえに のこるので、「かんり」から もとに もどせます）</span>' +
+    '<button class="btn small" id="alignSiteBtn" style="width:100%;margin-top:8px">サイトの ないよう（' + n + 'さくひん）に そろえる</button></div>';
 }
 function homeNoticeHTML(){
   if(!isIosSafariTab() || store.read(KEY.a2hs, false) || !hasOwnData()) return '';
