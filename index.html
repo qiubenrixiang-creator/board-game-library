@@ -2629,6 +2629,13 @@ function playersText(g){
 document.addEventListener('error', e => {
   const im = e.target;
   if(!im || im.tagName !== 'IMG' || im.dataset.failed) return;
+  /* オインクゲームズの 箱の 画像は、png か webp の どちらかで おかれて いる。
+     かたほうで ひらけなければ、もう かたほうを 1回だけ ためす。 */
+  if(!im.dataset.retried && /\/\/oinkgames\.com\/images\/flatview\/[^?#]+\.(png|webp)$/.test(im.src)){
+    im.dataset.retried = '1';
+    im.src = im.src.replace(/\.(png|webp)$/, (m, ext) => ext === 'png' ? '.webp' : '.png');
+    return;
+  }
   im.dataset.failed = '1';
   const th = im.closest('.thumb');
   if(th){ th.innerHTML = '<span class="glyph">' + esc(th.dataset.g || '？') + '</span>'; return; }
@@ -7548,7 +7555,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.11.11-a';
+const APP_VERSION = '2026.11.11-b';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
