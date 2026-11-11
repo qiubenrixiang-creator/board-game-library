@@ -5,6 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>BOARD GAME LIBRARY｜きょうは なにで あそぶ？</title>
 <meta name="description" content="にんずうと じかんと きぶんを えらぶだけ。30びょうで きょうの ボードゲームが きまる ずかん。">
+<!-- X・LINE などに アドレスを はった ときに でる カード -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BOARD GAME LIBRARY">
+<meta property="og:title" content="BOARD GAME LIBRARY｜きょうは なにで あそぶ？">
+<meta property="og:description" content="にんずうと じかんと きぶんを えらぶだけ。30びょうで きょうの ボードゲームが きまる ずかん。">
+<meta property="og:url" content="https://qiubenrixiang-creator.github.io/board-game-library/">
+<meta property="og:image" content="https://qiubenrixiang-creator.github.io/board-game-library/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://qiubenrixiang-creator.github.io/board-game-library/ogp.png">
 <meta name="theme-color" content="#141C3A">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -1153,6 +1165,7 @@ const KEY = {
   gone:'bgl.gonePlays',       /* けした きろくの しるし */
   welcome:'bgl.welcomeDone',  /* さいしょの あんないを すませたか */
   guide:'bgl.guideSeen',      /* はじめての 人への あんないを 見たか */
+  intro:'bgl.introDone',      /* さがす画面の「はじめての かたへ」を とじたか */
   helpSeen:'bgl.helpSeen',    /* 右上の ？ を おした ことが あるか */
   frWait:'bgl.friendWait',    /* リンクで もらった ともだちコード */
   profile:'bgl.myProfile'     /* じぶんの しょうごう・いちおし */
@@ -2612,9 +2625,32 @@ function stars(n, max){
 function playersText(g){
   return g.playersMin === g.playersMax ? g.playersMin + '人' : g.playersMin + '〜' + g.playersMax + '人';
 }
+/* がぞうが ひらけない（URLが きれた など）ときは、もじの ひょうじに きりかえる */
+document.addEventListener('error', e => {
+  const im = e.target;
+  if(!im || im.tagName !== 'IMG' || im.dataset.failed) return;
+  im.dataset.failed = '1';
+  const th = im.closest('.thumb');
+  if(th){ th.innerHTML = '<span class="glyph">' + esc(th.dataset.g || '？') + '</span>'; return; }
+  if(im.classList.contains('hero-img')){
+    const d = document.createElement('div');
+    d.className = 'hero-fallback';
+    d.innerHTML = '<span class="glyph">' + esc(im.dataset.g || '？') + '</span>';
+    im.replaceWith(d); return;
+  }
+  const strip = im.closest('.hero-strip');
+  if(strip){
+    im.remove();
+    if(!strip.querySelector('img')){
+      const hint = strip.nextElementSibling;
+      strip.remove();
+      if(hint && hint.classList.contains('count')) hint.remove();
+    }
+  }
+}, true);
 function thumbHTML(g, cls){
   const c = 'thumb' + (cls ? ' ' + cls : '');
-  if(g.images && g.images[0]) return '<div class="'+c+'"><img src="'+esc(g.images[0])+'" alt="" loading="lazy"></div>';
+  if(g.images && g.images[0]) return '<div class="'+c+'" data-g="'+esc((g.title||'？').trim().charAt(0))+'"><img src="'+esc(g.images[0])+'" alt="" loading="lazy"></div>';
   return '<div class="'+c+'"><span class="glyph">'+esc((g.title||'？').trim().charAt(0))+'</span></div>';
 }
 
@@ -2905,7 +2941,7 @@ function render(){
                   admin:viewAdmin, random:viewRandom, stats:viewStats, bulk:viewBulk,
                   print:viewPrint, playlog:viewPlayLog, lend:viewLend, tools:viewTools,
                   records:viewRecords, tool:viewTool, kai:viewKai, card:viewCard,
-                  suggest:viewSuggest, review:viewReview, poll:viewPoll };
+                  suggest:viewSuggest, review:viewReview, poll:viewPoll, about:viewAbout };
   app.innerHTML = (views[r.name] || viewHome)(r.param);
   paintIcons(app);
   bind(r);
@@ -3128,7 +3164,7 @@ function viewHome(){
     : '';
 
   return '<section class="page">' +
-    '<h1 class="lede">きょうは なにで あそぶ？</h1>' + kaiBarHTML() + todayBar +
+    '<h1 class="lede">きょうは なにで あそぶ？</h1>' + introBoxHTML() + kaiBarHTML() + todayBar +
     (newArrivals().length ? '<button class="btn small" id="newArrivalBtn" style="width:100%;margin-bottom:12px">' +
       '▶ 新入荷（'+newArrivals().length+'）を みる</button>' : '') +
     siteUpdateNoticeHTML() + homeNoticeHTML() +
@@ -3176,6 +3212,8 @@ function viewHome(){
     '<div style="height:11px"></div>' +
     '<button class="btn big" id="randomBtn"><span style="width:22px;height:22px;display:inline-block" data-icon="die"></span> おまかせで きめる</button>' +
     '<p class="sub" style="text-align:center;margin:12px 0 0">じょうけんを えらんで いれば、いちばん よく あう ゲームの なかから ひきます。</p>' +
+    '<p class="count" style="text-align:center;margin:22px 0 0">' +
+      '<button class="mini" data-go2="#/about">りようきやく・プライバシーポリシー</button></p>' +
   '</section>';
 }
 
@@ -3487,7 +3525,7 @@ function viewRandom(){
 
 function randomResultHTML(g){
   const img = (g.images && g.images[0])
-    ? '<img class="hero-img" src="'+esc(g.images[0])+'" alt="">'
+    ? '<img class="hero-img" src="'+esc(g.images[0])+'" alt="" data-g="'+esc((g.title||'？').trim().charAt(0))+'">'
     : '<div class="hero-fallback"><span class="glyph">'+esc((g.title||'？').trim().charAt(0))+'</span></div>';
   return '<div>' + img +
     '<div class="win" style="margin-top:12px">' +
@@ -6371,6 +6409,7 @@ function welcomeHTML(){
       '<button class="mini" id="meStart" style="flex:0 0 auto">はじめる</button></div>' +
     '<p class="count" style="margin:8px 0 0"><button class="mini" id="meLater">あとで</button> ' +
       'とうろく しなくても、ずかんは いままで どおり つかえます。</p>' +
+    '<p class="count" style="margin:6px 0 0">はじめると、りようきやくに どうい した ことに なります。 <button class="mini" data-go2="#/about">よむ</button></p>' +
   '</div>';
 }
 /* じぶんの 証（ひとめで わかる ように 上に だす） */
@@ -7509,7 +7548,7 @@ function viewTool(id){
    サーバーを ひっこし した ときは この1行を かきかえる。 */
 const API_BASE_DEFAULT = 'https://bgl-api.qiubenrixiang.workers.dev';
 /* アプリの バージョン（Safari と ホーム画面の アプリで おなじか くらべる ため） */
-const APP_VERSION = '2026.10.22-e';
+const APP_VERSION = '2026.11.11-a';
 function apiBase(){
   const saved = String(store.read(KEY.api, '') || '').trim().replace(/\/+$/, '');
   return saved || API_BASE_DEFAULT;
@@ -9462,7 +9501,9 @@ function guidePicTerm(){
 const GUIDE_TABS = [['search','さがす'],['book','ずかん'],['die','おまかせ'],['sword','どうぐ'],['gear','かんり']];
 const GUIDE_PAGES = [
   {tab:'all', title:'ようこそ！', pic:guidePicWelcome,
-   body:['この いえに ある ボードゲームを あつめた としょかん です。',
+   body:[() => store.read(KEY.localOnly, false)
+           ? 'あなたの いえに ある ボードゲームを あつめる としょかん です。'
+           : 'この サイトを つくった 人の いえに ある ボードゲームを あつめた としょかん です。',
          'あそぶ ゲームを えらぶ ところから、あそぶ ときの どうぐ まで、ここ ひとつで そろいます。'],
    cap:'この 5つの ボタンを じゅんばんに しょうかい します。'},
   {tab:0, title:'さがす', pic:guidePicSearch,
@@ -9479,7 +9520,7 @@ const GUIDE_PAGES = [
          'とうひょうは QRコードで、みんなの スマホから さんか できます。']},
   {tab:4, title:'さいごに', pic:guidePicTerm,
    body:['せつめいの 中で てんせんが ついた ことばは、タップすると いみが でます。',
-         '「かんり」は ゲームを とうろく する 人の ための ばしょ です。'],
+         '「かんり」では、じぶんの いえの ゲームで あなただけの ずかんを つくる ことも できます。'],
    point:'わからない ときは 右上の ？ を おすと、その 画面の せつめいが でます。'}
 ];
 let guideStep = 0;
@@ -9503,7 +9544,7 @@ function showGuide(){
     (pg.cap ? '<p class="guide-cap">' + pg.cap + '</p>' : '') +
     '<h2>' + pg.title + '</h2>' +
     '<div class="guide-pic" id="guidePic">' + pg.pic() + '</div>' +
-    '<div class="guide-body">' + pg.body.map(t => '<p>' + t + '</p>').join('') + '</div>' +
+    '<div class="guide-body">' + pg.body.map(t => '<p>' + (typeof t === 'function' ? t() : t) + '</p>').join('') + '</div>' +
     (pg.point ? '<p class="guide-point">' + pg.point + '</p>' : '') +
     '<div class="guide-dots">' + GUIDE_PAGES.map((_, k) => '<span' + (k === i ? ' class="on"' : '') + '></span>').join('') + '</div>' +
     '<div class="guide-btns">' +
@@ -9991,7 +10032,7 @@ function showScreenHelp(){
       '<button class="mini" id="helpClose">とじる</button></div>' +
     '<h2 style="margin-top:6px">' + pg.title + '</h2>' +
     '<div class="guide-pic" id="guidePic">' + pg.pic() + '</div>' +
-    '<div class="guide-body">' + pg.body.map(t => '<p>' + t + '</p>').join('') + '</div>' +
+    '<div class="guide-body">' + pg.body.map(t => '<p>' + (typeof t === 'function' ? t() : t) + '</p>').join('') + '</div>' +
     (n > 1 ? '<div class="guide-dots">' + h.pages.map((_, k) => '<span' + (k === helpStep ? ' class="on"' : '') + '></span>').join('') + '</div>' : '<div style="height:10px"></div>') +
     (h.guide ? '<button class="mini" id="helpGuide" style="margin:0 0 10px;align-self:center">はじめての あんないを ぜんぶ 見る</button>' : '') +
     '<div class="guide-btns">' +
@@ -10434,6 +10475,7 @@ function onlineHTML(){
           '<input type="text" id="acctName" placeholder="れい：ひなた" maxlength="20">' +
         '</div>' +
         '<button class="btn small primary" id="acctSignup" style="width:100%;margin-bottom:8px">さかばに とうろく する</button>' +
+        '<p class="count" style="margin:0 0 10px">とうろく すると、りようきやくに どうい した ことに なります。 <button class="mini" data-go2="#/about">よむ</button></p>' +
         '<label class="lbl" for="acctClaim">まえの スマホから ひきつぐ</label>' +
         '<div class="row"><input type="text" id="acctClaim" placeholder="ひきつぎコード" ' +
           'autocapitalize="characters" autocorrect="off" spellcheck="false" style="flex:2;letter-spacing:2px">' +
@@ -10598,6 +10640,39 @@ function hasOwnData(){
 }
 /* かんりにんの スマホに、サイトの あたらしい ずかんが まだ はいって いない ときの おしらせ。
    この スマホに サイトへ だして いない へんしゅうが あると、じどうでは いれかえない ため。 */
+/* はじめて きた 人への 入口（さがす画面の いちばん 上）。
+   ここが だれの ずかんか と、じぶんの ずかんの つくりかたを つたえる。
+   じぶんの ずかんを つくった 人・証や きろくが ある 人・サイトを こうしんする 人には ださない。 */
+function introBoxHTML(){
+  if(store.read(KEY.intro, false) || store.read(KEY.localOnly, false) || isPublisher() || hasOwnData()) return '';
+  return '<div class="win" id="introBox" style="margin-bottom:14px;border-color:var(--accent-2)">' +
+    '<div class="row" style="align-items:center;margin-bottom:6px">' +
+      '<span style="flex:1;font-size:15px;color:var(--accent-2)">▶ はじめての かたへ</span>' +
+      '<button class="mini" id="introClose" style="flex:0 0 auto" aria-label="この あんないを とじる">とじる</button></div>' +
+    '<p class="count" style="margin:0 0 10px;color:var(--text);line-height:1.8">' +
+      'ここは、この サイトを つくった 人の いえに ある ボードゲーム（' + ownedGames().length + 'さくひん）の ずかん です。' +
+      'とうろく なしで そのまま つかえます。</p>' +
+    '<div class="btn-row">' +
+      '<button class="btn small" id="introGuide" style="flex:1">つかいかた</button>' +
+      '<button class="btn small" id="introMine" style="flex:1.8">じぶんの ずかんを つくる</button></div>' +
+  '</div>';
+}
+/* この スマホの ずかんを からっぽに して、じぶんの いえの ゲームだけの ずかんに する。
+   fromHome：さがす画面の 入口から きた とき（おわったら「かんり」へ あんない する） */
+function makeMineLibrary(fromHome){
+  ask('いま とうろく されている ゲームを ぜんぶ けして、\nからっぽの ずかんに します。\n（けされるのは この スマホの 中だけです）' +
+      (fromHome ? '\nあとで「かんり」の「サイトの ないように そろえる」を おすと、もとに もどせます。' : ''), () => {
+    state.games = [];
+    state.tags = DEFAULT_TAGS.map(t=>({...t}));
+    state.filters = {time:null, players:null, playersN:6, tags:[]};
+    store.write(KEY.localOnly, true);
+    store.write(KEY.intro, true);
+    saveGames(); saveTags(); saveFilters(); markDirty();
+    if(fromHome && currentRoute().name !== 'admin') go('#/admin'); else render();
+    toast(fromHome ? 'からっぽに しました。「＋ ゲームを ついかする」から はじめましょう'
+                   : 'からっぽに しました。ゲームを ついか して いきましょう');
+  });
+}
 function siteUpdateNoticeHTML(){
   if(!pendingSiteData || store.read(KEY.localOnly, false)) return '';
   const n = (pendingSiteData.games || []).length;
@@ -10786,6 +10861,10 @@ function viewAdmin(){
     '<p class="count">はじめて きた 人に でる あんないを、もういちど 見られます。</p>' +
     '<button class="btn small" id="guideOpen" style="width:100%;margin-bottom:16px">つかいかたの あんないを 見る</button>' +
 
+    '<div class="divider"></div><h2 class="sec">この サイトに ついて</h2>' +
+    '<p class="count">つかう ときの やくそく（りようきやく）と、データの あつかい（プライバシーポリシー）を よめます。</p>' +
+    '<button class="btn small" data-go2="#/about" style="width:100%;margin-bottom:16px">りようきやく・プライバシーポリシー</button>' +
+
     '<div class="divider"></div><h2 class="sec">おとの せってい</h2>' +
     '<p class="count" style="margin:0 0 8px">BGM（ぜんきょく）と ジョブの こうかおん：<span style="color:var(--accent)">イワシロ音楽素材</span>（https://iwashiro-sounds.work/）</p>' +
     '<p class="count" style="margin:0 0 8px">アプリの バージョン：<span style="color:var(--accent)">'+APP_VERSION+'</span></p>' +
@@ -10811,6 +10890,114 @@ function viewAdmin(){
 
     '<div class="divider"></div><h2 class="sec">そのた</h2>' +
     '<button class="mini warn" id="resetBtn">さいしょの サンプルに もどす</button>' +
+  '</section>';
+}
+
+/* ---------------- この サイトに ついて（りようきやく・プライバシーポリシー） ----------------
+   れんらく先は ここ 1か所を かきかえる。
+   label：画面に だす 文字（れい：'X（@○○○）'）　url：おした ときに ひらく 先（なくても よい） */
+const SITE_CONTACT = {label:'', url:''};
+const ABOUT_UPDATED = '2026年11月11日';
+function contactHTML(){
+  if(!SITE_CONTACT.label) return '<span style="color:var(--muted)">（れんらく先は じゅんび中です）</span>';
+  return SITE_CONTACT.url
+    ? '<a href="' + esc(SITE_CONTACT.url) + '" target="_blank" rel="noopener" style="color:var(--accent-2)">' + esc(SITE_CONTACT.label) + '</a>'
+    : esc(SITE_CONTACT.label);
+}
+/* h：見出し　t：本文（よみやすい 文字で だす。かいぎょうは そのまま でる） */
+const ABOUT_TERMS = [
+  {h:'はじめに', t:
+'このサイトを使うと、ここに書いてある約束に同意したことになります。\n' +
+'未成年の方は、保護者の方といっしょに読んでください。'},
+  {h:'むりょうです・ほしょうは ありません', t:
+'・無料で使えます。広告もありません。\n' +
+'・書いてある内容（遊び方の説明・人数・時間など）が正しいことは保証できません。正しいルールは、ゲームの説明書で確かめてください。\n' +
+'・予告なく、内容を変えたり、サイトを止めたりすることがあります。\n' +
+'・このサイトを使って起きた損害について、管理人は責任を負いません（管理人に、わざと、または大きな不注意があった場合をのぞきます）。'},
+  {h:'データの ほぞん', t:
+'・図鑑の編集や遊んだ記録の多くは、お使いのスマホやパソコンの中に保存されます。\n' +
+'・ブラウザのデータを消したり、機種を変えたりすると、消えることがあります。\n' +
+'・大切な記録は「かんり」の「ひかえを ほぞん」で、ファイルに残しておいてください。'},
+  {h:'しては いけない こと', t:
+'・法律に反すること、ほかの人の権利を傷つけること\n' +
+'・ほかの人の本名・住所・連絡先・顔のわかる写真などを、本人の許可なく登録したり送ったりすること\n' +
+'・人を傷つける言葉や、見た人がいやな気持ちになる名前・文章・写真を登録すること\n' +
+'・ほかの人になりすますこと、ほかの人の「ぼうけんしゃの証」を使うこと\n' +
+'・サーバーに大きな負担をかけること、しくみの弱いところをついて入りこむこと'},
+  {h:'おくられた ないよう', t:
+'・「ずかんづくり」で送られた説明文や写真は、管理人が確かめて、図鑑にのせることがあります。自分で書いたもの・自分で撮ったものだけを送ってください。\n' +
+'・約束に反する内容や「ぼうけんしゃの証」は、管理人が予告なく消したり、使えなくしたりすることがあります。'},
+  {h:'けんりに ついて', t:
+'・ゲームの名前・箱の絵・ロゴなどの権利は、それぞれの出版社・作者のものです。\n' +
+'・箱の画像は、出版社や日本語版の発売元が公開している画像を表示しています。\n' +
+'・説明の動画は、YouTube に公開されている動画を、YouTube のしくみで表示しています。\n' +
+'・BGM と一部の効果音は「イワシロ音楽素材」（https://iwashiro-sounds.work/）のものを使っています。\n' +
+'・権利をお持ちの方で、のせるのをやめてほしいものがあれば、下の連絡先までお知らせください。すぐに対応します。'},
+  {h:'やくそくの へんこう', t:
+'この約束は、必要なときに変えることがあります。変えたあとは、このページにのせたときから新しい内容になります。\n' +
+'このサイトに関することは、日本の法律にしたがいます。'}
+];
+const ABOUT_PRIVACY = [
+  {h:'とうろく しないで つかう とき', t:
+'名前・メールアドレス・電話番号・位置情報などは集めません。\n' +
+'図鑑の編集、遊んだ記録、感想、メモ、なかまの名前、設定は、お使いのスマホやパソコンの中だけに保存されます。管理人には届きません。\n' +
+'ただし、投票に参加したときは、選んだ内容と、入力した名前（名前つきの投票のとき）がサーバーに保存されます。'},
+  {h:'「ぼうけんしゃの証」を つくった とき', t:
+'次の内容がサーバーに保存されます。\n' +
+'・ぼうけんしゃの名前、ともだちコード、この端末を見分けるための合言葉\n' +
+'・プロフィール（称号、ジョブ、いちおしのゲーム、ひとこと）\n' +
+'・遊んだ記録（ゲーム名、日付、人数、勝った人の名前、いっしょに遊んだ人の名前）\n' +
+'・記録につけた写真\n' +
+'・なかま（ともだち）のつながり\n' +
+'・「遊んでみたい」に入れたゲーム\n' +
+'・なかまに送ったメモ、作った投票と投票の内容\n' +
+'・「ずかんづくり」で送った説明文や写真\n' +
+'感想は送られません。スマホの中だけに残ります。\n' +
+'名前は、本名ではなくニックネームをおすすめします。いっしょに遊んだ人の名前も同じです。'},
+  {h:'だれに 見えるか', t:
+'・遊んだ記録とプロフィールは、あなたと「なかま」になった人に見えます。\n' +
+'・記録の写真は、「なかまにも みせる」にした記録だけ、なかまに見えます。\n' +
+'・写真には、当てずっぽうでは当てられない長いアドレスがつきます。そのアドレスを知っている人は、写真を見ることができます。\n' +
+'・「遊んでみたい」に入れたゲームは、あなたのぼうけんしゃの名前といっしょに、証を持っているほかの人にも見えます。\n' +
+'・投票は、その投票のアドレスやQRコードを知っている人が、見たり参加したりできます。\n' +
+'・管理人は、不具合を直すときや、約束に反する内容を消すときに、サーバーの内容を見ることがあります。'},
+  {h:'つかう もくてき', t:
+'集めた内容は、このサイトの機能を動かすためだけに使います。\n' +
+'広告に使ったり、ほかの人や会社に売ったり渡したりしません（法律にもとづいて求められたときをのぞきます）。\n' +
+'アクセス解析や広告のしくみは入れていません。このサイト自身は Cookie を使っていません。'},
+  {h:'そとの サービス', t:
+'このサイトは、次の外のサービスを使っています。使うときに、接続に必要な情報（IPアドレス、ブラウザの種類など）が、それぞれのサービスに自動で送られます。\n' +
+'・GitHub Pages（サイトの置き場所）\n' +
+'・Cloudflare（「ぼうけんしゃの証」や投票のサーバー）\n' +
+'・Google Fonts（文字の形）\n' +
+'・YouTube（説明の動画を再生したとき）\n' +
+'・出版社などのサイト（箱の画像を表示するとき）\n' +
+'・QRコードを作るサービス api.qrserver.com（QRコードを出したとき。QRコードにするアドレスが送られます）'},
+  {h:'データを けしたい とき', t:
+'・スマホの中のデータは、ブラウザの設定から、このサイトのデータを消すと消えます。\n' +
+'・アプリで遊んだ記録を消すと、いっしょに遊んだ人の名前と写真もサーバーから消えます。\n' +
+'・「ぼうけんしゃの証」そのものや、サーバーに残っている内容を消したいときは、下の連絡先までお知らせください。管理人が消します。'},
+  {h:'ないようの へんこう', t:
+'この内容は、機能が増えたときなどに変えることがあります。変えたときは、このページの日付を新しくします。'}
+];
+function aboutSectionsHTML(list){
+  return list.map((x, i) =>
+    '<div class="section"><h2>' + (i + 1) + '. ' + esc(x.h) + '</h2><div class="body">' + esc(x.t) + '</div></div>').join('');
+}
+function viewAbout(){
+  return '<section class="page">' +
+    '<h1 class="lede">この サイトに ついて</h1>' +
+    '<p class="sub read" style="color:var(--text);font-size:14px;line-height:1.9">' +
+      'BOARD GAME LIBRARY は、個人が趣味で作っている、無料のボードゲーム図鑑です。<br>' +
+      'ゲームの出版社やお店とは関係のない、非公式のサイトです。</p>' +
+    '<h2 class="sec">りようきやく（つかう ときの やくそく）</h2>' + aboutSectionsHTML(ABOUT_TERMS) +
+    '<div class="divider"></div>' +
+    '<h2 class="sec">プライバシーポリシー（データの あつかい）</h2>' + aboutSectionsHTML(ABOUT_PRIVACY) +
+    '<div class="divider"></div>' +
+    '<h2 class="sec">れんらく先</h2>' +
+    '<p class="read" style="font-size:14.5px;line-height:1.9;margin:0 0 6px">' + contactHTML() + '</p>' +
+    '<p class="count">さいごに なおした日：' + ABOUT_UPDATED + '</p>' +
+    '<button class="btn small" id="aboutBack" style="width:100%;margin-top:10px">◀ もどる</button>' +
   '</section>';
 }
 
@@ -11137,6 +11324,15 @@ function bind(r){
   if(treasureAll) treasureAll.onclick = () => { state.listMode = 'sleep'; go('#/list'); };
   const a2hsOk = document.getElementById('a2hsOk');
   if(a2hsOk) a2hsOk.onclick = () => { store.write(KEY.a2hs, true); render(); };
+  /* はじめての かたへ（さがす画面の 入口） */
+  const introGuide = document.getElementById('introGuide');
+  if(introGuide) introGuide.onclick = openGuide;
+  const introMine = document.getElementById('introMine');
+  if(introMine) introMine.onclick = () => makeMineLibrary(true);
+  const introClose = document.getElementById('introClose');
+  if(introClose) introClose.onclick = () => { store.write(KEY.intro, true); render(); };
+  const aboutBack = document.getElementById('aboutBack');
+  if(aboutBack) aboutBack.onclick = () => { if(history.length > 1) history.back(); else go('#/'); };
   const newArrivalBtn = document.getElementById('newArrivalBtn');
   if(newArrivalBtn) newArrivalBtn.onclick = () => { state.listMode = 'new'; go('#/list'); };
   const clearToday = document.getElementById('clearToday');
@@ -12756,17 +12952,7 @@ function bind(r){
     });
   };
   const makeMineBtn = document.getElementById('makeMineBtn');
-  if(makeMineBtn) makeMineBtn.onclick = () => {
-    ask('いま とうろく されている ゲームを ぜんぶ けして、\nからっぽの ずかんに します。\n（けされるのは この スマホの 中だけです）', () => {
-    state.games = [];
-    state.tags = DEFAULT_TAGS.map(t=>({...t}));
-    state.filters = {time:null, players:null, playersN:6, tags:[]};
-    store.write(KEY.localOnly, true);
-    saveGames(); saveTags(); saveFilters(); markDirty();
-    render();
-    toast('からっぽに しました。ゲームを ついか して いきましょう');
-    });
-  };
+  if(makeMineBtn) makeMineBtn.onclick = () => makeMineLibrary(false);
   const resetBtn = document.getElementById('resetBtn');
   if(resetBtn) resetBtn.onclick = () => {
     ask('とうろくした 内容を すべて けして、\nサンプルに もどします。よろしいですか？', () => {
@@ -12955,9 +13141,12 @@ function importLibrary(e){
       const data = JSON.parse(fr.result);
       if(!data || !Array.isArray(data.games)) throw new Error('format');
       ask('この スマホの ずかん（' + state.games.length + 'さくひん）を、えらんだ ファイルの ないよう（' + data.games.length + 'さくひん）に いれかえます。\n' +
+          'ファイルに きろくが 入って いない ゲームは、この スマホの あそんだ きろく・かしだしを そのまま のこします。\n' +
           'いまの ないようは ひかえに のこすので、あとで もとに もどせます。よろしいですか？', () => {
         keepBeforeAdopt();
-        state.games = data.games;
+        /* ファイルに きろくが ない ゲームは、この スマホの きろく・かしだしを ひきつぐ
+           （サイト用の library.json など、きろくの 入って いない ファイルを よんでも きえない ように） */
+        state.games = mergePrivate(data.games);
         if(Array.isArray(data.tags) && data.tags.length) state.tags = data.tags;
         store.write(KEY.games, state.games);
         store.write(KEY.tags, state.tags);
